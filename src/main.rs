@@ -5,22 +5,24 @@ extern crate urlencoding;
 
 use std::collections::HashMap;
 
-mod gamedata;
-mod gamerules;
+mod logic;
+mod protocol;
 mod snakes;
+mod util;
 
 pub trait Battlesnake {
-    fn snake_info(&self) -> gamedata::SnakeInfo;
-    fn start(&self, req: gamedata::Request) -> Result<(), String>;
-    fn end(&self, req: gamedata::Request) -> Result<(), String>;
-    fn make_move(&self, req: gamedata::Request) -> Result<gamedata::MoveResponse, String>;
+    fn snake_info(&self) -> protocol::SnakeInfo;
+    fn start(&self, req: protocol::Request) -> Result<(), String>;
+    fn end(&self, req: protocol::Request) -> Result<(), String>;
+    fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String>;
 }
 
 fn main() {
     let snakes = HashMap::from([("simple".to_string(), Box::new(snakes::SimpleSnake {}))]);
 
-    rouille::start_server("localhost:5110", move |request| {
-        router!(request,
+    rouille::start_server("127.0.0.1:5110", move |request| {
+        let body = util::dump_request(request).unwrap_or_default();
+        let resp = router!(request,
             (GET) (/) => {
                 // List all registered snake bots
                 let mut list = vec!["<html><head><title>Battle snakes</title></head><body><ul>".to_string()];
@@ -38,6 +40,7 @@ fn main() {
             },
 
             (GET) (/{id: String}/) => {
+                println!("request for snake info: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => rouille::Response::json(&snake.snake_info()),
                     None => rouille::Response::empty_404(),
@@ -45,12 +48,20 @@ fn main() {
             },
 
             (POST) (/{id: String}/start) => {
+                println!("starting new game for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
-                        let body: gamedata::Request = try_or_400!(rouille::input::json_input(request));
-                        match snake.start(body) {
-                            Ok(_) => rouille::Response::text(""),
-                            Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                        match serde_json::from_slice(&body) {
+                            Ok(request_body) => {
+                                match snake.start(request_body) {
+                                    Ok(_) => rouille::Response::text(""),
+                                    Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                                }
+                            },
+                            Err(e) => {
+                                println!("{:?}", e);
+                                rouille::Response::text(format!("{}", e)).with_status_code(400)
+                            },
                         }
                     },
                     None => rouille::Response::empty_404(),
@@ -58,12 +69,20 @@ fn main() {
             },
 
             (POST) (/{id: String}/end) => {
+                println!("game over for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
-                        let body: gamedata::Request = try_or_400!(rouille::input::json_input(request));
-                        match snake.end(body) {
-                            Ok(_) => rouille::Response::text(""),
-                            Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                        match serde_json::from_slice(&body) {
+                            Ok(request_body) => {
+                                match snake.end(request_body) {
+                                    Ok(_) => rouille::Response::text(""),
+                                    Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                                }
+                            },
+                            Err(e) => {
+                                println!("{:?}", e);
+                                rouille::Response::text(format!("{}", e)).with_status_code(400)
+                            },
                         }
                     },
                     None => rouille::Response::empty_404(),
@@ -71,12 +90,20 @@ fn main() {
             },
 
             (POST) (/{id: String}/move) => {
+                println!("new move for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
-                        let body: gamedata::Request = try_or_400!(rouille::input::json_input(request));
-                        match snake.make_move(body) {
-                            Ok(res) => rouille::Response::json(&res),
-                            Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                        match serde_json::from_slice(&body) {
+                            Ok(request_body) => {
+                                match snake.make_move(request_body) {
+                                    Ok(response) => rouille::Response::json(&response),
+                                    Err(msg) => rouille::Response::text(msg).with_status_code(500),
+                                }
+                            },
+                            Err(e) => {
+                                println!("{:?}", e);
+                                rouille::Response::text(format!("{}", e)).with_status_code(400)
+                            },
                         }
                     },
                     None => rouille::Response::empty_404(),
@@ -84,6 +111,7 @@ fn main() {
             },
 
             _ => rouille::Response::empty_404()
-        )
+        );
+        util::dump_response(resp)
     });
 }
