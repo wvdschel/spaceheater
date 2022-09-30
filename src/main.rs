@@ -28,7 +28,7 @@ fn main() {
                 let mut list = vec!["<html><head><title>Battle snakes</title></head><body><ul>".to_string()];
                 for (name, _) in snakes.iter() {
                     list.push(
-                        format!("<li><a href=\"/{}/\">{}</a></li>",
+                        format!("<li><a href=\"./{}/\">{}</a></li>",
                                 urlencoding::encode(name), html_escape::encode_text(name)))
                 }
                 list.push("</ul></body></html>".to_string());

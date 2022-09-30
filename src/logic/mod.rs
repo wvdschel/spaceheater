@@ -42,7 +42,10 @@ impl std::fmt::Display for dyn BoardLike {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..self.height() {
             for x in 0..self.width() {
-                let p = Point{x, y: self.height() - y - 1};
+                let p = Point {
+                    x,
+                    y: self.height() - y - 1,
+                };
                 _ = self.get(&p).fmt(f);
             }
             _ = f.write_str("\n");
@@ -54,7 +57,6 @@ impl std::fmt::Display for dyn BoardLike {
 mod board;
 pub use board::Board;
 
-mod search;
-pub use search::search;
+pub(crate) mod search;
 
 use crate::protocol::Point;
