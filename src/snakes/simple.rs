@@ -7,7 +7,7 @@ use crate::{
 #[derive(Copy, Clone)]
 pub struct SimpleSnake {}
 
-fn look_ahead(board: &mut logic::Board, head: &Point, turns: usize) -> (Direction, usize) {
+fn look_ahead(board: &mut dyn BoardLike, head: &Point, turns: usize) -> (Direction, usize) {
     let mut max_turns = 0;
     let mut best_dir = Direction::Down;
 
@@ -30,7 +30,7 @@ fn look_ahead(board: &mut logic::Board, head: &Point, turns: usize) -> (Directio
                 Tile::Head => println!("survival time for {:?}: {}", dir, turns + 1),
                 _ => (),
             }
-            if turns >= max_turns {
+            if turns > max_turns || (turns == max_turns && rand::random()) {
                 max_turns = turns + 1;
                 best_dir = dir;
             }
@@ -39,6 +39,70 @@ fn look_ahead(board: &mut logic::Board, head: &Point, turns: usize) -> (Directio
     }
 
     (best_dir, max_turns)
+}
+
+fn wipeout(
+    board: &dyn BoardLike,
+    snakes: Vec<protocol::Snake>,
+    you: &protocol::Snake,
+    p: &Point,
+) -> Vec<(Direction, bool, bool)> {
+    let head_to_head_points = [
+        (
+            Direction::Left,
+            [
+                p.neighbour(Direction::Left).neighbour(Direction::Left),
+                p.neighbour(Direction::Left).neighbour(Direction::Up),
+                p.neighbour(Direction::Left).neighbour(Direction::Down),
+            ],
+        ),
+        (
+            Direction::Right,
+            [
+                p.neighbour(Direction::Right).neighbour(Direction::Right),
+                p.neighbour(Direction::Right).neighbour(Direction::Up),
+                p.neighbour(Direction::Right).neighbour(Direction::Down),
+            ],
+        ),
+        (
+            Direction::Up,
+            [
+                p.neighbour(Direction::Up).neighbour(Direction::Up),
+                p.neighbour(Direction::Up).neighbour(Direction::Left),
+                p.neighbour(Direction::Up).neighbour(Direction::Right),
+            ],
+        ),
+        (
+            Direction::Down,
+            [
+                p.neighbour(Direction::Down).neighbour(Direction::Down),
+                p.neighbour(Direction::Down).neighbour(Direction::Left),
+                p.neighbour(Direction::Down).neighbour(Direction::Right),
+            ],
+        ),
+    ];
+
+    let mut res = Vec::new();
+    for (dir, points) in head_to_head_points {
+        let (mut die, mut kill) = (false, false);
+        for h in points {
+            if board.get(&h) == Tile::Head {
+                for s in &snakes {
+                    if s.name == you.name {
+                        continue;
+                    }
+
+                    if s.head == h {
+                        die = die || s.length >= you.length;
+                        kill = kill || s.length <= you.length;
+                    }
+                }
+            }
+        }
+        res.push((dir, die, kill))
+    }
+
+    res
 }
 
 fn search_for_food(
@@ -61,7 +125,7 @@ fn search_for_food(
     for f in food {
         if let Some(distance) = distances[f.x as usize][f.y as usize] {
             println!("distance to food at {} is {}", f, distance);
-            if (distance + board.width()) < hp as isize {
+            if (distance + board.width()) < hp as isize && (distance > board.width() / 2) {
                 println!(
                     "not hungry yet (distance to food is {}, hp is {})",
                     distance, hp
@@ -113,19 +177,34 @@ impl Battlesnake for SimpleSnake {
 
     fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String> {
         let food = Vec::from(req.board.food.as_slice());
+        let snakes = req.board.snakes.clone();
         let mut board: logic::Board = req.board.into();
-        let head = req.you.head;
-        println!("at {} -> {:?}", head, board.get(&head));
+        println!("at {} -> {:?}", req.you.head, board.get(&req.you.head));
         println!("{}", &board as &dyn BoardLike);
 
-        if let Some(dir) = search_for_food(&board, &food, &head, req.you.health) {
+        for (direction, die, kill) in wipeout(&board, snakes, &req.you, &req.you.head) {
+            let p = req.you.head.neighbour(direction);
+            if board.is_safe(&p) {
+                if die {
+                    // Just mark the tile of a heads-on collision as a hazard for the time being
+                    board.set(&p, Tile::Hazard);
+                } else if kill {
+                    return Ok(protocol::MoveResponse {
+                        direction,
+                        shout: "お前はもう死んでいる".into(),
+                    });
+                }
+            }
+        }
+
+        if let Some(dir) = search_for_food(&board, &food, &req.you.head, req.you.health) {
             return Ok(protocol::MoveResponse {
                 direction: dir,
-                shout: "food".to_string(),
+                shout: "nom nom nom".to_string(),
             });
         }
 
-        let (dir, _) = look_ahead(&mut board, &head, 10);
+        let (dir, _) = look_ahead(&mut board, &req.you.head, 10);
         Ok(protocol::MoveResponse {
             direction: dir,
             shout: "".to_string(),

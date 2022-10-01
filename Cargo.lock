@@ -633,6 +633,7 @@ version = "0.1.0"
 dependencies = [
  "html-escape",
  "priority-queue",
+ "rand",
  "rouille",
  "serde",
  "serde_json",

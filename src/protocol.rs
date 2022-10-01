@@ -107,7 +107,7 @@ pub struct SquadRules {
 }
 
 // See https://docs.battlesnake.com/api/objects/board
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Board {
     pub height: usize,
     pub width: usize,
@@ -117,7 +117,7 @@ pub struct Board {
 }
 
 // See https://docs.battlesnake.com/api/objects/battlesnake
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Snake {
     pub id: String,
     pub name: String,
@@ -131,7 +131,7 @@ pub struct Snake {
     pub customizations: Customizations,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Customizations {
     pub color: String,
     pub head: String,
@@ -175,7 +175,7 @@ impl Direction {
     }
 }
 
-impl Display for Direction{
+impl Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", self))
     }

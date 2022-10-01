@@ -18,8 +18,12 @@ pub trait Battlesnake {
 }
 
 fn main() {
-    let snakes = HashMap::from([("simple".to_string(), Box::new(snakes::SimpleSnake {}))]);
+    let snakes = HashMap::from([
+                               ("simple".to_string(), Box::new(snakes::SimpleSnake {})),
+                               ("solid".to_string(), Box::new(snakes::SimpleSnake {})),
+    ]);
 
+    println!("starting server on 127.0.0.1:5110");
     rouille::start_server("127.0.0.1:5110", move |request| {
         let body = util::dump_request(request).unwrap_or_default();
         let resp = router!(request,
