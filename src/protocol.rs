@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::VecDeque, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,51 +6,6 @@ use serde::{Deserialize, Serialize};
 pub struct Point {
     pub x: isize,
     pub y: isize,
-}
-
-impl Point {
-    pub fn neighbour(&self, d: Direction) -> Point {
-        match d {
-            Direction::Up => Point {
-                x: self.x,
-                y: self.y + 1,
-            },
-            Direction::Down => Point {
-                x: self.x,
-                y: self.y - 1,
-            },
-            Direction::Left => Point {
-                x: self.x - 1,
-                y: self.y,
-            },
-            Direction::Right => Point {
-                x: self.x + 1,
-                y: self.y,
-            },
-        }
-    }
-
-    pub fn neighbours(&self) -> [(Direction, Point); 4] {
-        [
-            Direction::Up,
-            Direction::Down,
-            Direction::Left,
-            Direction::Right,
-        ]
-        .map(|d| (d, self.neighbour(d)))
-    }
-}
-
-impl std::fmt::Display for Point {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("({},{})", self.x, self.y))
-    }
-}
-
-impl std::fmt::Debug for Point {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(self, f)
-    }
 }
 
 // See https://docs.battlesnake.com/api/requests/info
@@ -121,8 +76,8 @@ pub struct Board {
 pub struct Snake {
     pub id: String,
     pub name: String,
-    pub health: usize,
-    pub body: Vec<Point>,
+    pub health: isize,
+    pub body: VecDeque<Point>,
     pub latency: String,
     pub head: Point,
     pub length: usize,
@@ -164,19 +119,9 @@ pub enum Direction {
     Right,
 }
 
-impl Direction {
-    pub fn opposite(&self) -> Direction {
-        match self {
-            Direction::Up => Direction::Down,
-            Direction::Down => Direction::Up,
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
-        }
-    }
-}
-
-impl Display for Direction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self))
-    }
-}
+pub const ALL_DIRECTIONS: [Direction; 4] = [
+    Direction::Up,
+    Direction::Down,
+    Direction::Left,
+    Direction::Right,
+];

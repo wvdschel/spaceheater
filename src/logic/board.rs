@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use crate::protocol::{self, Point};
 
-use super::{Tile, BoardLike};
+use super::{BoardLike, Tile};
 
 #[derive(Clone)]
 pub struct Board {
@@ -50,39 +52,43 @@ impl From<protocol::Board> for Board {
         let mut b = Board::new(g.width, g.height);
         for snake in g.snakes {
             for point in snake.body {
-                b.set(&point, Tile::Snake)
+                b.add(&point, Tile::Snake)
             }
-            b.set(&snake.head, Tile::Head);
+            b.add(&snake.head, Tile::Head);
         }
         for food in g.food {
-            b.set(&food, Tile::Food)
+            b.add(&food, Tile::Food)
         }
         for hazard in g.hazards {
-            b.set(&hazard, Tile::Hazard)
+            b.add(&hazard, Tile::Hazard)
         }
         b
     }
 }
 
-pub struct BoardOverlay<'a> {
+pub struct BoardOverlay {
     tiles: Vec<Vec<Option<Tile>>>,
-    below: &'a dyn BoardLike,
+    below: Arc<dyn BoardLike>,
 }
 
-impl<'a> BoardOverlay<'a> {
-    pub fn new(below: &'a dyn BoardLike) -> BoardOverlay {
+impl BoardOverlay {
+    pub fn new(below: Arc<dyn BoardLike>) -> BoardOverlay {
+        if below.layers() as isize > below.width() / 2 {
+            return Self::new(Arc::new(below.flatten()));
+        }
+
         let w = below.width() as usize;
         let h = below.height() as usize;
         let mut tiles = Vec::with_capacity(w);
-        for i in 0..tiles.len() {
+        for x in 0..w {
             tiles.push(Vec::with_capacity(h as usize));
-            tiles[i].resize(h, None);
+            tiles[x].resize(h, None);
         }
         BoardOverlay { tiles, below }
     }
 }
 
-impl<'a> BoardLike for BoardOverlay<'a> {
+impl BoardLike for BoardOverlay {
     fn get(&self, p: &Point) -> Tile {
         if p.x < 0 || p.y < 0 || p.x >= self.width() || p.y >= self.height() {
             return Tile::Wall;
@@ -105,5 +111,9 @@ impl<'a> BoardLike for BoardOverlay<'a> {
 
     fn height(&self) -> isize {
         self.below.height()
+    }
+
+    fn layers(&self) -> usize {
+        self.below.layers() + 1
     }
 }

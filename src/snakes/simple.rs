@@ -1,7 +1,6 @@
 use crate::{
-    logic::{self, search, BoardLike, Tile},
-    protocol::{self, Direction, Point},
-    Battlesnake,
+    logic::{self, search, BoardLike, Direction, Point, Tile},
+    protocol, Battlesnake,
 };
 
 #[derive(Copy, Clone)]
@@ -22,7 +21,7 @@ fn look_ahead(board: &mut dyn BoardLike, head: &Point, turns: usize) -> (Directi
         Direction::Right,
     ] {
         let p = head.neighbour(dir);
-        if board.is_safe(&p) {
+        if board.get(&p).is_safe() {
             let old = board.get(&p);
             board.set(&p, Tile::Wall);
             let (_, turns) = look_ahead(board, &p, turns - 1);
@@ -95,6 +94,7 @@ fn wipeout(
                     if s.head == h {
                         die = die || s.length >= you.length;
                         kill = kill || s.length <= you.length;
+                        println!("head-to-head with {}: die={} kill={}", s.name, die, kill);
                     }
                 }
             }
@@ -116,7 +116,7 @@ fn search_for_food(
         board,
         head,
         |_, p| {
-            let distance = if board.is_safe(p) { 1 } else { 9999999 };
+            let distance = if board.get(p).is_safe() { 1 } else { 9999999 };
             (distance, p.neighbours().map(|n| n.1).into())
         },
         |_, p| board.get(&p) == Tile::Food,
@@ -125,7 +125,7 @@ fn search_for_food(
     for f in food {
         if let Some(distance) = distances[f.x as usize][f.y as usize] {
             println!("distance to food at {} is {}", f, distance);
-            if (distance + board.width()) < hp as isize && (distance > board.width() / 2) {
+            if (distance + board.width()) < hp as isize && (distance > board.width()) {
                 println!(
                     "not hungry yet (distance to food is {}, hp is {})",
                     distance, hp
@@ -184,7 +184,7 @@ impl Battlesnake for SimpleSnake {
 
         for (direction, die, kill) in wipeout(&board, snakes, &req.you, &req.you.head) {
             let p = req.you.head.neighbour(direction);
-            if board.is_safe(&p) {
+            if board.get(&p).is_safe() {
                 if die {
                     // Just mark the tile of a heads-on collision as a hazard for the time being
                     board.set(&p, Tile::Hazard);
@@ -197,11 +197,13 @@ impl Battlesnake for SimpleSnake {
             }
         }
 
-        if let Some(dir) = search_for_food(&board, &food, &req.you.head, req.you.health) {
-            return Ok(protocol::MoveResponse {
-                direction: dir,
-                shout: "nom nom nom".to_string(),
-            });
+        if let Some(dir) = search_for_food(&board, &food, &req.you.head, req.you.health as usize) {
+            if board.get(&req.you.head.neighbour(dir)).is_safe() {
+                return Ok(protocol::MoveResponse {
+                    direction: dir,
+                    shout: "nom nom nom".to_string(),
+                });
+            }
         }
 
         let (dir, _) = look_ahead(&mut board, &req.you.head, 10);

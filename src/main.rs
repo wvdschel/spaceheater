@@ -10,6 +10,8 @@ mod protocol;
 mod snakes;
 mod util;
 
+const DEFAULT_HOST: &str = "127.0.0.1";
+
 pub trait Battlesnake {
     fn snake_info(&self) -> protocol::SnakeInfo;
     fn start(&self, req: protocol::Request) -> Result<(), String>;
@@ -18,13 +20,17 @@ pub trait Battlesnake {
 }
 
 fn main() {
-    let snakes = HashMap::from([
-                               ("simple".to_string(), Box::new(snakes::SimpleSnake {})),
-                               ("solid".to_string(), Box::new(snakes::SimpleSnake {})),
-    ]);
+    let args: Vec<String> = std::env::args().collect();
+    let host = args.get(1).map_or(DEFAULT_HOST, |v| v.as_str());
+    let address = format!("{}:5110", host);
 
-    println!("starting server on 127.0.0.1:5110");
-    rouille::start_server("127.0.0.1:5110", move |request| {
+    let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
+    snakes.insert("simple".to_string(), Box::new(snakes::SimpleSnake {}));
+    snakes.insert("solid".to_string(), Box::new(snakes::SolidSnake {}));
+    snakes.insert("spaceheater".to_string(), Box::new(snakes::SpaceHeater {}));
+
+    println!("starting server on {}", address);
+    rouille::start_server(address, move |request| {
         let body = util::dump_request(request).unwrap_or_default();
         let resp = router!(request,
             (GET) (/) => {
