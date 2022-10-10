@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt::Display};
+use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,7 @@ pub struct SnakeInfo {
 }
 
 // See https://docs.battlesnake.com/api/objects/game
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Game {
     pub id: String,
     pub ruleset: Ruleset,
@@ -29,14 +29,14 @@ pub struct Game {
     pub source: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Ruleset {
     pub name: String,
     pub version: String,
     pub settings: RulesetSettings,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RulesetSettings {
     pub food_spawn_chance: usize,
@@ -46,13 +46,13 @@ pub struct RulesetSettings {
     pub squad: SquadRules,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RoyaleRules {
     pub shrink_every_n_turns: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SquadRules {
     pub allow_body_collisions: bool,
@@ -94,7 +94,7 @@ pub struct Customizations {
 }
 
 // Request body for game start, game end and move endpoints
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Request {
     pub game: Game,
     pub turn: usize,

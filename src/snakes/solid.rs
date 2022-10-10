@@ -35,7 +35,7 @@ impl Battlesnake for SolidSnake {
         Ok(())
     }
 
-    fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String> {
+    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
         let game: Game = req.into();
 
         //let (tx, rx) = mpsc::channel();

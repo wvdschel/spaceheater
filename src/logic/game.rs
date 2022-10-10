@@ -34,9 +34,9 @@ impl Clone for Game {
     }
 }
 
-impl From<protocol::Request> for Game {
-    fn from(req: protocol::Request) -> Self {
-        let board: Board = req.board.clone().into();
+impl From<&protocol::Request> for Game {
+    fn from(req: &protocol::Request) -> Self {
+        let board: Board = (&req.board).into();
         Game {
             board: Arc::new(board),
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
@@ -44,10 +44,11 @@ impl From<protocol::Request> for Game {
             others: req
                 .board
                 .snakes
-                .into_iter()
+                .iter()
                 .filter(|s| s.name != req.you.name)
+                .map(|s| s.clone())
                 .collect(),
-            rules: Arc::new(req.game.ruleset),
+            rules: Arc::new(req.game.ruleset.clone()),
             dead_snakes: 0,
             turn: req.turn,
         }

@@ -47,19 +47,19 @@ impl BoardLike for Board {
     }
 }
 
-impl From<protocol::Board> for Board {
-    fn from(g: protocol::Board) -> Self {
+impl From<&protocol::Board> for Board {
+    fn from(g: &protocol::Board) -> Self {
         let mut b = Board::new(g.width, g.height);
-        for snake in g.snakes {
-            for point in snake.body {
+        for snake in &g.snakes {
+            for point in &snake.body {
                 b.add(&point, Tile::Snake)
             }
             b.add(&snake.head, Tile::Head);
         }
-        for food in g.food {
+        for food in &g.food {
             b.add(&food, Tile::Food)
         }
-        for hazard in g.hazards {
+        for hazard in &g.hazards {
             b.add(&hazard, Tile::Hazard)
         }
         b

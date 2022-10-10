@@ -1,54 +1,107 @@
 use std::{
-    collections::{HashMap, VecDeque},
-    sync::Arc,
+    collections::VecDeque,
+    sync::{
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+        Arc,
+    },
+    thread,
     time::{Duration, Instant},
 };
 
 use crate::{
-    logic::{self, search, BoardLike, BoardOverlay, Direction, Game, Point, Tile},
+    logic::{Direction, Game},
     protocol::{self, ALL_DIRECTIONS},
     Battlesnake,
 };
 
-const MAX_LATENCY: Duration = Duration::from_millis(60);
+struct Scorecard {
+    up: AtomicUsize,
+    down: AtomicUsize,
+    right: AtomicUsize,
+    left: AtomicUsize,
+}
 
-fn look_ahead(game: &Game, deadline: &Instant, fork: usize) -> [(Direction, usize); 4] {
+unsafe impl Send for Scorecard {}
+
+impl Scorecard {
+    fn new() -> Self {
+        Self {
+            up: AtomicUsize::new(0),
+            down: AtomicUsize::new(0),
+            right: AtomicUsize::new(0),
+            left: AtomicUsize::new(0),
+        }
+    }
+
+    fn get(&self, d: Direction) -> usize {
+        match d {
+            Direction::Up => self.up.load(Ordering::Relaxed),
+            Direction::Down => self.down.load(Ordering::Relaxed),
+            Direction::Left => self.left.load(Ordering::Relaxed),
+            Direction::Right => self.right.load(Ordering::Relaxed),
+        }
+    }
+
+    fn post_score(&self, d: Direction, score: usize) -> bool {
+        score
+            <= match d {
+                Direction::Up => self.up.fetch_max(score, Ordering::Relaxed),
+                Direction::Down => self.down.fetch_max(score, Ordering::Relaxed),
+                Direction::Left => self.left.fetch_max(score, Ordering::Relaxed),
+                Direction::Right => self.right.fetch_max(score, Ordering::Relaxed),
+            }
+    }
+
+    fn top_score(&self) -> (Direction, usize) {
+        let mut top_score = 0;
+        let mut best_dir = Direction::Left;
+        for dir in ALL_DIRECTIONS {
+            let score = self.get(dir);
+            if score >= top_score {
+                top_score = score;
+                best_dir = dir;
+            }
+        }
+        (best_dir, top_score)
+    }
+}
+
+fn look_ahead(game: &Game, deadline: &Instant, fork: usize, scores: &Scorecard) {
     if fork > 0 {
-        fork_lookahead(game, deadline, fork - 1)
+        fork_lookahead(game, deadline, fork - 1, scores)
     } else {
-        simple_lookahead(game, deadline)
+        simple_lookahead(game, deadline, scores)
     }
 }
 
-fn fork_lookahead(game: &Game, deadline: &Instant, fork: usize) -> [(Direction, usize); 4] {
+fn fork_lookahead(game: &Game, deadline: &Instant, _fork: usize, scores: &Scorecard) {
     // TODO fork 'n shit
-    simple_lookahead(game, deadline)
+    simple_lookahead(game, deadline, scores)
 }
 
-fn simple_lookahead(game: &Game, deadline: &Instant) -> [(Direction, usize); 4] {
+fn simple_lookahead(game: &Game, deadline: &Instant, scores: &Scorecard) {
     if &Instant::now() > deadline {
-        return ALL_DIRECTIONS.map(|d| (d, 0));
+        return;
     }
-    let mut scores = HashMap::<Direction, usize>::from([
-        (Direction::Up, 0),
-        (Direction::Down, 0),
-        (Direction::Right, 0),
-        (Direction::Left, 0),
-    ]);
     let start_turn = game.turn;
     let mut queue = VecDeque::new();
     for d in ALL_DIRECTIONS {
         let mut ng = game.clone();
         ng.execute_moves(d, vec![]);
         if ng.you.health > 0 {
-            scores.insert(d, 1);
+            // println!("initial move to {} succeeds!", d);
+            // println!(
+            //     "===== BEFORE =====\n{}\n===== AFTER  =====\n{}\n==================",
+            //     game.board, ng.board
+            // );
+            scores.post_score(d, 1);
             queue.push_back((d, ng));
         }
     }
 
-    println!("======== TURN {} ========", game.turn);
-    println!("hp = {}", game.you.health);
-    println!("{}", game.board);
+    // println!("======== TURN {} ========", game.turn);
+    // println!("hp = {}", game.you.health);
+    // println!("{}", game.board);
 
     while &Instant::now() < deadline {
         if let Some((first_dir, game)) = queue.pop_front() {
@@ -56,18 +109,17 @@ fn simple_lookahead(game: &Game, deadline: &Instant) -> [(Direction, usize); 4] 
                 let mut ng = game.clone();
                 let score = ng.turn - start_turn;
                 ng.execute_moves(dir, vec![]);
-                if score == 1 {
-                    println!("----- BEFORE -----");
-                    println!("hp = {}", game.you.health);
-                    println!("{}", game.board);
+                // if score == 1 {
+                //     println!("----- BEFORE -----");
+                //     println!("hp = {}", game.you.health);
+                //     println!("{}", game.board);
 
-                    println!("----- TURN {}: GO {} -----", ng.turn, dir);
-                    println!("hp = {}", ng.you.health);
-                    println!("{}", ng.board);
-                }
+                //     println!("----- TURN {}: GO {} -----", ng.turn, dir);
+                //     println!("hp = {}", ng.you.health);
+                //     println!("{}", ng.board);
+                // }
                 if ng.you.health > 0 {
-                    // Score is guarantueed to be >= scores[first_dir]
-                    scores.insert(first_dir, score);
+                    scores.post_score(first_dir, score);
                     queue.push_back((first_dir, ng))
                 }
             }
@@ -76,12 +128,20 @@ fn simple_lookahead(game: &Game, deadline: &Instant) -> [(Direction, usize); 4] 
             break;
         }
     }
-
-    ALL_DIRECTIONS.map(|d| (d, *scores.get(&d).unwrap()))
 }
 
-#[derive(Copy, Clone)]
-pub struct SpaceHeater {}
+#[derive(Clone)]
+pub struct SpaceHeater {
+    last_turn_latency_estimate: Arc<AtomicU64>,
+}
+
+impl SpaceHeater {
+    pub fn new() -> Self {
+        Self {
+            last_turn_latency_estimate: Arc::new(AtomicU64::new(55)),
+        }
+    }
+}
 
 impl Battlesnake for SpaceHeater {
     fn snake_info(&self) -> protocol::SnakeInfo {
@@ -89,7 +149,7 @@ impl Battlesnake for SpaceHeater {
             apiversion: "1".to_string(),
             author: "General Error".to_string(),
             color: "#4A0E3D".to_string(),
-            head: "allseeing".to_string(),
+            head: "all-seeing".to_string(),
             tail: "freckled".to_string(),
             version: "106b".to_string(),
         }
@@ -103,33 +163,50 @@ impl Battlesnake for SpaceHeater {
         Ok(())
     }
 
-    fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String> {
-        let game: logic::Game = req.into();
-        let deadline = Instant::now() + game.timeout - MAX_LATENCY;
-        println!(
-            "request received at {:?}, max duration {}, max latency {}, deadline set at {:?}",
-            Instant::now(),
-            game.timeout.as_millis(),
-            MAX_LATENCY.as_millis(),
-            deadline
-        );
-        let res = look_ahead(&game, &deadline, 1 + num_cpus::get() / 4);
+    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
+        let last_turn_duration_ms = req.you.latency.parse::<u64>().unwrap_or(0);
+        let latency_ms: u64;
+        let turn_time_ms = req.game.timeout as u64;
+        if last_turn_duration_ms != 0 {
+            let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
+            let last_turn_compute_time_ms = turn_time_ms - prev_latency_ms;
+            let last_turn_actual_latency = last_turn_duration_ms - last_turn_compute_time_ms;
+            latency_ms = last_turn_actual_latency * 12 / 10 + 1;
+            println!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
+                last_turn_duration_ms, turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
+            self.last_turn_latency_estimate
+                .store(latency_ms, Ordering::Release);
+        } else {
+            latency_ms = self.last_turn_latency_estimate.load(Ordering::Relaxed);
+        }
+        let latency = Duration::from_millis(latency_ms);
+        let start_time = Instant::now();
+        let deadline = start_time + Duration::from_millis(turn_time_ms) - latency;
 
-        let (best_dir, max_turns) = res.into_iter().fold((Direction::Down, 0), |acc, entry| {
-            if acc.1 > entry.1 {
-                acc
-            } else {
-                entry
-            }
+        println!(
+            "request received at {:?}, max duration {}, latency {}, deadline set at {:?}",
+            start_time, turn_time_ms, latency_ms, deadline
+        );
+        let scores = Arc::new(Scorecard::new());
+
+        let req = (*req).clone();
+        let scores_clone = scores.clone();
+        thread::spawn(move || {
+            let game = (&req).into();
+            look_ahead(&game, &deadline, 1 + num_cpus::get() / 4, &scores_clone);
         });
 
-        println!("deadline: {:?}, now: {:?}", deadline, Instant::now());
+        let sleep_time = deadline - start_time;
+        println!("Sleeping for {}ms", sleep_time.as_millis());
+        thread::sleep(sleep_time);
 
+        let (best_dir, max_turns) = scores.top_score();
         println!(
             "I think I can survive for at least {} turns when moving {}",
             max_turns, best_dir
         );
 
+        println!("deadline: {:?}, now: {:?}", deadline, Instant::now());
         Ok(protocol::MoveResponse {
             direction: best_dir,
             shout: "".to_string(),

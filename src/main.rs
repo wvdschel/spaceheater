@@ -16,7 +16,7 @@ pub trait Battlesnake {
     fn snake_info(&self) -> protocol::SnakeInfo;
     fn start(&self, req: protocol::Request) -> Result<(), String>;
     fn end(&self, req: protocol::Request) -> Result<(), String>;
-    fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String>;
+    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String>;
 }
 
 fn main() {
@@ -27,7 +27,10 @@ fn main() {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
     snakes.insert("simple".to_string(), Box::new(snakes::SimpleSnake {}));
     snakes.insert("solid".to_string(), Box::new(snakes::SolidSnake {}));
-    snakes.insert("spaceheater".to_string(), Box::new(snakes::SpaceHeater {}));
+    snakes.insert(
+        "spaceheater".to_string(),
+        Box::new(snakes::SpaceHeater::new()),
+    );
 
     println!("starting server on {}", address);
     rouille::start_server(address, move |request| {
@@ -105,7 +108,7 @@ fn main() {
                     Some(snake) => {
                         match serde_json::from_slice(&body) {
                             Ok(request_body) => {
-                                match snake.make_move(request_body) {
+                                match snake.make_move(&request_body) {
                                     Ok(response) => rouille::Response::json(&response),
                                     Err(msg) => rouille::Response::text(msg).with_status_code(500),
                                 }

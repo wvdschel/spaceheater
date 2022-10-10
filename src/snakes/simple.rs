@@ -175,10 +175,10 @@ impl Battlesnake for SimpleSnake {
         Ok(())
     }
 
-    fn make_move(&self, req: protocol::Request) -> Result<protocol::MoveResponse, String> {
+    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
         let food = Vec::from(req.board.food.as_slice());
         let snakes = req.board.snakes.clone();
-        let mut board: logic::Board = req.board.into();
+        let mut board: logic::Board = (&req.board).into();
         println!("at {} -> {:?}", req.you.head, board.get(&req.you.head));
         println!("{}", &board as &dyn BoardLike);
 
