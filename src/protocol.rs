@@ -103,7 +103,7 @@ pub struct Request {
 }
 
 // Response body for move endpoint
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MoveResponse {
     #[serde(rename = "move")]
     pub direction: Direction,
