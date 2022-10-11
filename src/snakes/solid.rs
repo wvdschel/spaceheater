@@ -1,7 +1,6 @@
 use crate::logic::{Direction, Game};
 use crate::protocol::ALL_DIRECTIONS;
 use crate::{protocol, Battlesnake};
-use std::sync::{mpsc, Arc};
 
 #[derive(Copy, Clone)]
 pub struct SolidSnake {}
@@ -27,11 +26,11 @@ impl Battlesnake for SolidSnake {
         }
     }
 
-    fn start(&self, _: protocol::Request) -> Result<(), String> {
+    fn start(&self, _: &protocol::Request) -> Result<(), String> {
         Ok(())
     }
 
-    fn end(&self, _: protocol::Request) -> Result<(), String> {
+    fn end(&self, _: &protocol::Request) -> Result<(), String> {
         Ok(())
     }
 

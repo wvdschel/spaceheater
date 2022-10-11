@@ -183,11 +183,11 @@ impl Battlesnake for SpaceHeater {
         }
     }
 
-    fn start(&self, _: protocol::Request) -> Result<(), String> {
+    fn start(&self, _: &protocol::Request) -> Result<(), String> {
         Ok(())
     }
 
-    fn end(&self, _: protocol::Request) -> Result<(), String> {
+    fn end(&self, _: &protocol::Request) -> Result<(), String> {
         Ok(())
     }
 

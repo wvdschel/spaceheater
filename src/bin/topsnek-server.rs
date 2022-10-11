@@ -3,38 +3,18 @@ extern crate rouille;
 extern crate html_escape;
 extern crate urlencoding;
 
-use std::{collections::HashMap, sync::Mutex};
+use std::sync::Mutex;
 
-use crate::gamelogger::GameLogger;
-
-mod gamelogger;
-mod logic;
-mod protocol;
-mod snakes;
-mod util;
+use topsnek::*;
 
 const DEFAULT_HOST: &str = "127.0.0.1";
-
-pub trait Battlesnake {
-    fn snake_info(&self) -> protocol::SnakeInfo;
-    fn start(&self, req: protocol::Request) -> Result<(), String>;
-    fn end(&self, req: protocol::Request) -> Result<(), String>;
-    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String>;
-}
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let host = args.get(1).map_or(DEFAULT_HOST, |v| v.as_str());
     let address = format!("{}:5110", host);
-    let gamelogger = Mutex::new(GameLogger::new());
-
-    let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
-    snakes.insert("simple".to_string(), Box::new(snakes::SimpleSnake {}));
-    snakes.insert("solid".to_string(), Box::new(snakes::SolidSnake {}));
-    snakes.insert(
-        "spaceheater".to_string(),
-        Box::new(snakes::SpaceHeater::new()),
-    );
+    let gamelogger = Mutex::new(gamelogger::GameLogger::new());
+    let snakes = snakes::snakes();
 
     println!("starting server on {}", address);
     rouille::start_server(address, move |request| {
@@ -74,7 +54,7 @@ fn main() {
                                     let mut gamelogger = gamelogger.lock().unwrap();
                                     gamelogger.new_game(&request_body);
                                 }
-                                match snake.start(request_body) {
+                                match snake.start(&request_body) {
                                     Ok(_) => rouille::Response::text(""),
                                     Err(msg) => rouille::Response::text(msg).with_status_code(500),
                                 }
@@ -99,7 +79,7 @@ fn main() {
                                     let mut gamelogger = gamelogger.lock().unwrap();
                                     gamelogger.end_game(&request_body);
                                 }
-                                match snake.end(request_body) {
+                                match snake.end(&request_body) {
                                     Ok(_) => rouille::Response::text(""),
                                     Err(msg) => rouille::Response::text(msg).with_status_code(500),
                                 }
