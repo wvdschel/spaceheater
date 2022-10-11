@@ -141,6 +141,34 @@ impl SpaceHeater {
             last_turn_latency_estimate: Arc::new(AtomicU64::new(55)),
         }
     }
+
+    fn calculate_latency(&self, last_turn_time_ms: u64, max_turn_time_ms: u64) -> Duration {
+        let mut latency_ms: u64;
+        if last_turn_time_ms != 0 {
+            let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
+            let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
+            let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
+
+            // 120% + 1 seems like a sensible margin for ping fluctuations
+            latency_ms = last_turn_actual_latency * 12 / 10 + 1;
+            println!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
+                last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
+
+            if latency_ms > max_turn_time_ms {
+                latency_ms = max_turn_time_ms * 10 / 20;
+                println!(
+                    "estimated latency exceeds turn time - limiting to {}ms",
+                    latency_ms
+                );
+            }
+
+            self.last_turn_latency_estimate
+                .store(latency_ms, Ordering::Release);
+        } else {
+            latency_ms = self.last_turn_latency_estimate.load(Ordering::Relaxed);
+        }
+        Duration::from_millis(latency_ms)
+    }
 }
 
 impl Battlesnake for SpaceHeater {
@@ -165,27 +193,14 @@ impl Battlesnake for SpaceHeater {
 
     fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
         let last_turn_duration_ms = req.you.latency.parse::<u64>().unwrap_or(0);
-        let latency_ms: u64;
-        let turn_time_ms = req.game.timeout as u64;
-        if last_turn_duration_ms != 0 {
-            let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
-            let last_turn_compute_time_ms = turn_time_ms - prev_latency_ms;
-            let last_turn_actual_latency = last_turn_duration_ms - last_turn_compute_time_ms;
-            latency_ms = last_turn_actual_latency * 12 / 10 + 1;
-            println!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
-                last_turn_duration_ms, turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
-            self.last_turn_latency_estimate
-                .store(latency_ms, Ordering::Release);
-        } else {
-            latency_ms = self.last_turn_latency_estimate.load(Ordering::Relaxed);
-        }
-        let latency = Duration::from_millis(latency_ms);
+        let max_turn_time_ms = req.game.timeout as u64;
+        let latency = self.calculate_latency(last_turn_duration_ms, max_turn_time_ms);
         let start_time = Instant::now();
-        let deadline = start_time + Duration::from_millis(turn_time_ms) - latency;
+        let deadline = start_time + Duration::from_millis(max_turn_time_ms) - latency;
 
         println!(
-            "request received at {:?}, max duration {}, latency {}, deadline set at {:?}",
-            start_time, turn_time_ms, latency_ms, deadline
+            "request received at {:?}, latency {:?}, deadline set at {:?}",
+            start_time, latency, deadline
         );
         let scores = Arc::new(Scorecard::new());
 
