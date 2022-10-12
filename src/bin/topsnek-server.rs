@@ -5,7 +5,7 @@ extern crate urlencoding;
 
 use std::sync::Mutex;
 
-use topsnek::*;
+use topsnek::{util::gamelogger, *};
 
 const DEFAULT_HOST: &str = "127.0.0.1";
 

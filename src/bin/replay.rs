@@ -1,13 +1,19 @@
 use std::io::stdin;
 
-use topsnek::*;
+use topsnek::{util::gamelogger, *};
 
 fn main() {
     let snakes = snakes::snakes();
     let mut args = std::env::args();
 
-    _ = args.next(); // discard program name
-    let snake_name = args.next().unwrap();
+    let cmd_name = args.next().unwrap_or("replay".into());
+    let snake_name = match args.next() {
+        Some(v) => v,
+        None => {
+            println!("usage: {} <snakename>", cmd_name);
+            std::process::exit(1);
+        }
+    };
 
     if !snakes.contains_key(&snake_name) {
         println!("unknown snake {}", snake_name);

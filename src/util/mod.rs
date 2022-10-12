@@ -2,6 +2,11 @@ use std::io::Read;
 
 use rouille::{Request, Response, ResponseBody};
 
+mod scorecard;
+pub use scorecard::Scorecard;
+
+pub mod gamelogger;
+
 pub fn dump_request(request: &Request) -> Option<Vec<u8>> {
     println!("{} {}", request.method(), request.raw_url());
     for (k, v) in request.headers() {

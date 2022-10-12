@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicU64, Ordering},
         Arc,
     },
     thread,
@@ -9,62 +9,11 @@ use std::{
 };
 
 use crate::{
-    logic::{Direction, Game},
+    logic::Game,
     protocol::{self, ALL_DIRECTIONS},
+    util::Scorecard,
     Battlesnake,
 };
-
-struct Scorecard {
-    up: AtomicUsize,
-    down: AtomicUsize,
-    right: AtomicUsize,
-    left: AtomicUsize,
-}
-
-unsafe impl Send for Scorecard {}
-
-impl Scorecard {
-    fn new() -> Self {
-        Self {
-            up: AtomicUsize::new(0),
-            down: AtomicUsize::new(0),
-            right: AtomicUsize::new(0),
-            left: AtomicUsize::new(0),
-        }
-    }
-
-    fn get(&self, d: Direction) -> usize {
-        match d {
-            Direction::Up => self.up.load(Ordering::Relaxed),
-            Direction::Down => self.down.load(Ordering::Relaxed),
-            Direction::Left => self.left.load(Ordering::Relaxed),
-            Direction::Right => self.right.load(Ordering::Relaxed),
-        }
-    }
-
-    fn post_score(&self, d: Direction, score: usize) -> bool {
-        score
-            <= match d {
-                Direction::Up => self.up.fetch_max(score, Ordering::Relaxed),
-                Direction::Down => self.down.fetch_max(score, Ordering::Relaxed),
-                Direction::Left => self.left.fetch_max(score, Ordering::Relaxed),
-                Direction::Right => self.right.fetch_max(score, Ordering::Relaxed),
-            }
-    }
-
-    fn top_score(&self) -> (Direction, usize) {
-        let mut top_score = 0;
-        let mut best_dir = Direction::Left;
-        for dir in ALL_DIRECTIONS {
-            let score = self.get(dir);
-            if score >= top_score {
-                top_score = score;
-                best_dir = dir;
-            }
-        }
-        (best_dir, top_score)
-    }
-}
 
 fn look_ahead(game: &Game, deadline: &Instant, fork: usize, scores: &Scorecard) {
     if fork > 0 {
@@ -143,9 +92,9 @@ impl SpaceHeater {
     }
 
     fn calculate_latency(&self, last_turn_time_ms: u64, max_turn_time_ms: u64) -> Duration {
-        let mut latency_ms: u64;
-        if last_turn_time_ms != 0 {
-            let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
+        let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
+        let mut latency_ms = prev_latency_ms;
+        if last_turn_time_ms > prev_latency_ms {
             let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
             let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
 
@@ -161,12 +110,9 @@ impl SpaceHeater {
                     latency_ms
                 );
             }
-
-            self.last_turn_latency_estimate
-                .store(latency_ms, Ordering::Release);
-        } else {
-            latency_ms = self.last_turn_latency_estimate.load(Ordering::Relaxed);
         }
+        self.last_turn_latency_estimate
+            .store(latency_ms, Ordering::Release);
         Duration::from_millis(latency_ms)
     }
 }

@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::{collections::HashMap, fs::File, sync};
 
 use flate2::bufread::GzDecoder;
-use flate2::write::{GzEncoder, ZlibEncoder};
+use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde::{Deserialize, Serialize};
 
