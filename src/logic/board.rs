@@ -68,11 +68,11 @@ impl From<&protocol::Board> for Board {
 
 pub struct BoardOverlay {
     tiles: Vec<Vec<Option<Tile>>>,
-    below: Arc<dyn BoardLike>,
+    below: Arc<dyn BoardLike + Send + Sync>,
 }
 
 impl BoardOverlay {
-    pub fn new(below: Arc<dyn BoardLike>) -> BoardOverlay {
+    pub fn new(below: Arc<dyn BoardLike + Send + Sync>) -> BoardOverlay {
         if below.layers() as isize > below.width() / 2 {
             return Self::new(Arc::new(below.flatten()));
         }

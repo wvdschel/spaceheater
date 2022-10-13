@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use super::{board::BoardOverlay, Board, BoardLike, Direction, Snake};
+use super::{board::BoardOverlay, Board, BoardLike, Direction, Point, Snake};
 use crate::protocol;
 
 pub struct Game {
-    pub board: Arc<dyn BoardLike>,
+    pub board: Arc<dyn BoardLike + Send + Sync>,
     pub others: Vec<Snake>,
     pub dead_snakes: usize,
     pub you: Snake,
@@ -91,6 +91,14 @@ impl Game {
             }
         }
         false
+    }
+
+    pub fn warp(&self, p: &Point) -> Point {
+        if self.rules.warped_mode() {
+            p.warp(self.board.width(), self.board.height())
+        } else {
+            p.clone()
+        }
     }
 
     // Current implementation does not take into account:
