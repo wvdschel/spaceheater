@@ -1,4 +1,4 @@
-use std::io::stdin;
+use std::{io::stdin, thread, time::Duration};
 
 use topsnek::{util::gamelogger, *};
 
@@ -29,4 +29,7 @@ fn main() {
             std::process::exit(1);
         }
     }
+
+    println!("sleeping 1s to let worker threads finish logging :)");
+    thread::sleep(Duration::from_millis(1000));
 }

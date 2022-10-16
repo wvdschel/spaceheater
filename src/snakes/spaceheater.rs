@@ -8,47 +8,22 @@ use std::{
     time::{Duration, Instant},
 };
 
-use protocol::{Direction, Point};
-
 use crate::{
+    log,
     logic::{Game, Tile},
-    protocol::{self, ALL_DIRECTIONS},
-    util::Scorecard,
+    protocol::{self, Direction, Point, ALL_DIRECTIONS},
+    util::{thread_count, Scorecard, WorkQueue},
     Battlesnake,
 };
 
-#[allow(unused)]
-fn lookahead(game: &Game, deadline: &Instant, scores: &Scorecard) {
-    if &Instant::now() > deadline {
-        return;
-    }
-    let start_turn = game.turn;
-    let mut queue = VecDeque::new();
-    for d in ALL_DIRECTIONS {
-        let mut ng = game.clone();
-        ng.execute_moves(d, vec![]);
-        if ng.you.health > 0 {
-            scores.post_score(d, 1);
-            queue.push_back((d, ng));
-        }
-    }
+struct WorkItem {
+    path_so_far: Vec<Direction>,
+    game: Game,
+}
 
-    while &Instant::now() < deadline {
-        if let Some((first_dir, game)) = queue.pop_front() {
-            for dir in ALL_DIRECTIONS {
-                let mut ng = game.clone();
-                let score = ng.turn - start_turn;
-                ng.execute_moves(dir, vec![]);
-                if ng.you.health > 0 {
-                    scores.post_score(first_dir, score);
-                    queue.push_back((first_dir, ng))
-                }
-            }
-        } else {
-            println!("reached end of game tree");
-            break;
-        }
-    }
+struct GameSolver {
+    work_queues: HashMap<usize, WorkQueue<WorkItem>>,
+    scores: Mutex<HashMap<Vec<Direction>, usize>>,
 }
 
 fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
@@ -63,11 +38,7 @@ fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
 }
 
 #[allow(unused)]
-fn evaluate_game_crowded(
-    initial_direction: Direction,
-    gamelogger: &Game,
-    scores: &Scorecard,
-) -> Vec<Game> {
+fn evaluate_game_crowded() -> Vec<Game> {
     // TODO: if there are too many snakes on the board, instead of simulating the other snakes truthfully,
     // simply:
     // - Remove their tails
@@ -78,13 +49,13 @@ fn evaluate_game_crowded(
     vec![]
 }
 
-fn run_games(game: &Game, deadline: &Instant, scores: Arc<Scorecard>) {
+fn run_games(game: &Game, deadline: &Instant, solver: Arc<GameSolver>) {
     let work_count = Arc::new(AtomicUsize::new(0));
     let queue = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let mut sync_queue = queue.lock().unwrap();
-        let first_games = evaluate_game(None, game, &scores);
+        let first_games = evaluate_game(vec![], game, &scores);
         work_count.store(first_games.len(), Ordering::Relaxed);
         for dir_and_game in first_games {
             sync_queue.push_back(dir_and_game);
@@ -92,7 +63,7 @@ fn run_games(game: &Game, deadline: &Instant, scores: Arc<Scorecard>) {
     }
 
     let mut threads = vec![];
-    for _ in 0..num_cpus::get() {
+    for _ in 0..thread_count() {
         let scores = Arc::clone(&scores);
         let queue = Arc::clone(&queue);
         let work_count = Arc::clone(&work_count);
@@ -109,7 +80,7 @@ fn run_games(game: &Game, deadline: &Instant, scores: Arc<Scorecard>) {
                 };
 
                 if let Some((initial_dir, game)) = work {
-                    let next_games = evaluate_game(Some(initial_dir), &game, &scores);
+                    let next_games = evaluate_game(vec![initial_dir], &game, &scores);
                     let next_games_count = next_games.len();
                     {
                         let mut sync_queue = queue.lock().unwrap();
@@ -132,7 +103,7 @@ fn run_games(game: &Game, deadline: &Instant, scores: Arc<Scorecard>) {
                 } else {
                     // No work received, check if work count is still positive
                     if work_count.load(Ordering::Relaxed) == 0 {
-                        println!("out of work");
+                        log!("out of work");
                         break;
                     }
                     println!("no work received, repolling queue in 2ms");
@@ -148,21 +119,29 @@ fn run_games(game: &Game, deadline: &Instant, scores: Arc<Scorecard>) {
 }
 
 fn score_game(game: &Game) -> usize {
-    let turns_alive = if game.you.health > 0 {
-        game.turn
+    let (turns_alive, kills) = if game.you.health > 0 {
+        (game.turn, game.dead_snakes)
     } else {
-        game.turn - 1
+        (game.turn - 1, game.dead_snakes - 1)
     };
 
-    turns_alive * 100 + game.dead_snakes
+    turns_alive * 100 + kills
 }
 
 fn evaluate_game(
-    initial_direction: Option<Direction>,
+    prev_moves: Vec<Direction>,
     game: &Game,
     scores: &Scorecard,
 ) -> Vec<(Direction, Game)> {
     let mut moves = HashMap::<Direction, Vec<Vec<Direction>>>::new();
+
+    if game.you.health <= 0 {
+        log!(
+            "warning: asked to evaluate game in which our snake is dead:\n{}",
+            game,
+        );
+        return vec![];
+    }
 
     let mut other_moves: Vec<Vec<Direction>> = vec![vec![]];
     for snake in &game.others {
@@ -200,34 +179,58 @@ fn evaluate_game(
         moves.insert(my_dir, other_moves.clone());
     }
 
-    // println!(
-    //     "got {} games to evaluate for turn {}",
-    //     moves
-    //         .iter()
-    //         .map(|(_, moves)| { moves.len() })
-    //         .reduce(|sum, move_count| { move_count + sum })
-    //         .unwrap_or_default(),
-    //     game.turn
-    // );
+    log!(
+        "got {} games to evaluate for turn {}",
+        moves
+            .iter()
+            .map(|(_, moves)| { moves.len() })
+            .reduce(|sum, move_count| { move_count + sum })
+            .unwrap_or_default(),
+        game.turn,
+    );
 
     let mut successor_games = vec![];
 
     for (my_dir, other_moves) in moves {
         let mut min_score = usize::MAX;
+        let mut full_path = prev_moves.clone();
+        full_path.push(my_dir);
+        let full_path = full_path;
         for other_moves in other_moves {
-            let mut game = game.clone();
-            game.execute_moves(my_dir, other_moves);
-            let score = score_game(&game);
+            let mut ngame = game.clone();
+            ngame.execute_moves(my_dir, &other_moves);
+            let score = score_game(&ngame);
             if score < min_score {
                 min_score = score;
+
+                log!(
+                    ">>> New min score for {:?}: Turn {} - {} {:?} - {}",
+                    full_path,
+                    game.turn,
+                    my_dir,
+                    &other_moves,
+                    score,
+                );
+                log!("BEFORE moving {}: {}", my_dir, game);
+                log!("AFTER  moving {}: {}", my_dir, ngame);
             }
-            successor_games.push((my_dir, game));
+            if ngame.you.health > 0 {
+                successor_games.push((my_dir, ngame));
+            }
         }
         // min_score is now the best score we can get if all other snakes try
         // to minimize our score this turn when moving into my_dir.
         // So post the score to the scoreboard and if it beats our previous best
         // it will become the new top score for this direction
-        scores.post_score(initial_direction.unwrap_or(my_dir), min_score);
+        if scores.post_score(full_path, min_score) != min_score {
+            log!(
+                ">>>> Direction {}: new min score for turn {}: {} ({:?})",
+                full_path.first().unwrap(),
+                game.turn,
+                min_score,
+                full_path,
+            );
+        }
     }
 
     successor_games
@@ -254,12 +257,12 @@ impl SpaceHeater {
 
             // 120% + 1 seems like a sensible margin for ping fluctuations
             latency_ms = last_turn_actual_latency * 12 / 10 + 1;
-            println!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
+            log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
                 last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
 
             if latency_ms > max_turn_time_ms {
                 latency_ms = max_turn_time_ms * 10 / 20;
-                println!(
+                log!(
                     "estimated latency exceeds turn time - limiting to {}ms",
                     latency_ms
                 );
@@ -300,7 +303,7 @@ impl Battlesnake for SpaceHeater {
         let scores = Arc::new(Scorecard::new());
 
         println!(
-            "request received at {:?}, latency {:?}, deadline set at {:?}",
+            "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
             start_time, latency, deadline
         );
 
@@ -309,8 +312,6 @@ impl Battlesnake for SpaceHeater {
             let scores_clone = scores.clone();
             thread::spawn(move || {
                 let game = (&req).into();
-                //lookahead(&game, &deadline, &scores_clone);
-                //evaluate_game(None, &game, &scores_clone);
                 run_games(&game, &deadline, scores_clone);
             });
         }
@@ -323,8 +324,9 @@ impl Battlesnake for SpaceHeater {
         let max_turns = top_score / 100 - req.turn;
         let max_kills = top_score % 100;
         println!(
-            "I think I can survive for at least {} turns (with {} dead snakes) when moving {}",
-            max_turns, max_kills, best_dir
+            "----- Turn {}: I think I can survive for at least {} turns (with {} dead snakes) when moving {} -----\n{}\n{}",
+            req.turn, max_turns, max_kills, best_dir, Game::from(req),
+            std::iter::repeat("-").take(100).collect::<String>(),
         );
 
         println!("deadline: {:?}, now: {:?}", deadline, Instant::now());

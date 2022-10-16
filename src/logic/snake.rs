@@ -69,3 +69,15 @@ impl Snake {
         }
     }
 }
+
+impl std::fmt::Display for Snake {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{:16} {} (hp={}, len={})",
+            self.name,
+            std::iter::repeat("o").take(self.length).collect::<String>(),
+            self.health,
+            self.length
+        ))
+    }
+}

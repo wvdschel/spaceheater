@@ -5,7 +5,34 @@ use rouille::{Request, Response, ResponseBody};
 mod scorecard;
 pub use scorecard::Scorecard;
 
+mod workqueue;
+pub use workqueue::WorkQueue;
+
 pub mod gamelogger;
+
+#[macro_export]
+#[cfg(feature = "logging")]
+macro_rules! log {
+    ( $( $x:tt )* ) => {
+        println!($( $x )*)
+    }
+}
+
+#[macro_export]
+#[cfg(not(feature = "logging"))]
+macro_rules! log {
+    ( $( $x:tt )* ) => {};
+}
+
+#[cfg(feature = "parallel")]
+pub fn thread_count() -> usize {
+    num_cpus::get()
+}
+
+#[cfg(not(feature = "parallel"))]
+pub fn thread_count() -> usize {
+    1
+}
 
 pub fn dump_request(request: &Request) -> Option<Vec<u8>> {
     println!("{} {}", request.method(), request.raw_url());
