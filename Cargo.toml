@@ -15,6 +15,12 @@ name = "replay"
 [profile.release]
 debug = 1
 
+[features]
+# Defines a feature named `webp` that does not enable any other features.
+default = ["parallel"]
+logging = []
+parallel = []
+
 [dependencies]
 rouille = "3.5"
 serde = { version = "1.0", features = ["derive"] }

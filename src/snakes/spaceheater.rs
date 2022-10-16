@@ -1,8 +1,8 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     sync::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     thread,
     time::{Duration, Instant},
@@ -22,8 +22,60 @@ struct WorkItem {
 }
 
 struct GameSolver {
-    work_queues: HashMap<usize, WorkQueue<WorkItem>>,
-    scores: Mutex<HashMap<Vec<Direction>, usize>>,
+    work_queue: Arc<WorkQueue<WorkItem>>,
+    scores: Arc<Scorecard<usize>>,
+    current_depth: Arc<AtomicUsize>,
+}
+
+impl GameSolver {
+    fn new() -> Self {
+        Self {
+            work_queue: Arc::new(WorkQueue::new()),
+            scores: Arc::new(Scorecard::new()),
+            current_depth: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, usize) {
+        let first_games = evaluate_game(vec![], game, &self.scores);
+        for work in first_games {
+            self.work_queue.push(work);
+        }
+        for _ in 0..thread_count() {
+            let scores = Arc::clone(&self.scores);
+            let queue = Arc::clone(&self.work_queue);
+            let deadline = deadline.clone();
+            let current_depth = Arc::clone(&self.current_depth);
+            thread::spawn(move || loop {
+                if Instant::now() > deadline {
+                    break;
+                }
+
+                if let Some(work) = queue.pop() {
+                    let depth_finished = work.path_so_far.len() - 1;
+                    if depth_finished != current_depth.fetch_max(depth_finished, Ordering::Relaxed)
+                    {
+                        scores.max_step(depth_finished)
+                    }
+
+                    let next_games = evaluate_game(work.path_so_far, &work.game, &scores);
+                    for more_work in next_games {
+                        queue.push(more_work);
+                    }
+                    queue.done();
+                } else {
+                    log!("out of work");
+                    break;
+                }
+            });
+        }
+
+        let sleep_time = *deadline - Instant::now();
+        println!("Sleeping for {}ms", sleep_time.as_millis());
+        thread::sleep(sleep_time);
+
+        return self.scores.top_score();
+    }
 }
 
 fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
@@ -49,75 +101,6 @@ fn evaluate_game_crowded() -> Vec<Game> {
     vec![]
 }
 
-fn run_games(game: &Game, deadline: &Instant, solver: Arc<GameSolver>) {
-    let work_count = Arc::new(AtomicUsize::new(0));
-    let queue = Arc::new(Mutex::new(VecDeque::new()));
-
-    {
-        let mut sync_queue = queue.lock().unwrap();
-        let first_games = evaluate_game(vec![], game, &scores);
-        work_count.store(first_games.len(), Ordering::Relaxed);
-        for dir_and_game in first_games {
-            sync_queue.push_back(dir_and_game);
-        }
-    }
-
-    let mut threads = vec![];
-    for _ in 0..thread_count() {
-        let scores = Arc::clone(&scores);
-        let queue = Arc::clone(&queue);
-        let work_count = Arc::clone(&work_count);
-        let deadline = deadline.clone();
-        threads.push(thread::spawn(move || {
-            loop {
-                if Instant::now() > deadline {
-                    break;
-                }
-
-                let work = {
-                    let mut sync_queue = queue.lock().unwrap();
-                    sync_queue.pop_front()
-                };
-
-                if let Some((initial_dir, game)) = work {
-                    let next_games = evaluate_game(vec![initial_dir], &game, &scores);
-                    let next_games_count = next_games.len();
-                    {
-                        let mut sync_queue = queue.lock().unwrap();
-                        for dir_and_game in next_games {
-                            sync_queue.push_back(dir_and_game);
-                        }
-                    }
-                    loop {
-                        let old_count = work_count.load(Ordering::Relaxed);
-                        let new_count = old_count + next_games_count - 1;
-                        if let Ok(_) = work_count.compare_exchange(
-                            old_count,
-                            new_count,
-                            Ordering::Relaxed,
-                            Ordering::Relaxed,
-                        ) {
-                            break;
-                        }
-                    }
-                } else {
-                    // No work received, check if work count is still positive
-                    if work_count.load(Ordering::Relaxed) == 0 {
-                        log!("out of work");
-                        break;
-                    }
-                    println!("no work received, repolling queue in 2ms");
-                    thread::sleep(Duration::from_millis(2));
-                }
-            }
-        }))
-    }
-
-    for t in threads {
-        t.join().unwrap();
-    }
-}
-
 fn score_game(game: &Game) -> usize {
     let (turns_alive, kills) = if game.you.health > 0 {
         (game.turn, game.dead_snakes)
@@ -131,8 +114,8 @@ fn score_game(game: &Game) -> usize {
 fn evaluate_game(
     prev_moves: Vec<Direction>,
     game: &Game,
-    scores: &Scorecard,
-) -> Vec<(Direction, Game)> {
+    scores: &Scorecard<usize>,
+) -> Vec<WorkItem> {
     let mut moves = HashMap::<Direction, Vec<Vec<Direction>>>::new();
 
     if game.you.health <= 0 {
@@ -215,7 +198,10 @@ fn evaluate_game(
                 log!("AFTER  moving {}: {}", my_dir, ngame);
             }
             if ngame.you.health > 0 {
-                successor_games.push((my_dir, ngame));
+                successor_games.push(WorkItem {
+                    path_so_far: full_path.clone(),
+                    game: ngame,
+                });
             }
         }
         // min_score is now the best score we can get if all other snakes try
@@ -300,27 +286,14 @@ impl Battlesnake for SpaceHeater {
         let latency = self.calculate_latency(last_turn_duration_ms, max_turn_time_ms);
         let start_time = Instant::now();
         let deadline = start_time + Duration::from_millis(max_turn_time_ms) - latency;
-        let scores = Arc::new(Scorecard::new());
 
         println!(
             "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
             start_time, latency, deadline
         );
 
-        {
-            let req = (*req).clone();
-            let scores_clone = scores.clone();
-            thread::spawn(move || {
-                let game = (&req).into();
-                run_games(&game, &deadline, scores_clone);
-            });
-        }
+        let (best_dir, top_score) = GameSolver::new().solve(&req.into(), &deadline);
 
-        let sleep_time = deadline - Instant::now();
-        println!("Sleeping for {}ms", sleep_time.as_millis());
-        thread::sleep(sleep_time);
-
-        let (best_dir, top_score) = scores.top_score();
         let max_turns = top_score / 100 - req.turn;
         let max_kills = top_score % 100;
         println!(

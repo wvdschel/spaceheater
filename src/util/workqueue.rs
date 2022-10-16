@@ -30,20 +30,20 @@ impl<T: Sized> WorkQueue<T> {
         }
     }
 
-    pub fn done(&mut self) {
+    pub fn done(&self) {
         let mut worklist = self.work.lock().unwrap();
         worklist.work_count -= 1;
         self.cvar.notify_all();
     }
 
-    pub fn push(&mut self, work: T) {
+    pub fn push(&self, work: T) {
         let mut worklist = self.work.lock().unwrap();
         worklist.work_count += 1;
         worklist.work_items.push_back(work);
         self.cvar.notify_one();
     }
 
-    pub fn pop(&mut self) -> Option<T> {
+    pub fn pop(&self) -> Option<T> {
         let mut worklist = self.work.lock().unwrap();
         loop {
             if let Some(work) = worklist.work_items.pop_front() {
