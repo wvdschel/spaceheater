@@ -1,3 +1,4 @@
 /target
 .compile_commands.log
 logs/
+tests.log
