@@ -47,13 +47,39 @@ impl Game {
         Ok(game)
     }
 
-    pub fn replay(&self, snake: &dyn Battlesnake) {
-        _ = snake.start(&self.start_request);
-        for (r, _) in &self.moves {
-            _ = snake.make_move(r);
+    pub fn replay(
+        &self,
+        snake: &dyn Battlesnake,
+        start_turn: Option<usize>,
+        end_turn: Option<usize>,
+        time_per_turn: Option<usize>,
+    ) {
+        let mut start_req = self.start_request.clone();
+        if let Some(millis) = time_per_turn {
+            start_req.game.timeout = millis as isize;
+        }
+        _ = snake.start(&start_req);
+        let mut start = 0;
+        let mut end = self.moves.len();
+        if let Some(s) = start_turn {
+            start = s;
+        }
+        if let Some(e) = end_turn {
+            end = e + 1;
+        }
+        for (r, _) in &self.moves[start..end] {
+            let mut req = r.clone();
+            if let Some(millis) = time_per_turn {
+                req.game.timeout = millis as isize;
+            }
+            _ = snake.make_move(&req);
         }
         if let Some(end_request) = &self.end_request {
-            _ = snake.end(end_request);
+            let mut end_req = end_request.clone();
+            if let Some(millis) = time_per_turn {
+                end_req.game.timeout = millis as isize;
+            }
+            _ = snake.end(&end_req);
         }
     }
 

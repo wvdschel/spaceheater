@@ -125,15 +125,27 @@ pub trait BoardLike {
     }
 
     fn clear_food(&mut self, p: &Point) {
-        self.set(p, self.get(p).clear_food())
+        let old_value = self.get(p);
+        let new_value = old_value.clear_food();
+        if old_value != new_value {
+            self.set(p, new_value);
+        }
     }
 
     fn clear_snake(&mut self, p: &Point) {
-        self.set(p, self.get(p).clear_snake())
+        let old_value = self.get(p);
+        let new_value = old_value.clear_snake();
+        if old_value != new_value {
+            self.set(p, new_value);
+        }
     }
 
     fn add(&mut self, p: &Point, v: Tile) {
-        self.set(p, self.get(p).add(v))
+        let old_value = self.get(p);
+        let new_value = old_value.add(v);
+        if old_value != new_value {
+            self.set(p, new_value);
+        }
     }
 
     fn flatten(&self) -> Board {
@@ -150,21 +162,21 @@ pub trait BoardLike {
 
         res
     }
-}
 
-impl std::fmt::Display for dyn BoardLike {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn to_string(&self) -> String {
+        let mut res = Vec::<u8>::new();
         for y in 0..self.height() {
             for x in 0..self.width() {
                 let p = Point {
                     x,
                     y: self.height() - y - 1,
                 };
-                _ = self.get(&p).fmt(f);
+                let mut tile = Vec::from_iter(format!("{}", self.get(&p)).chars().map(|c| c as u8));
+                res.append(&mut tile);
             }
-            _ = f.write_str("\n");
+            res.push('\n' as u8);
         }
-        Ok(())
+        String::from_utf8(res).unwrap()
     }
 }
 

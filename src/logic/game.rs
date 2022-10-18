@@ -1,7 +1,8 @@
+use std::hash::Hash;
 use std::sync::Arc;
 
 use super::{board::BoardOverlay, Board, BoardLike, Direction, Point, Snake, Tile};
-use crate::protocol;
+use crate::{log, protocol};
 
 pub struct Game {
     pub board: Arc<dyn BoardLike + Send + Sync>,
@@ -11,6 +12,20 @@ pub struct Game {
     pub timeout: std::time::Duration,
     pub rules: Arc<protocol::Ruleset>,
     pub turn: usize,
+}
+
+impl Eq for Game {}
+
+impl PartialEq for Game {
+    fn eq(&self, other: &Self) -> bool {
+        format!("{}", self) == format!("{}", other)
+    }
+}
+
+impl Hash for Game {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write(format!("{}", self).as_bytes());
+    }
 }
 
 pub enum GameMode {
@@ -45,6 +60,7 @@ impl Game {
     // - moving or expanding hazards
     // - spawning food
     pub fn execute_moves(&mut self, you: Direction, others: &Vec<Direction>) {
+        log!("Moves: {} {:?}\n{}", you, others, self.board.to_string());
         let mut new_board = BoardOverlay::new(self.board.clone());
         self.you.apply_move(you, &mut new_board, &self.rules);
         for i in 0..others.len() {
@@ -53,13 +69,13 @@ impl Game {
 
         self.eliminate_dead_snakes(&mut new_board);
 
-        if self.death_by_collission(&self.you) {
+        if self.death_by_collission(&self.you, &new_board) {
             self.you.health = 0;
         }
 
         let mut deaths = Vec::new();
         for snake in self.others.iter() {
-            deaths.push(self.death_by_collission(snake));
+            deaths.push(self.death_by_collission(snake, &new_board));
         }
         for i in 0..deaths.len() {
             if deaths[i] {
@@ -68,12 +84,32 @@ impl Game {
         }
 
         self.eliminate_dead_snakes(&mut new_board);
+        self.draw_heads(&mut new_board);
+        log!("After:\n{}", new_board.to_string());
+
         self.board = Arc::new(new_board);
         self.turn += 1;
     }
 
-    fn death_by_collission(&self, snake: &Snake) -> bool {
-        if self.board.get(&snake.head).is_snake() {
+    fn draw_heads(&self, board: &mut dyn BoardLike) {
+        if self.you.health > 0 {
+            board.add(&self.you.head, Tile::Head);
+        }
+        for snake in &self.others {
+            if snake.health > 0 {
+                board.add(&snake.head, Tile::Head);
+            }
+        }
+    }
+
+    fn death_by_collission(&self, snake: &Snake, board: &dyn BoardLike) -> bool {
+        if board.get(&snake.head) == Tile::Snake {
+            log!(
+                "{} will die colliding with a body at {}:\n{}",
+                snake,
+                snake.head,
+                board.to_string()
+            );
             return true;
         }
 
@@ -83,40 +119,78 @@ impl Game {
             }
 
             if other.head == snake.head {
-                return snake.length <= other.length;
+                if snake.length <= other.length {
+                    log!("{} will die colliding with the head of {}", snake, other);
+                    return true;
+                }
             }
         }
 
         if snake.name != self.you.name && snake.head == self.you.head {
-            return snake.length <= self.you.length;
+            if snake.length <= self.you.length {
+                log!("{} will die colliding with the head of {}", snake, self.you);
+                return true;
+            }
         }
 
         false
     }
 
+    fn repair_crash_sites(&self, points: &Vec<Point>, new_board: &mut dyn BoardLike) {
+        for p in points {
+            if self.you.health > 0 {
+                for b in &self.you.body {
+                    if b == p {
+                        new_board.add(p, Tile::Snake);
+                    }
+                }
+                if &self.you.head == p {
+                    new_board.add(p, Tile::Head);
+                }
+            }
+
+            for snake in &self.others {
+                for b in &snake.body {
+                    if b == p {
+                        new_board.add(p, Tile::Snake);
+                    }
+                }
+                if &snake.head == p {
+                    new_board.add(p, Tile::Head);
+                }
+            }
+        }
+    }
+
     fn eliminate_dead_snakes(&mut self, new_board: &mut dyn BoardLike) {
+        let mut crash_sites = vec![];
         if self.you.dead() {
             self.you.remove_from_board(new_board);
+            crash_sites.push(self.you.head.clone());
             self.dead_snakes += 1;
         }
         self.others.retain(|snake| {
             if snake.dead() {
                 snake.remove_from_board(new_board);
+                crash_sites.push(snake.head.clone());
                 self.dead_snakes += 1;
                 false
             } else {
                 true
             }
         });
+        self.repair_crash_sites(&crash_sites, new_board);
     }
 
     fn snake_number(&self, p: &Point) -> isize {
-        if &self.you.head == p {
-            return 0;
-        }
-        for b in &self.you.body {
-            if b == p {
+        if self.you.health > 0 {
+            if &self.you.head == p {
                 return 0;
+            }
+            for b in &self.you.body {
+                if b == p {
+                    return 0;
+                }
             }
         }
 

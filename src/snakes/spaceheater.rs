@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    hash::Hash,
     sync::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc,
@@ -16,13 +17,31 @@ use crate::{
     Battlesnake,
 };
 
+#[cfg(feature = "logging")]
+macro_rules! move_label {
+    ($($arg:tt)*) => {{
+        let res = format!($($arg)*);
+        res
+    }}
+}
+
+#[macro_export]
+#[cfg(not(feature = "logging"))]
+macro_rules! move_label {
+    ( $( $x:tt )* ) => {
+        String::new()
+    };
+}
+
+#[derive(Hash, Eq, PartialEq)]
 struct WorkItem {
     path_so_far: Vec<Direction>,
     game: Game,
+    label: String,
 }
 
 struct GameSolver {
-    work_queue: Arc<WorkQueue<WorkItem>>,
+    work_queue: Arc<WorkQueue<WorkItem, usize>>,
     scores: Arc<Scorecard<usize>>,
     current_depth: Arc<AtomicUsize>,
 }
@@ -37,9 +56,11 @@ impl GameSolver {
     }
 
     fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, usize) {
-        let first_games = evaluate_game(vec![], game, &self.scores);
+        let base_label = move_label!("{}", game);
+        let first_games = evaluate_game(vec![], game, &self.scores, &base_label);
         for work in first_games {
-            self.work_queue.push(work);
+            let priority = usize::MAX - work.path_so_far.len();
+            self.work_queue.push(work, priority);
         }
         for _ in 0..thread_count() {
             let scores = Arc::clone(&self.scores);
@@ -52,15 +73,28 @@ impl GameSolver {
                 }
 
                 if let Some(work) = queue.pop() {
+                    if Instant::now() > deadline {
+                        break;
+                    }
                     let depth_finished = work.path_so_far.len() - 1;
-                    if depth_finished != current_depth.fetch_max(depth_finished, Ordering::Relaxed)
-                    {
+                    let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
+                    if depth_finished > old_depth {
+                        println!(
+                            "{:?} finished depth {} (coming from {})",
+                            Instant::now(),
+                            depth_finished,
+                            old_depth
+                        );
                         scores.max_step(depth_finished)
+                    } else if depth_finished < old_depth {
+                        log!("wtf why are we getting a game for depth {} while {} is supposed to be finished?", depth_finished+1, old_depth);
                     }
 
-                    let next_games = evaluate_game(work.path_so_far, &work.game, &scores);
+                    let next_games =
+                        evaluate_game(work.path_so_far, &work.game, &scores, &work.label);
                     for more_work in next_games {
-                        queue.push(more_work);
+                        let priority = usize::MAX - more_work.path_so_far.len();
+                        queue.push(more_work, priority);
                     }
                     queue.done();
                 } else {
@@ -74,6 +108,7 @@ impl GameSolver {
         println!("Sleeping for {}ms", sleep_time.as_millis());
         thread::sleep(sleep_time);
 
+        log!("{}", self.scores);
         return self.scores.top_score();
     }
 }
@@ -108,24 +143,10 @@ fn score_game(game: &Game) -> usize {
         (game.turn - 1, game.dead_snakes - 1)
     };
 
-    turns_alive * 100 + kills
+    turns_alive * 10000 + kills * 100 + game.you.length
 }
 
-fn evaluate_game(
-    prev_moves: Vec<Direction>,
-    game: &Game,
-    scores: &Scorecard<usize>,
-) -> Vec<WorkItem> {
-    let mut moves = HashMap::<Direction, Vec<Vec<Direction>>>::new();
-
-    if game.you.health <= 0 {
-        log!(
-            "warning: asked to evaluate game in which our snake is dead:\n{}",
-            game,
-        );
-        return vec![];
-    }
-
+fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
     let mut other_moves: Vec<Vec<Direction>> = vec![vec![]];
     for snake in &game.others {
         let mut viable_directions: Vec<Direction> = ALL_DIRECTIONS
@@ -137,6 +158,7 @@ fn evaluate_game(
             .collect();
 
         if viable_directions.len() == 0 {
+            log!("{} will die anyway, it's going up:\n{}", snake, game);
             // If all directions lead to death, we do want to add something to prevent this subtree from being ignored.
             viable_directions.push(Direction::Up);
         }
@@ -151,75 +173,143 @@ fn evaluate_game(
         }
         other_moves = new_moves;
     }
+    other_moves
+}
+
+fn evaluate_game(
+    prev_moves: Vec<Direction>,
+    game: &Game,
+    scores: &Scorecard<usize>,
+    _label: &str,
+) -> Vec<WorkItem> {
+    if game.you.health <= 0 {
+        println!(
+            "warning: asked to evaluate game in which our snake is dead:\n{}",
+            game,
+        );
+        return vec![];
+    }
+
+    let other_moves_catalog = all_possible_enemy_moves(game);
+
+    struct Successor {
+        my_dir: Direction,
+        other_moves: Vec<Direction>,
+        next_state: WorkItem,
+    }
+
+    let mut successor_games: Vec<Successor> = vec![];
+    let mut direction_kills_me = HashMap::from(ALL_DIRECTIONS.map(|d| (d, false)));
+    let mut directions_others_can_survive =
+        Vec::<HashMap<Direction, bool>>::with_capacity(game.others.len());
+    directions_others_can_survive.resize(
+        game.others.len(),
+        HashMap::from(ALL_DIRECTIONS.map(|d| (d, false))),
+    );
 
     for my_dir in ALL_DIRECTIONS {
+        // Eliminate directions which would lead to certain death
         let my_pos = game.warp(&game.you.head.neighbour(my_dir));
-
         if certain_death(game, &my_pos, game.you.health) {
             continue;
         }
 
-        moves.insert(my_dir, other_moves.clone());
-    }
-
-    log!(
-        "got {} games to evaluate for turn {}",
-        moves
-            .iter()
-            .map(|(_, moves)| { moves.len() })
-            .reduce(|sum, move_count| { move_count + sum })
-            .unwrap_or_default(),
-        game.turn,
-    );
-
-    let mut successor_games = vec![];
-
-    for (my_dir, other_moves) in moves {
         let mut min_score = usize::MAX;
         let mut full_path = prev_moves.clone();
         full_path.push(my_dir);
         let full_path = full_path;
-        for other_moves in other_moves {
+        let mut min_game = String::new();
+        for other_moves in other_moves_catalog.iter() {
             let mut ngame = game.clone();
             ngame.execute_moves(my_dir, &other_moves);
             let score = score_game(&ngame);
             if score < min_score {
-                min_score = score;
-
-                log!(
-                    ">>> New min score for {:?}: Turn {} - {} {:?} - {}",
-                    full_path,
-                    game.turn,
-                    my_dir,
-                    &other_moves,
+                min_game = move_label!(
+                    "{}Enemy moves: {:?} / Score: {}\n{}",
+                    _label,
+                    other_moves,
                     score,
+                    ngame
                 );
-                log!("BEFORE moving {}: {}", my_dir, game);
-                log!("AFTER  moving {}: {}", my_dir, ngame);
+                min_score = score;
             }
+
+            for (i, other) in ngame.others.iter().enumerate() {
+                if other.health > 0 {
+                    let dir = other_moves[i];
+                    directions_others_can_survive[i].insert(dir, true);
+                }
+            }
+
             if ngame.you.health > 0 {
-                successor_games.push(WorkItem {
-                    path_so_far: full_path.clone(),
-                    game: ngame,
+                let label = move_label!(
+                    "{}Enemy moves: {:?} / Score: {}\n{}",
+                    _label,
+                    other_moves,
+                    score,
+                    ngame
+                );
+                successor_games.push(Successor {
+                    my_dir,
+                    other_moves: other_moves.clone(),
+                    next_state: WorkItem {
+                        path_so_far: full_path.clone(),
+                        game: ngame,
+                        label,
+                    },
                 });
+            } else {
+                // Any direction in which the enemies have a combination of moves that would lead to our
+                // death needs to be avoided
+                direction_kills_me.insert(my_dir, true);
             }
         }
+
         // min_score is now the best score we can get if all other snakes try
         // to minimize our score this turn when moving into my_dir.
         // So post the score to the scoreboard and if it beats our previous best
         // it will become the new top score for this direction
-        if scores.post_score(full_path, min_score) != min_score {
-            log!(
-                ">>>> Direction {}: new min score for turn {}: {} ({:?})",
-                full_path.first().unwrap(),
-                game.turn,
-                min_score,
-                full_path,
-            );
+        log!("{:?}: posted score {}", full_path, min_score);
+        let _old_score = scores.post_score_with_label(full_path, min_score, Some(min_game));
+        log!("old score was {}", _old_score);
+    }
+
+    for survival_map in directions_others_can_survive.iter_mut() {
+        // If all directions would lead to a snake dieing, then don't use that snake to
+        // filter in the next step.
+        if survival_map.values().all(|b| *b) {
+            for dir in ALL_DIRECTIONS {
+                survival_map.insert(dir, true);
+            }
         }
     }
 
-    successor_games
+    // filter successor games for trees in which another snake always dies
+    // no rational snake will move in a direction that leads to certain death,
+    // unless all directions lead to death.
+    let mut res = vec![];
+    for succ in successor_games {
+        if direction_kills_me[&succ.my_dir] {
+            continue;
+        }
+        let mut rejected = false;
+        for (idx, _) in game.others.iter().enumerate() {
+            let snake_dir = succ.other_moves[idx];
+            let directions_snake_can_survive = directions_others_can_survive.get(idx).unwrap();
+            if !directions_snake_can_survive
+                .get(&snake_dir)
+                .unwrap_or(&false)
+            {
+                rejected = true;
+                break;
+            }
+        }
+        if rejected {
+            continue;
+        }
+        res.push(succ.next_state);
+    }
+    res
 }
 
 #[derive(Clone)]
@@ -241,8 +331,8 @@ impl SpaceHeater {
             let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
             let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
 
-            // 120% + 1 seems like a sensible margin for ping fluctuations
-            latency_ms = last_turn_actual_latency * 12 / 10 + 1;
+            // 120% + 25 seems like a sensible margin for ping fluctuations
+            latency_ms = last_turn_actual_latency * 12 / 10 + 25;
             log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
                 last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
 
@@ -294,6 +384,7 @@ impl Battlesnake for SpaceHeater {
 
         let (best_dir, top_score) = GameSolver::new().solve(&req.into(), &deadline);
 
+        let top_score = top_score / 100;
         let max_turns = top_score / 100 - req.turn;
         let max_kills = top_score % 100;
         println!(

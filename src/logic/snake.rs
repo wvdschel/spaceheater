@@ -37,7 +37,8 @@ impl Snake {
         }
 
         // Update snake position and board
-        board.add(&new_head, Tile::Head);
+        // We intentionally don't add new heads here, as they would break
+        // our collision detection in Game.death_by_collission()
         if self.length > 1 {
             board.add(&self.head, Tile::Snake);
         } else {

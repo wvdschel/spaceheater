@@ -10,10 +10,17 @@ fn main() {
     let snake_name = match args.next() {
         Some(v) => v,
         None => {
-            println!("usage: {} <snakename>", cmd_name);
+            println!(
+                "usage: {} <snakename> [<start_turn> <end_turn> <millis_per_move>]",
+                cmd_name
+            );
             std::process::exit(1);
         }
     };
+
+    let start_turn: Option<usize> = args.next().map(|f| f.parse().unwrap());
+    let end_turn: Option<usize> = args.next().map(|f| f.parse().unwrap());
+    let millis: Option<usize> = args.next().map(|f| f.parse().unwrap());
 
     if !snakes.contains_key(&snake_name) {
         println!("unknown snake {}", snake_name);
@@ -23,13 +30,13 @@ fn main() {
     let snake = snakes.get(&snake_name).unwrap();
 
     match gamelogger::Game::load(&mut stdin()) {
-        Ok(game) => game.replay(snake.as_ref()),
+        Ok(game) => game.replay(snake.as_ref(), start_turn, end_turn, millis),
         Err(e) => {
             println!("failed to load game: {}", e);
             std::process::exit(1);
         }
     }
 
-    println!("sleeping 1s to let worker threads finish logging :)");
-    thread::sleep(Duration::from_millis(1000));
+    println!("sleeping 10s to let worker threads finish logging :)");
+    thread::sleep(Duration::from_millis(10000));
 }

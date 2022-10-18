@@ -180,7 +180,7 @@ impl Battlesnake for SimpleSnake {
         let snakes = req.board.snakes.clone();
         let mut board: logic::Board = (&req.board).into();
         println!("at {} -> {:?}", req.you.head, board.get(&req.you.head));
-        println!("{}", &board as &dyn BoardLike);
+        println!("{}", board.to_string());
 
         for (direction, die, kill) in wipeout(&board, snakes, &req.you, &req.you.head) {
             let p = req.you.head.neighbour(direction);

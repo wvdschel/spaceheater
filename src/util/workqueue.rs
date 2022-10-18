@@ -1,28 +1,28 @@
-use std::{
-    collections::VecDeque,
-    sync::{Condvar, Mutex},
-};
+use std::sync::{Condvar, Mutex};
 
-struct WorkList<T: Sized> {
-    work_items: VecDeque<T>,
+use priority_queue::PriorityQueue;
+use std::hash::Hash;
+
+struct WorkList<W: Hash + Eq, P: Ord> {
+    work_items: PriorityQueue<W, P>,
     work_count: usize,
 }
 
-impl<T: Sized> WorkList<T> {
+impl<W: Hash + Eq, P: Ord> WorkList<W, P> {
     pub fn new() -> Self {
         Self {
-            work_items: VecDeque::new(),
+            work_items: PriorityQueue::new(),
             work_count: 0,
         }
     }
 }
 
-pub struct WorkQueue<T: Sized> {
-    work: Mutex<WorkList<T>>,
+pub struct WorkQueue<W: Hash + Eq, P: Ord> {
+    work: Mutex<WorkList<W, P>>,
     cvar: Condvar,
 }
 
-impl<T: Sized> WorkQueue<T> {
+impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
     pub fn new() -> Self {
         Self {
             work: Mutex::new(WorkList::new()),
@@ -36,17 +36,17 @@ impl<T: Sized> WorkQueue<T> {
         self.cvar.notify_all();
     }
 
-    pub fn push(&self, work: T) {
+    pub fn push(&self, work: W, priority: P) {
         let mut worklist = self.work.lock().unwrap();
         worklist.work_count += 1;
-        worklist.work_items.push_back(work);
+        worklist.work_items.push(work, priority);
         self.cvar.notify_one();
     }
 
-    pub fn pop(&self) -> Option<T> {
+    pub fn pop(&self) -> Option<W> {
         let mut worklist = self.work.lock().unwrap();
         loop {
-            if let Some(work) = worklist.work_items.pop_front() {
+            if let Some((work, _priority)) = worklist.work_items.pop() {
                 return Some(work);
             } else if worklist.work_count == 0 {
                 return None;
