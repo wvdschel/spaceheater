@@ -49,7 +49,7 @@ struct GameSolver {
 impl GameSolver {
     fn new() -> Self {
         Self {
-            work_queue: Arc::new(WorkQueue::new()),
+            work_queue: Arc::new(WorkQueue::new(16 * 1024 * 1024)),
             scores: Arc::new(Scorecard::new()),
             current_depth: Arc::new(AtomicUsize::new(0)),
         }
@@ -62,6 +62,7 @@ impl GameSolver {
             let priority = usize::MAX - work.path_so_far.len();
             self.work_queue.push(work, priority);
         }
+
         for _ in 0..thread_count() {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
@@ -94,7 +95,9 @@ impl GameSolver {
                         evaluate_game(work.path_so_far, &work.game, &scores, &work.label);
                     for more_work in next_games {
                         let priority = usize::MAX - more_work.path_so_far.len();
-                        queue.push(more_work, priority);
+                        if !queue.push(more_work, priority) {
+                            println!("warning: discarding work because work queue is full");
+                        }
                     }
                     queue.done();
                 } else {
@@ -122,18 +125,6 @@ fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
         // TODO model starvation?
         _ => false,
     }
-}
-
-#[allow(unused)]
-fn evaluate_game_crowded() -> Vec<Game> {
-    // TODO: if there are too many snakes on the board, instead of simulating the other snakes truthfully,
-    // simply:
-    // - Remove their tails
-    // - Turn their head into body
-    // - for each neighbouring tile of the old head that does not lead to instant death, copy the snake with the neighbour as its head
-    // - make sure copied snakes don't kill each other
-
-    vec![]
 }
 
 fn score_game(game: &Game) -> usize {
@@ -381,15 +372,15 @@ impl Battlesnake for SpaceHeater {
             "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
             start_time, latency, deadline
         );
-
-        let (best_dir, top_score) = GameSolver::new().solve(&req.into(), &deadline);
+        let game = Game::from(req);
+        let (best_dir, top_score) = GameSolver::new().solve(&game, &deadline);
 
         let top_score = top_score / 100;
         let max_turns = top_score / 100 - req.turn;
         let max_kills = top_score % 100;
         println!(
             "----- Turn {}: I think I can survive for at least {} turns (with {} dead snakes) when moving {} -----\n{}\n{}",
-            req.turn, max_turns, max_kills, best_dir, Game::from(req),
+            req.turn, max_turns, max_kills, best_dir, &game,
             std::iter::repeat("-").take(100).collect::<String>(),
         );
 

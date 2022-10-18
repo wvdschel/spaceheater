@@ -20,13 +20,15 @@ impl<W: Hash + Eq, P: Ord> WorkList<W, P> {
 pub struct WorkQueue<W: Hash + Eq, P: Ord> {
     work: Mutex<WorkList<W, P>>,
     cvar: Condvar,
+    max_len: usize,
 }
 
 impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
-    pub fn new() -> Self {
+    pub fn new(max_len: usize) -> Self {
         Self {
             work: Mutex::new(WorkList::new()),
             cvar: Condvar::new(),
+            max_len,
         }
     }
 
@@ -36,11 +38,15 @@ impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
         self.cvar.notify_all();
     }
 
-    pub fn push(&self, work: W, priority: P) {
+    pub fn push(&self, work: W, priority: P) -> bool {
         let mut worklist = self.work.lock().unwrap();
+        if worklist.work_items.len() > self.max_len {
+            return false;
+        }
         worklist.work_count += 1;
         worklist.work_items.push(work, priority);
         self.cvar.notify_one();
+        true
     }
 
     pub fn pop(&self) -> Option<W> {

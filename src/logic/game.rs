@@ -2,7 +2,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use super::{board::BoardOverlay, Board, BoardLike, Direction, Point, Snake, Tile};
-use crate::{log, protocol};
+use crate::protocol;
 
 pub struct Game {
     pub board: Arc<dyn BoardLike + Send + Sync>,
@@ -60,7 +60,6 @@ impl Game {
     // - moving or expanding hazards
     // - spawning food
     pub fn execute_moves(&mut self, you: Direction, others: &Vec<Direction>) {
-        log!("Moves: {} {:?}\n{}", you, others, self.board.to_string());
         let mut new_board = BoardOverlay::new(self.board.clone());
         self.you.apply_move(you, &mut new_board, &self.rules);
         for i in 0..others.len() {
@@ -85,7 +84,6 @@ impl Game {
 
         self.eliminate_dead_snakes(&mut new_board);
         self.draw_heads(&mut new_board);
-        log!("After:\n{}", new_board.to_string());
 
         self.board = Arc::new(new_board);
         self.turn += 1;
@@ -104,12 +102,6 @@ impl Game {
 
     fn death_by_collission(&self, snake: &Snake, board: &dyn BoardLike) -> bool {
         if board.get(&snake.head) == Tile::Snake {
-            log!(
-                "{} will die colliding with a body at {}:\n{}",
-                snake,
-                snake.head,
-                board.to_string()
-            );
             return true;
         }
 
@@ -120,7 +112,6 @@ impl Game {
 
             if other.head == snake.head {
                 if snake.length <= other.length {
-                    log!("{} will die colliding with the head of {}", snake, other);
                     return true;
                 }
             }
@@ -128,7 +119,6 @@ impl Game {
 
         if snake.name != self.you.name && snake.head == self.you.head {
             if snake.length <= self.you.length {
-                log!("{} will die colliding with the head of {}", snake, self.you);
                 return true;
             }
         }
