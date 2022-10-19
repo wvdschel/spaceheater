@@ -50,11 +50,7 @@ impl Game {
 
     pub fn warp(&self, p: &Point) -> Point {
         if self.rules.warped_mode() {
-            let warped = p.warp(self.board.width(), self.board.height());
-            if *p != warped {
-                println!("Warped: {} -> {}", p, warped);
-            }
-            warped
+            p.warp(self.board.width(), self.board.height())
         } else {
             p.clone()
         }
