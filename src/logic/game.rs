@@ -50,7 +50,11 @@ impl Game {
 
     pub fn warp(&self, p: &Point) -> Point {
         if self.rules.warped_mode() {
-            p.warp(self.board.width(), self.board.height())
+            let warped = p.warp(self.board.width(), self.board.height());
+            if *p != warped {
+                println!("Warped: {} -> {}", p, warped);
+            }
+            warped
         } else {
             p.clone()
         }
@@ -284,7 +288,7 @@ impl protocol::Ruleset {
         match self.name.as_str() {
             "standard" => GameMode::Standard,
             "royale" => GameMode::Royale,
-            "warped" => GameMode::Warped,
+            "wrapped" => GameMode::Warped,
             _ => GameMode::Standard,
         }
     }

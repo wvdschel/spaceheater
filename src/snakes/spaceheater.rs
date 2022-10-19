@@ -306,12 +306,14 @@ fn evaluate_game(
 #[derive(Clone)]
 pub struct SpaceHeater {
     last_turn_latency_estimate: Arc<AtomicU64>,
+    recent_ping_average: Arc<AtomicU64>,
 }
 
 impl SpaceHeater {
     pub fn new() -> Self {
         Self {
-            last_turn_latency_estimate: Arc::new(AtomicU64::new(55)),
+            last_turn_latency_estimate: Arc::new(AtomicU64::new(100)),
+            recent_ping_average: Arc::new(AtomicU64::new(100)),
         }
     }
 
@@ -322,8 +324,19 @@ impl SpaceHeater {
             let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
             let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
 
-            // 120% + 25 seems like a sensible margin for ping fluctuations
-            latency_ms = last_turn_actual_latency * 12 / 10 + 25;
+            let mut ping_avg = self.recent_ping_average.load(Ordering::Acquire);
+            if last_turn_actual_latency > ping_avg {
+                // Override ping average if we got a worse ping
+                println!("Bad ping: {}ms (previous average: {}ms)", last_turn_actual_latency, ping_avg);
+                ping_avg = last_turn_actual_latency;
+            } else {
+                // Gradually decline if we got a better ping
+                ping_avg = (ping_avg * 95 + last_turn_actual_latency * 5) / 100;
+            }
+            self.recent_ping_average.store(ping_avg, Ordering::Release);
+
+            // 140% + 40ms seems like a sensible margin for ping fluctuations
+            latency_ms = ping_avg * 14 / 10 + 40;
             log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
                 last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
 
@@ -346,9 +359,9 @@ impl Battlesnake for SpaceHeater {
         protocol::SnakeInfo {
             apiversion: "1".to_string(),
             author: "General Error".to_string(),
-            color: "#3B224C".to_string(),
-            head: "all-seeing".to_string(),
-            tail: "freckled".to_string(),
+            color: "#E77200".to_string(),
+            head: "workout".to_string(),
+            tail: "rocket".to_string(),
             version: "109b".to_string(),
         }
     }
