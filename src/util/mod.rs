@@ -24,12 +24,12 @@ macro_rules! log {
     ( $( $x:tt )* ) => {};
 }
 
-#[cfg(feature = "parallel")]
+#[cfg(not(feature = "sequential"))]
 pub fn thread_count() -> usize {
     num_cpus::get()
 }
 
-#[cfg(not(feature = "parallel"))]
+#[cfg(feature = "sequential")]
 pub fn thread_count() -> usize {
     1
 }

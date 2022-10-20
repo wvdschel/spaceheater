@@ -16,10 +16,9 @@ name = "replay"
 debug = 1
 
 [features]
-# Defines a feature named `webp` that does not enable any other features.
-default = ["parallel"]
+default = []
 logging = []
-parallel = []
+sequential = []
 
 [dependencies]
 rouille = "3.5"

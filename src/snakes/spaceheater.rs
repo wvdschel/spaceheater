@@ -173,6 +173,10 @@ fn evaluate_game(
     scores: &Scorecard<usize>,
     _label: &str,
 ) -> Vec<WorkItem> {
+    log!("start eval: {:?} {}", prev_moves, game);
+    if scores.is_certain_death(&prev_moves) {
+        log!("{:?}: skipping because certain death", prev_moves);
+    }
     if game.you.health <= 0 {
         println!(
             "warning: asked to evaluate game in which our snake is dead:\n{}",
@@ -202,6 +206,7 @@ fn evaluate_game(
         // Eliminate directions which would lead to certain death
         let my_pos = game.warp(&game.you.head.neighbour(my_dir));
         if certain_death(game, &my_pos, game.you.health) {
+            direction_kills_me.insert(my_dir, true);
             continue;
         }
 
@@ -215,6 +220,7 @@ fn evaluate_game(
             ngame.execute_moves(my_dir, &other_moves);
             let score = score_game(&ngame);
             if score < min_score {
+                log!("{:?}: min score: {} - {}", full_path, score, ngame);
                 min_game = move_label!(
                     "{}Enemy moves: {:?} / Score: {}\n{}",
                     _label,
@@ -274,6 +280,15 @@ fn evaluate_game(
             }
         }
     }
+    
+    if direction_kills_me.values().all(|b| *b) {
+        // All directions lead to death. We might not have posted any scores, but we should post at least one for min-max to work.
+        log!("{:?} leads to certain death", prev_moves);
+        let mut full_path = prev_moves.clone();
+        full_path.push(Direction::Up);
+        scores.post_score_with_label(full_path.clone(), score_game(game), Some(move_label!("certain death: {}", game)));
+        scores.post_certain_death(prev_moves.clone());
+    }
 
     // filter successor games for trees in which another snake always dies
     // no rational snake will move in a direction that leads to certain death,
@@ -327,7 +342,10 @@ impl SpaceHeater {
             let mut ping_avg = self.recent_ping_average.load(Ordering::Acquire);
             if last_turn_actual_latency > ping_avg {
                 // Override ping average if we got a worse ping
-                println!("Bad ping: {}ms (previous average: {}ms)", last_turn_actual_latency, ping_avg);
+                println!(
+                    "Bad ping: {}ms (previous average: {}ms)",
+                    last_turn_actual_latency, ping_avg
+                );
                 ping_avg = last_turn_actual_latency;
             } else {
                 // Gradually decline if we got a better ping
@@ -356,13 +374,17 @@ impl SpaceHeater {
 
 impl Battlesnake for SpaceHeater {
     fn snake_info(&self) -> protocol::SnakeInfo {
+        let ping = self.recent_ping_average.load(Ordering::Relaxed);
+        if ping < 500 {
+            thread::sleep(Duration::from_millis(500 - ping));
+        }
         protocol::SnakeInfo {
             apiversion: "1".to_string(),
             author: "General Error".to_string(),
             color: "#E77200".to_string(),
             head: "workout".to_string(),
             tail: "rocket".to_string(),
-            version: "109b".to_string(),
+            version: "112c".to_string(),
         }
     }
 

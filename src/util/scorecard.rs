@@ -1,11 +1,12 @@
 use itertools::Itertools;
-use std::{collections::HashMap, fmt::Display, sync::Mutex};
+use std::{collections::{HashMap, HashSet}, fmt::Display, sync::Mutex};
 
 use crate::{logic::Direction, protocol::ALL_DIRECTIONS};
 
 pub struct Scorecard<T: Ord + Default + Copy> {
     scores: Mutex<HashMap<Vec<Direction>, (T, Option<String>)>>,
     paths: Mutex<HashMap<usize, Vec<Vec<Direction>>>>,
+    certain_death: Mutex<HashSet<Vec<Direction>>>,
 }
 
 unsafe impl<T: Ord + Default + Copy> Send for Scorecard<T> {}
@@ -15,6 +16,7 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
         Self {
             scores: Mutex::new(HashMap::new()),
             paths: Mutex::new(HashMap::new()),
+            certain_death: Mutex::new(HashSet::new()),
         }
     }
 
@@ -26,11 +28,16 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
     pub fn max_step(&self, depth: usize) {
         let mut scores = self.scores.lock().unwrap();
         let paths = self.paths.lock().unwrap();
+        let deaths = self.certain_death.lock().unwrap();
 
         let mut depth = depth;
         while depth > 0 {
             if let Some(paths) = paths.get(&depth) {
                 for path in paths {
+                    // If the path is certain death for a given set of enemy moves, it should not be max-ed.
+                    if deaths.contains(path) {
+                        continue;
+                    }
                     let mut subpath = path.clone();
                     let mut max_score = T::default();
                     let mut max_label = None;
@@ -86,6 +93,16 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
             scores.insert(path, (score, label));
             T::default()
         }
+    }
+
+    pub fn post_certain_death(&self, path: Vec<Direction>) {
+        let mut deaths = self.certain_death.lock().unwrap();
+        deaths.insert(path);
+    }
+
+    pub fn is_certain_death(&self, path: &Vec<Direction>) -> bool {
+        let deaths = self.certain_death.lock().unwrap();
+        deaths.contains(path)
     }
 
     pub fn top_score(&self) -> (Direction, T) {
