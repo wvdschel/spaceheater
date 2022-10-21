@@ -1,8 +1,6 @@
 # Spaceheater
 Weird choices to debug:
-86e382a7-d52c-4e48-84ee-821dbc13fa8a turn 96-97
-15290976-48e4-47df-bed5-48e2c48c72b9 turn 13
-656abce3-1cbe-4557-80ab-dd10f3ef730f turn 42 (should turn around)
+- 86e382a7-d52c-4e48-84ee-821dbc13fa8a turn 96-97
 
 # Game logic
 ## Unsupported game features

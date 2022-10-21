@@ -259,6 +259,7 @@ fn evaluate_game(
                 // Any direction in which the enemies have a combination of moves that would lead to our
                 // death needs to be avoided
                 direction_kills_me.insert(my_dir, true);
+                break; // This optimizes our search, at the cost of missing some possibillities to draw.
             }
         }
 
@@ -280,13 +281,18 @@ fn evaluate_game(
             }
         }
     }
-    
+
     if direction_kills_me.values().all(|b| *b) {
         // All directions lead to death. We might not have posted any scores, but we should post at least one for min-max to work.
+        // This indicates we made a mistake a number of turns back that gave the enemy a surefire set of moves to kill us.
         log!("{:?} leads to certain death", prev_moves);
         let mut full_path = prev_moves.clone();
         full_path.push(Direction::Up);
-        scores.post_score_with_label(full_path.clone(), score_game(game), Some(move_label!("certain death: {}", game)));
+        scores.post_score_with_label(
+            full_path.clone(),
+            score_game(game),
+            Some(move_label!("certain death: {}", game)),
+        );
         scores.post_certain_death(prev_moves.clone());
     }
 
@@ -296,6 +302,9 @@ fn evaluate_game(
     let mut res = vec![];
     for succ in successor_games {
         if direction_kills_me[&succ.my_dir] {
+            // At least one set of enemy moves in this direction killed our snake.
+            // Discard all games in this branch of the tree, and mark the path as certain death.
+            scores.post_certain_death(succ.next_state.path_so_far);
             continue;
         }
         let mut rejected = false;
