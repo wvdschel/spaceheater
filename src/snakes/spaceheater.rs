@@ -392,8 +392,8 @@ impl Battlesnake for SpaceHeater {
             author: "General Error".to_string(),
             color: "#E77200".to_string(),
             head: "workout".to_string(),
-            tail: "rocket".to_string(),
-            version: "112c".to_string(),
+            tail: "flame".to_string(),
+            version: "113".to_string(),
         }
     }
 
