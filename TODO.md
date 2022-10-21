@@ -1,4 +1,10 @@
+# Spaceheater
 Weird choices to debug:
-Seems to eliminate pretty obvious kill moves from the enemy snakes:
-- cargo run --bin replay --release --features=logging spaceheater 70 70 < logs/Spaceheater_0b483398-0ad2-4f3d-ad19-cb866bc4fe38.json.gz
-- cargo run --bin replay --release --features=logging spaceheater 8 8 < logs/Spaceheater_3af774ff-ea43-4f1e-90fa-19744f67b143.json.gz
+86e382a7-d52c-4e48-84ee-821dbc13fa8a turn 96-97
+15290976-48e4-47df-bed5-48e2c48c72b9 turn 13
+656abce3-1cbe-4557-80ab-dd10f3ef730f turn 42 (should turn around)
+
+# Game logic
+## Unsupported game features
+- stacked hazards:
+  - example: 15290976-48e4-47df-bed5-48e2c48c72b9 turn 19

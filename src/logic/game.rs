@@ -31,7 +31,7 @@ impl Hash for Game {
 pub enum GameMode {
     Standard,
     Constrictor,
-    Warped,
+    Wrapped,
     Royale,
 }
 
@@ -268,7 +268,7 @@ impl From<&protocol::Request> for Game {
 impl protocol::Ruleset {
     pub fn warped_mode(&self) -> bool {
         match self.game_mode() {
-            GameMode::Warped => true,
+            GameMode::Wrapped => true,
             _ => false,
         }
     }
@@ -284,7 +284,7 @@ impl protocol::Ruleset {
         match self.name.as_str() {
             "standard" => GameMode::Standard,
             "royale" => GameMode::Royale,
-            "wrapped" => GameMode::Warped,
+            "wrapped" => GameMode::Wrapped,
             _ => GameMode::Standard,
         }
     }

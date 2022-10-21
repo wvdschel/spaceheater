@@ -1,5 +1,8 @@
 use std::fmt::Display;
 
+#[cfg(test)]
+mod test;
+
 mod board;
 pub use board::{Board, BoardOverlay};
 
