@@ -28,7 +28,6 @@ impl Snake {
         if board.get(&new_head).has_food() || rules.constrictor_mode() {
             self.health = 100;
             self.length += 1;
-            board.clear_food(&new_head);
         }
 
         // Apply out of bounds damage

@@ -1,0 +1,345 @@
+{
+  "game": {
+    "id": "15290976-48e4-47df-bed5-48e2c48c72b9",
+    "ruleset": {
+      "name": "wrapped",
+      "version": "v1.1.20",
+      "settings": {
+        "foodSpawnChance": 15,
+        "minimumFood": 1,
+        "hazardDamagePerTurn": 100,
+        "royale": {
+          "shrinkEveryNTurns": 0
+        },
+        "squad": {
+          "allowBodyCollisions": false,
+          "sharedElimination": false,
+          "sharedHealth": false,
+          "sharedLength": false
+        }
+      }
+    },
+    "map": "hz_islands_bridges",
+    "timeout": 500,
+    "source": "league"
+  },
+  "turn": 13,
+  "board": {
+    "height": 11,
+    "width": 11,
+    "food": [
+      {
+        "x": 1,
+        "y": 1
+      },
+      {
+        "x": 2,
+        "y": 6
+      }
+    ],
+    "hazards": [
+      {
+        "x": 5,
+        "y": 10
+      },
+      {
+        "x": 5,
+        "y": 9
+      },
+      {
+        "x": 5,
+        "y": 7
+      },
+      {
+        "x": 5,
+        "y": 6
+      },
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 5,
+        "y": 3
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 1
+      },
+      {
+        "x": 6,
+        "y": 5
+      },
+      {
+        "x": 7,
+        "y": 5
+      },
+      {
+        "x": 9,
+        "y": 5
+      },
+      {
+        "x": 10,
+        "y": 5
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 3,
+        "y": 5
+      },
+      {
+        "x": 1,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      },
+      {
+        "x": 1,
+        "y": 10
+      },
+      {
+        "x": 9,
+        "y": 10
+      },
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 9,
+        "y": 0
+      },
+      {
+        "x": 10,
+        "y": 1
+      },
+      {
+        "x": 10,
+        "y": 0
+      },
+      {
+        "x": 10,
+        "y": 10
+      },
+      {
+        "x": 10,
+        "y": 9
+      },
+      {
+        "x": 0,
+        "y": 10
+      },
+      {
+        "x": 0,
+        "y": 9
+      },
+      {
+        "x": 0,
+        "y": 1
+      },
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 6
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 10,
+        "y": 4
+      },
+      {
+        "x": 6,
+        "y": 10
+      },
+      {
+        "x": 4,
+        "y": 10
+      },
+      {
+        "x": 6,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      }
+    ],
+    "snakes": [
+      {
+        "id": "gs_m7qKF8yTvk7gXtVPydYwfhB7",
+        "name": "ScarfSnake",
+        "health": 87,
+        "body": [
+          {
+            "x": 8,
+            "y": 6
+          },
+          {
+            "x": 9,
+            "y": 6
+          },
+          {
+            "x": 9,
+            "y": 7
+          }
+        ],
+        "latency": "97",
+        "head": {
+          "x": 8,
+          "y": 6
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#247946",
+          "head": "scarf",
+          "tail": "rbc-necktie"
+        }
+      },
+      {
+        "id": "gs_cvfGcMjmSwcWqKGSrgv8QB4R",
+        "name": "Spaceheater",
+        "health": 100,
+        "body": [
+          {
+            "x": 2,
+            "y": 7
+          },
+          {
+            "x": 3,
+            "y": 7
+          },
+          {
+            "x": 4,
+            "y": 7
+          },
+          {
+            "x": 4,
+            "y": 6
+          },
+          {
+            "x": 4,
+            "y": 6
+          }
+        ],
+        "latency": "458",
+        "head": {
+          "x": 2,
+          "y": 7
+        },
+        "length": 5,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#e77200",
+          "head": "workout",
+          "tail": "rocket"
+        }
+      },
+      {
+        "id": "gs_3pXTShgTHStMv73DbdtbbB7C",
+        "name": "One",
+        "health": 97,
+        "body": [
+          {
+            "x": 2,
+            "y": 5
+          },
+          {
+            "x": 2,
+            "y": 4
+          },
+          {
+            "x": 2,
+            "y": 3
+          },
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 2
+          }
+        ],
+        "latency": "51",
+        "head": {
+          "x": 2,
+          "y": 5
+        },
+        "length": 5,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#32a83c",
+          "head": "default",
+          "tail": "default"
+        }
+      }
+    ]
+  },
+  "you": {
+    "id": "gs_cvfGcMjmSwcWqKGSrgv8QB4R",
+    "name": "Spaceheater",
+    "health": 100,
+    "body": [
+      {
+        "x": 2,
+        "y": 7
+      },
+      {
+        "x": 3,
+        "y": 7
+      },
+      {
+        "x": 4,
+        "y": 7
+      },
+      {
+        "x": 4,
+        "y": 6
+      },
+      {
+        "x": 4,
+        "y": 6
+      }
+    ],
+    "latency": "458",
+    "head": {
+      "x": 2,
+      "y": 7
+    },
+    "length": 5,
+    "shout": "",
+    "squad": "",
+    "customizations": {
+      "color": "#e77200",
+      "head": "workout",
+      "tail": "rocket"
+    }
+  }
+}

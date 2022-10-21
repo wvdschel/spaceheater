@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 mod board;
 pub use board::{Board, BoardOverlay};
