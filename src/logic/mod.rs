@@ -3,6 +3,8 @@ use std::fmt::Display;
 #[cfg(test)]
 mod tests;
 
+pub mod scoring;
+
 mod board;
 pub use board::{Board, BoardOverlay};
 

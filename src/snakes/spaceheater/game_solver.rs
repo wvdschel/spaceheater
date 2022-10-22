@@ -1,20 +1,20 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     hash::Hash,
     sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
         Arc,
     },
     thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use crate::{
     log,
     logic::{Game, Tile},
-    protocol::{self, Direction, Point, ALL_DIRECTIONS},
+    protocol::{Direction, Point, ALL_DIRECTIONS},
     util::{thread_count, Scorecard, WorkQueue},
-    Battlesnake,
 };
 
 #[cfg(feature = "logging")]
@@ -40,24 +40,29 @@ struct WorkItem {
     label: String,
 }
 
-struct GameSolver {
+pub struct GameSolver<T>
+where
+    T: Ord + Default + Copy + Display + Send,
+{
     work_queue: Arc<WorkQueue<WorkItem, usize>>,
-    scores: Arc<Scorecard<usize>>,
+    scores: Arc<Scorecard<T>>,
     current_depth: Arc<AtomicUsize>,
+    score_fn: fn(&Game) -> T,
 }
 
-impl GameSolver {
-    fn new() -> Self {
+impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
+    pub fn new(score_fn: fn(&Game) -> T) -> Self {
         Self {
             work_queue: Arc::new(WorkQueue::new(32 * 1024 * 1024)),
             scores: Arc::new(Scorecard::new()),
             current_depth: Arc::new(AtomicUsize::new(0)),
+            score_fn,
         }
     }
 
-    fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, usize) {
+    pub fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, T) {
         let base_label = move_label!("{}", game);
-        let first_games = evaluate_game(vec![], game, &self.scores, &base_label);
+        let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label);
         for work in first_games {
             let priority = usize::MAX - work.path_so_far.len();
             self.work_queue.push(work, priority);
@@ -68,6 +73,7 @@ impl GameSolver {
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
             let current_depth = Arc::clone(&self.current_depth);
+            let score_fn = self.score_fn.clone();
             thread::spawn(move || loop {
                 if Instant::now() > deadline {
                     break;
@@ -92,7 +98,7 @@ impl GameSolver {
                     }
 
                     let next_games =
-                        evaluate_game(work.path_so_far, &work.game, &scores, &work.label);
+                        evaluate_game(work.path_so_far, &work.game, score_fn, &scores, &work.label);
                     for more_work in next_games {
                         let priority = usize::MAX - more_work.path_so_far.len();
                         if !queue.push(more_work, priority) {
@@ -116,61 +122,11 @@ impl GameSolver {
     }
 }
 
-fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
-    match game.board.get(p) {
-        Tile::Hazard | Tile::HazardWithSnake | Tile::HazardWithHead => {
-            game.rules.settings.hazard_damage_per_turn > hp
-        }
-        Tile::Wall => true,
-        // TODO model starvation?
-        _ => false,
-    }
-}
-
-fn score_game(game: &Game) -> usize {
-    let (turns_alive, kills) = if game.you.health > 0 {
-        (game.turn, game.dead_snakes)
-    } else {
-        (game.turn - 1, game.dead_snakes - 1)
-    };
-
-    turns_alive * 10000 + kills * 100 + game.you.length
-}
-
-fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
-    let mut other_moves: Vec<Vec<Direction>> = vec![vec![]];
-    for snake in &game.others {
-        let mut viable_directions: Vec<Direction> = ALL_DIRECTIONS
-            .into_iter()
-            .filter(|&dir| {
-                let pos = game.warp(&snake.head.neighbour(dir));
-                !certain_death(game, &pos, snake.health)
-            })
-            .collect();
-
-        if viable_directions.len() == 0 {
-            log!("{} will die anyway, it's going up:\n{}", snake, game);
-            // If all directions lead to death, we do want to add something to prevent this subtree from being ignored.
-            viable_directions.push(Direction::Up);
-        }
-
-        let mut new_moves = Vec::with_capacity(viable_directions.len() * other_moves.len());
-        for dir in viable_directions {
-            for old_moves in other_moves.iter() {
-                let mut m = old_moves.clone();
-                m.push(dir);
-                new_moves.push(m);
-            }
-        }
-        other_moves = new_moves;
-    }
-    other_moves
-}
-
-fn evaluate_game(
+fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     prev_moves: Vec<Direction>,
     game: &Game,
-    scores: &Scorecard<usize>,
+    score_fn: fn(&Game) -> T,
+    scores: &Scorecard<T>,
     _label: &str,
 ) -> Vec<WorkItem> {
     log!("start eval: {:?} {}", prev_moves, game);
@@ -210,7 +166,7 @@ fn evaluate_game(
             continue;
         }
 
-        let mut min_score = usize::MAX;
+        let mut min_score = Option::<T>::default();
         let mut full_path = prev_moves.clone();
         full_path.push(my_dir);
         let full_path = full_path;
@@ -218,8 +174,8 @@ fn evaluate_game(
         for other_moves in other_moves_catalog.iter() {
             let mut ngame = game.clone();
             ngame.execute_moves(my_dir, &other_moves);
-            let score = score_game(&ngame);
-            if score < min_score {
+            let score = (score_fn)(&game);
+            if min_score.is_none() || score < min_score.unwrap() {
                 log!("{:?}: min score: {} - {}", full_path, score, ngame);
                 min_game = move_label!(
                     "{}Enemy moves: {:?} / Score: {}\n{}",
@@ -228,7 +184,7 @@ fn evaluate_game(
                     score,
                     ngame
                 );
-                min_score = score;
+                min_score = Some(score);
             }
 
             for (i, other) in ngame.others.iter().enumerate() {
@@ -267,9 +223,11 @@ fn evaluate_game(
         // to minimize our score this turn when moving into my_dir.
         // So post the score to the scoreboard and if it beats our previous best
         // it will become the new top score for this direction
-        log!("{:?}: posted score {}", full_path, min_score);
-        let _old_score = scores.post_score_with_label(full_path, min_score, Some(min_game));
-        log!("old score was {}", _old_score);
+        if let Some(min_score) = min_score {
+            log!("{:?}: posted score {}", full_path, min_score);
+            let _old_score = scores.post_score_with_label(full_path, min_score, Some(min_game));
+            log!("old score was {}", _old_score);
+        }
     }
 
     for survival_map in directions_others_can_survive.iter_mut() {
@@ -290,7 +248,7 @@ fn evaluate_game(
         full_path.push(Direction::Up);
         scores.post_score_with_label(
             full_path.clone(),
-            score_game(game),
+            (score_fn)(game),
             Some(move_label!("certain death: {}", game)),
         );
         scores.post_certain_death(prev_moves.clone());
@@ -327,111 +285,43 @@ fn evaluate_game(
     res
 }
 
-#[derive(Clone)]
-pub struct SpaceHeater {
-    last_turn_latency_estimate: Arc<AtomicU64>,
-    recent_ping_average: Arc<AtomicU64>,
-}
-
-impl SpaceHeater {
-    pub fn new() -> Self {
-        Self {
-            last_turn_latency_estimate: Arc::new(AtomicU64::new(100)),
-            recent_ping_average: Arc::new(AtomicU64::new(100)),
+fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
+    match game.board.get(p) {
+        Tile::Hazard | Tile::HazardWithSnake | Tile::HazardWithHead => {
+            game.rules.settings.hazard_damage_per_turn > hp
         }
-    }
-
-    fn calculate_latency(&self, last_turn_time_ms: u64, max_turn_time_ms: u64) -> Duration {
-        let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
-        let mut latency_ms = prev_latency_ms;
-        if last_turn_time_ms > prev_latency_ms {
-            let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
-            let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
-
-            let mut ping_avg = self.recent_ping_average.load(Ordering::Acquire);
-            if last_turn_actual_latency > ping_avg {
-                // Override ping average if we got a worse ping
-                println!(
-                    "Bad ping: {}ms (previous average: {}ms)",
-                    last_turn_actual_latency, ping_avg
-                );
-                ping_avg = last_turn_actual_latency;
-            } else {
-                // Gradually decline if we got a better ping
-                ping_avg = (ping_avg * 95 + last_turn_actual_latency * 5) / 100;
-            }
-            self.recent_ping_average.store(ping_avg, Ordering::Release);
-
-            // 140% + 40ms seems like a sensible margin for ping fluctuations
-            latency_ms = ping_avg * 14 / 10 + 40;
-            log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
-                last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
-
-            if latency_ms > max_turn_time_ms {
-                latency_ms = max_turn_time_ms * 10 / 20;
-                log!(
-                    "estimated latency exceeds turn time - limiting to {}ms",
-                    latency_ms
-                );
-            }
-        }
-        self.last_turn_latency_estimate
-            .store(latency_ms, Ordering::Release);
-        Duration::from_millis(latency_ms)
+        Tile::Wall => true,
+        // TODO model starvation?
+        _ => false,
     }
 }
 
-impl Battlesnake for SpaceHeater {
-    fn snake_info(&self) -> protocol::SnakeInfo {
-        let ping = self.recent_ping_average.load(Ordering::Relaxed);
-        if ping < 500 {
-            thread::sleep(Duration::from_millis(500 - ping));
+fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
+    let mut other_moves: Vec<Vec<Direction>> = vec![vec![]];
+    for snake in &game.others {
+        let mut viable_directions: Vec<Direction> = ALL_DIRECTIONS
+            .into_iter()
+            .filter(|&dir| {
+                let pos = game.warp(&snake.head.neighbour(dir));
+                !certain_death(game, &pos, snake.health)
+            })
+            .collect();
+
+        if viable_directions.len() == 0 {
+            log!("{} will die anyway, it's going up:\n{}", snake, game);
+            // If all directions lead to death, we do want to add something to prevent this subtree from being ignored.
+            viable_directions.push(Direction::Up);
         }
-        protocol::SnakeInfo {
-            apiversion: "1".to_string(),
-            author: "General Error".to_string(),
-            color: "#E77200".to_string(),
-            head: "workout".to_string(),
-            tail: "flame".to_string(),
-            version: "113".to_string(),
+
+        let mut new_moves = Vec::with_capacity(viable_directions.len() * other_moves.len());
+        for dir in viable_directions {
+            for old_moves in other_moves.iter() {
+                let mut m = old_moves.clone();
+                m.push(dir);
+                new_moves.push(m);
+            }
         }
+        other_moves = new_moves;
     }
-
-    fn start(&self, _: &protocol::Request) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn end(&self, _: &protocol::Request) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
-        let last_turn_duration_ms = req.you.latency.parse::<u64>().unwrap_or(0);
-        let max_turn_time_ms = req.game.timeout as u64;
-        let latency = self.calculate_latency(last_turn_duration_ms, max_turn_time_ms);
-        let start_time = Instant::now();
-        let deadline = start_time + Duration::from_millis(max_turn_time_ms) - latency;
-
-        println!(
-            "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
-            start_time, latency, deadline
-        );
-        let game = Game::from(req);
-        let (best_dir, top_score) = GameSolver::new().solve(&game, &deadline);
-
-        let top_score = top_score / 100;
-        let max_turns = top_score / 100 - req.turn;
-        let max_kills = top_score % 100;
-        println!(
-            "----- Turn {}: I think I can survive for at least {} turns (with {} dead snakes) when moving {} -----\n{}\n{}",
-            req.turn, max_turns, max_kills, best_dir, &game,
-            std::iter::repeat("-").take(100).collect::<String>(),
-        );
-
-        println!("deadline: {:?}, now: {:?}", deadline, Instant::now());
-        Ok(protocol::MoveResponse {
-            direction: best_dir,
-            shout: "".to_string(),
-        })
-    }
+    other_moves
 }
