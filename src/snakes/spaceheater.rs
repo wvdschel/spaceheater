@@ -49,7 +49,7 @@ struct GameSolver {
 impl GameSolver {
     fn new() -> Self {
         Self {
-            work_queue: Arc::new(WorkQueue::new(16 * 1024 * 1024)),
+            work_queue: Arc::new(WorkQueue::new(32 * 1024 * 1024)),
             scores: Arc::new(Scorecard::new()),
             current_depth: Arc::new(AtomicUsize::new(0)),
         }
