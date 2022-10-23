@@ -14,6 +14,10 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         "spaceheater".to_string(),
         Box::new(SpaceHeater::new(logic::scoring::survival_kills_length)),
     );
+    snakes.insert(
+        "spaceheater_v".to_string(),
+        Box::new(SpaceHeater::new(logic::scoring::voronoi)),
+    );
 
     snakes
 }
