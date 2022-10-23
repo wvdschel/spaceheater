@@ -1,7 +1,11 @@
 use itertools::Itertools;
-use std::{collections::{HashMap, HashSet}, fmt::Display, sync::Mutex};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    sync::Mutex,
+};
 
-use crate::{logic::Direction, protocol::ALL_DIRECTIONS};
+use crate::{log, logic::Direction, protocol::ALL_DIRECTIONS};
 
 pub struct Scorecard<T: Ord + Default + Copy> {
     scores: Mutex<HashMap<Vec<Direction>, (T, Option<String>)>>,
@@ -20,6 +24,7 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
         }
     }
 
+    #[allow(unused)]
     pub fn get(&self, path: &Vec<Direction>) -> T {
         let scores = self.scores.lock().unwrap();
         scores.get(path).unwrap_or(&(T::default(), None)).0
@@ -27,12 +32,12 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
 
     pub fn max_step(&self, depth: usize) {
         let mut scores = self.scores.lock().unwrap();
-        let paths = self.paths.lock().unwrap();
+        let all_paths_per_depth = self.paths.lock().unwrap();
         let deaths = self.certain_death.lock().unwrap();
 
         let mut depth = depth;
         while depth > 0 {
-            if let Some(paths) = paths.get(&depth) {
+            if let Some(paths) = all_paths_per_depth.get(&depth) {
                 for path in paths {
                     // If the path is certain death for a given set of enemy moves, it should not be max-ed.
                     if deaths.contains(path) {
@@ -50,7 +55,11 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
                         if let Some((score, label)) = &scores.get(&subpath) {
                             if *score > max_score {
                                 max_score = *score;
-                                max_label = Some(format!("max choice: {:?}: {}", subpath, label.clone().unwrap_or("".into())));
+                                max_label = Some(format!(
+                                    "max choice: {:?}: {}",
+                                    subpath,
+                                    label.clone().unwrap_or("".into())
+                                ));
                             }
                         }
                         subpath.pop();
@@ -62,16 +71,7 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
         }
     }
 
-    pub fn post_score(&self, path: Vec<Direction>, score: T) -> T {
-        self.post_score_with_label(path, score, None)
-    }
-
-    pub fn post_score_with_label(
-        &self,
-        path: Vec<Direction>,
-        score: T,
-        label: Option<String>,
-    ) -> T {
+    pub fn post_score(&self, path: Vec<Direction>, score: T, label: Option<String>) -> T {
         let mut scores = self.scores.lock().unwrap();
         let old_score = scores.get(&path).map(|(s, _)| *s);
         if let Some(old_score) = old_score {
@@ -97,6 +97,10 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
 
     pub fn post_certain_death(&self, path: Vec<Direction>) {
         let mut deaths = self.certain_death.lock().unwrap();
+        #[cfg(feature = "logging")]
+        if !deaths.contains(&path) {
+            log!("Marking as certain death: {:?}", path);
+        }
         deaths.insert(path);
     }
 

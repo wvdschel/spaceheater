@@ -2,9 +2,6 @@ use std::io::Read;
 
 use rouille::{Request, Response, ResponseBody};
 
-mod scorecard;
-pub use scorecard::Scorecard;
-
 mod workqueue;
 pub use workqueue::WorkQueue;
 

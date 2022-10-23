@@ -13,6 +13,8 @@ use crate::{log, logic::Game, protocol, Battlesnake};
 mod game_solver;
 use game_solver::GameSolver;
 
+mod scorecard;
+
 #[derive(Clone)]
 pub struct SpaceHeater<T>
 where

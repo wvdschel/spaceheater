@@ -14,8 +14,10 @@ use crate::{
     log,
     logic::{Game, Tile},
     protocol::{Direction, Point, ALL_DIRECTIONS},
-    util::{thread_count, Scorecard, WorkQueue},
+    util::{thread_count, WorkQueue},
 };
+
+use super::scorecard::Scorecard;
 
 #[cfg(feature = "logging")]
 macro_rules! move_label {
@@ -225,7 +227,7 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
         // it will become the new top score for this direction
         if let Some(min_score) = min_score {
             log!("{:?}: posted score {}", full_path, min_score);
-            let _old_score = scores.post_score_with_label(full_path, min_score, Some(min_game));
+            let _old_score = scores.post_score(full_path, min_score, Some(min_game));
             log!("old score was {}", _old_score);
         }
     }
@@ -240,13 +242,21 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
         }
     }
 
+    for (dir, death) in direction_kills_me.iter() {
+        if *death {
+            let mut path = prev_moves.clone();
+            path.push(*dir);
+            scores.post_certain_death(path);
+        }
+    }
+
     if direction_kills_me.values().all(|b| *b) {
         // All directions lead to death. We might not have posted any scores, but we should post at least one for min-max to work.
         // This indicates we made a mistake a number of turns back that gave the enemy a surefire set of moves to kill us.
         log!("{:?} leads to certain death", prev_moves);
         let mut full_path = prev_moves.clone();
         full_path.push(Direction::Up);
-        scores.post_score_with_label(
+        scores.post_score(
             full_path.clone(),
             (score_fn)(game),
             Some(move_label!("certain death: {}", game)),
@@ -261,12 +271,12 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     for succ in successor_games {
         if direction_kills_me[&succ.my_dir] {
             // At least one set of enemy moves in this direction killed our snake.
-            // Discard all games in this branch of the tree, and mark the path as certain death.
+            // Discard all games in this branch of the tree.
             scores.post_certain_death(succ.next_state.path_so_far);
             continue;
         }
         let mut rejected = false;
-        for (idx, _) in game.others.iter().enumerate() {
+        for (idx, _snake) in game.others.iter().enumerate() {
             let snake_dir = succ.other_moves[idx];
             let directions_snake_can_survive = directions_others_can_survive.get(idx).unwrap();
             if !directions_snake_can_survive
@@ -274,12 +284,20 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
                 .unwrap_or(&false)
             {
                 rejected = true;
+                log!("rejected by {}:\n{}", _snake, succ.next_state.game);
                 break;
             }
         }
         if rejected {
             continue;
         }
+        log!(
+            "{:?}: successor state: {} [{:?}]\n{}",
+            prev_moves,
+            succ.my_dir,
+            succ.other_moves,
+            succ.next_state.game
+        );
         res.push(succ.next_state);
     }
     res

@@ -5,10 +5,7 @@ use std::{
 
 use priority_queue::PriorityQueue;
 
-use crate::{
-    log,
-    protocol::{Direction, Point},
-};
+use crate::protocol::{Direction, Point};
 
 use super::{Board, BoardLike, Game, Tile};
 
@@ -212,12 +209,6 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
             }
         }
         if first {
-            log!(
-                "{} gets to {} after {} moves",
-                cur_snake.name,
-                work.point,
-                work.neighbours
-            );
             distances_grid[x][y] = Some(work.distance);
             res_board[x][y] = Some(work.snake);
             let count = res_counts.get_mut(&cur_snake.name).unwrap();
