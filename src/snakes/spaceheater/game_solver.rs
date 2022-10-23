@@ -284,20 +284,20 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
                 .unwrap_or(&false)
             {
                 rejected = true;
-                log!("rejected by {}:\n{}", _snake, succ.next_state.game);
+                // log!("rejected by {}:\n{}", _snake, succ.next_state.game);
                 break;
             }
         }
         if rejected {
             continue;
         }
-        log!(
-            "{:?}: successor state: {} [{:?}]\n{}",
-            prev_moves,
-            succ.my_dir,
-            succ.other_moves,
-            succ.next_state.game
-        );
+        // log!(
+        //     "{:?}: successor state: {} [{:?}]\n{}",
+        //     prev_moves,
+        //     succ.my_dir,
+        //     succ.other_moves,
+        //     succ.next_state.game
+        // );
         res.push(succ.next_state);
     }
     res
