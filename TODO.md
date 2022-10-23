@@ -2,7 +2,7 @@
 Weird choices to debug:
 - 86e382a7-d52c-4e48-84ee-821dbc13fa8a turn 96-97
 - 62ff2b75-656d-4bc4-8a81-8b57d6193cce turn 46 (should go straight?)
-- ba69c912-3e24-46b3-9f5e-f434255f3abf turn 47
+- ~~ba69c912-3e24-46b3-9f5e-f434255f3abf turn 47~~ SOLVED
 - 1c61e823-bac2-4bff-9825-e4a6d703ff8e turn 18 (random self collision)
 - ea884a4d-4b18-41de-8bd5-1c6bac052d34 turn 142
 

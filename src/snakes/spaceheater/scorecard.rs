@@ -5,6 +5,7 @@ use std::{
     sync::Mutex,
 };
 
+#[allow(unused)]
 use crate::{log, logic::Direction, protocol::ALL_DIRECTIONS};
 
 pub struct Scorecard<T: Ord + Default + Copy> {

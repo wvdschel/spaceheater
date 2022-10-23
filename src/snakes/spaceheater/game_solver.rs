@@ -176,7 +176,7 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
         for other_moves in other_moves_catalog.iter() {
             let mut ngame = game.clone();
             ngame.execute_moves(my_dir, &other_moves);
-            let score = (score_fn)(&game);
+            let score = (score_fn)(&ngame);
             if min_score.is_none() || score < min_score.unwrap() {
                 log!("{:?}: min score: {} - {}", full_path, score, ngame);
                 min_game = move_label!(
