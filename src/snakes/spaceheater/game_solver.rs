@@ -70,7 +70,7 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
             self.work_queue.push(work, priority);
         }
 
-        for _ in 0..thread_count() {
+        for _ in 0..(thread_count() * 2 - 1) {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();

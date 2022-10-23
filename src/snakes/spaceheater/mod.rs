@@ -59,7 +59,7 @@ where
             self.recent_ping_average.store(ping_avg, Ordering::Release);
 
             // 140% + 40ms seems like a sensible margin for ping fluctuations
-            latency_ms = ping_avg * 14 / 10 + 40;
+            latency_ms = ping_avg * 14 / 10 + 60;
             log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
                 last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
 
