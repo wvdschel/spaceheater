@@ -5,7 +5,10 @@ use std::{
 
 use priority_queue::PriorityQueue;
 
-use crate::protocol::{Direction, Point};
+use crate::{
+    log,
+    protocol::{Direction, Point},
+};
 
 use super::{Board, BoardLike, Game, Tile};
 
@@ -185,6 +188,7 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
     while let Some(work) = queue.pop_front() {
         let (x, y) = (work.point.x as usize, work.point.y as usize);
 
+        let cur_snake = all_snakes[work.snake];
         let mut first = work.distance < distances_grid[x][y].unwrap_or(usize::MAX);
         if work.distance == distances_grid[x][y].unwrap_or(usize::MAX) {
             // Draw - longest snake wins
@@ -194,7 +198,6 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
                 }
 
                 let prev_snake = all_snakes[prev_snake_idx];
-                let cur_snake = all_snakes[work.snake];
 
                 if cur_snake.length > prev_snake.length {
                     first = true;
@@ -209,8 +212,16 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
             }
         }
         if first {
+            log!(
+                "{} gets to {} after {} moves",
+                cur_snake.name,
+                work.point,
+                work.neighbours
+            );
             distances_grid[x][y] = Some(work.distance);
             res_board[x][y] = Some(work.snake);
+            let count = res_counts.get_mut(&cur_snake.name).unwrap();
+            *count += 1;
 
             for (_, next_point) in work.point.neighbours() {
                 let next_point = game.warp(&next_point);
