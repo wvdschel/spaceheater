@@ -189,6 +189,10 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
         if work.distance == distances_grid[x][y].unwrap_or(usize::MAX) {
             // Draw - longest snake wins
             if let Some(prev_snake_idx) = res_board[x][y] {
+                if prev_snake_idx == work.snake {
+                    continue; // Already processed this tile
+                }
+
                 let prev_snake = all_snakes[prev_snake_idx];
                 let cur_snake = all_snakes[work.snake];
 
