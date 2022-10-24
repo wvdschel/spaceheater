@@ -42,7 +42,11 @@ where
         let mut latency_ms = prev_latency_ms;
         if last_turn_time_ms > prev_latency_ms {
             let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
-            let last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
+            let mut last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
+            if last_turn_compute_time_ms > last_turn_time_ms {
+                println!("Warning: compute time is higher than total latency? Using 1ms latency");
+                last_turn_actual_latency = 1;
+            }
 
             let mut ping_avg = self.recent_ping_average.load(Ordering::Acquire);
             if last_turn_actual_latency > ping_avg {
