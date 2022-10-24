@@ -62,8 +62,8 @@ where
             }
             self.recent_ping_average.store(ping_avg, Ordering::Release);
 
-            // 140% + 40ms seems like a sensible margin for ping fluctuations
-            latency_ms = ping_avg * 14 / 10 + 60;
+            // 140% + 25ms seems like a sensible margin for ping fluctuations
+            latency_ms = ping_avg * 14 / 10 + 25;
             log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
                 last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
 
@@ -75,9 +75,12 @@ where
                 );
             }
         }
-        if max_turn_time_ms - latency_ms < 200 {
-            println!("Very little turn timer left with a latency of {}ms, reducing to {}ms", latency_ms, max_turn_time_ms - 200);
-            latency_ms = max_turn_time_ms - 200;
+        // Don't allow latencies over 60% of the turn timer, to prevent one bad ping from wrecking our compute time forever.
+        // If true latency is this bad, we're ruined anyway.
+        let max_sensible_latency = max_turn_time_ms * 3 / 5;
+        if latency_ms > max_sensible_latency {
+            println!("latency of {}ms exceeds 60% of turn time, reducing to {}ms", latency_ms, max_sensible_latency);
+            latency_ms = max_sensible_latency;
         }
         self.last_turn_latency_estimate
             .store(latency_ms, Ordering::Release);
