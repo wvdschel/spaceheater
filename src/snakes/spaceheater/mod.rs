@@ -12,6 +12,7 @@ use crate::{log, logic::Game, protocol, Battlesnake};
 
 mod game_solver;
 use game_solver::GameSolver;
+use rand::Rng;
 
 mod scorecard;
 
@@ -97,13 +98,19 @@ where
         if ping < 500 {
             thread::sleep(Duration::from_millis(500 - ping));
         }
+        let mut rng = rand::thread_rng();
+        let red = rng.gen_range(128..256);
+        let green = rng.gen_range(32..red);
+        let blue = rng.gen_range(0..green);
+        let color = format!("#{:02x}{:02x}{:02x}", red, green, blue);
+
         protocol::SnakeInfo {
             apiversion: "1".to_string(),
             author: "General Error".to_string(),
-            color: "#E77200".to_string(),
+            color,
             head: "workout".to_string(),
             tail: "flame".to_string(),
-            version: "113".to_string(),
+            version: "115".to_string(),
         }
     }
 
