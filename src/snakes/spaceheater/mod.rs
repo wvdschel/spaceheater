@@ -71,6 +71,10 @@ where
                 );
             }
         }
+        if max_turn_time_ms - latency_ms < 200 {
+            println!("Very little turn timer left with a latency of {}ms, reducing to {}ms", latency_ms, max_turn_time_ms - 200);
+            latency_ms = max_turn_time_ms - 200;
+        }
         self.last_turn_latency_estimate
             .store(latency_ms, Ordering::Release);
         Duration::from_millis(latency_ms)

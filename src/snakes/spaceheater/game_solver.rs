@@ -70,47 +70,55 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
             self.work_queue.push(work, priority);
         }
 
-        for _ in 0..(thread_count() * 2 - 1) {
+        for _ in 0..thread_count() {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
             let current_depth = Arc::clone(&self.current_depth);
             let score_fn = self.score_fn.clone();
-            thread::spawn(move || loop {
-                if Instant::now() > deadline {
-                    break;
-                }
-
-                if let Some(work) = queue.pop() {
+            thread::spawn(move || {
+                let start_time = Instant::now();
+                loop {
                     if Instant::now() > deadline {
                         break;
                     }
-                    let depth_finished = work.path_so_far.len() - 1;
-                    let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
-                    if depth_finished > old_depth {
-                        println!(
-                            "{:?} finished depth {} (coming from {})",
-                            Instant::now(),
-                            depth_finished,
-                            old_depth
-                        );
-                        scores.max_step(depth_finished)
-                    } else if depth_finished < old_depth {
-                        log!("wtf why are we getting a game for depth {} while {} is supposed to be finished?", depth_finished+1, old_depth);
-                    }
 
-                    let next_games =
-                        evaluate_game(work.path_so_far, &work.game, score_fn, &scores, &work.label);
-                    for more_work in next_games {
-                        let priority = usize::MAX - more_work.path_so_far.len();
-                        if !queue.push(more_work, priority) {
-                            println!("warning: discarding work because work queue is full");
+                    if let Some(work) = queue.pop() {
+                        if Instant::now() > deadline {
+                            break;
                         }
+                        let depth_finished = work.path_so_far.len() - 1;
+                        let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
+                        if depth_finished > old_depth {
+                            println!(
+                                "{}ms: finished depth {} (coming from {})",
+                                (Instant::now() - start_time).as_millis(),
+                                depth_finished,
+                                old_depth
+                            );
+                            scores.max_step(depth_finished)
+                        } else if depth_finished < old_depth {
+                            log!("wtf why are we getting a game for depth {} while {} is supposed to be finished?", depth_finished+1, old_depth);
+                        }
+
+                        let next_games = evaluate_game(
+                            work.path_so_far,
+                            &work.game,
+                            score_fn,
+                            &scores,
+                            &work.label,
+                        );
+                        for more_work in next_games {
+                            let priority = usize::MAX - more_work.path_so_far.len();
+                            if !queue.push(more_work, priority) {
+                                println!("warning: discarding work because work queue is full");
+                            }
+                        }
+                        queue.done();
+                    } else {
+                        log!("out of work");
+                        break;
                     }
-                    queue.done();
-                } else {
-                    log!("out of work");
-                    break;
                 }
             });
         }
