@@ -12,7 +12,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert("simple".to_string(), Box::new(SimpleSnake {}));
     snakes.insert(
         "spaceheater_classic".to_string(),
-        Box::new(SpaceHeater::new(logic::scoring::survival_kills_length)),
+        Box::new(SpaceHeater::new(logic::scoring::classic)),
     );
     snakes.insert(
         "spaceheater_v".to_string(),
@@ -21,6 +21,10 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert(
         "spaceheater_vrl".to_string(),
         Box::new(SpaceHeater::new(logic::scoring::voronoi_relative_length)),
+    );
+    snakes.insert(
+        "spaceheater_vt".to_string(),
+        Box::new(SpaceHeater::new(logic::scoring::tournament_voronoi)),
     );
 
     snakes

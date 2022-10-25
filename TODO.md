@@ -9,6 +9,15 @@ Weird choices to debug:
   - 76523316-d6c5-4051-9b97-c0d51c9c79d5
   - 0d3cf040-091d-4c40-afc3-72c9d635a26d
 
+# Threading problems
+- Scorecard:
+ - single global mutex
+ - mpsc channels for submitting scores
+- work queue:
+ - append all, notify all
+ - append by using mpsc?
+ - single operation for appending + popping with a single lock/unlock?
+
 # Game logic
 ## Unsupported game features
 - stacked hazards:
