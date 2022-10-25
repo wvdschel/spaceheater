@@ -2,8 +2,6 @@ use crate::protocol::{self};
 
 use super::{Direction, Game};
 
-mod spaceheater;
-
 #[test]
 fn head_to_head_collision() {}
 

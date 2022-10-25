@@ -1,31 +1,36 @@
-use std::sync::{Condvar, Mutex};
+use std::{
+    collections::{hash_map::DefaultHasher, HashSet, VecDeque},
+    hash::Hasher,
+    sync::{Condvar, Mutex},
+};
 
-use priority_queue::PriorityQueue;
 use std::hash::Hash;
 
-struct WorkList<W: Hash + Eq, P: Ord> {
-    work_items: PriorityQueue<W, P>,
+struct WorkList<W: Hash + Eq> {
+    work_items: VecDeque<W>,
+    items_seen: HashSet<u64>,
     work_count: usize,
-    done_count: usize,
+    duplicate_count: usize,
 }
 
-impl<W: Hash + Eq, P: Ord> WorkList<W, P> {
+impl<W: Hash + Eq> WorkList<W> {
     pub fn new() -> Self {
         Self {
-            work_items: PriorityQueue::new(),
+            work_items: VecDeque::new(),
+            items_seen: HashSet::new(),
             work_count: 0,
-            done_count: 0,
+            duplicate_count: 0,
         }
     }
 }
 
-pub struct WorkQueue<W: Hash + Eq, P: Ord> {
-    work: Mutex<WorkList<W, P>>,
+pub struct WorkQueue<W: Hash + Eq> {
+    work: Mutex<WorkList<W>>,
     cvar: Condvar,
     max_len: usize,
 }
 
-impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
+impl<W: Hash + Eq + Clone> WorkQueue<W> {
     pub fn new(max_len: usize) -> Self {
         Self {
             work: Mutex::new(WorkList::new()),
@@ -34,27 +39,38 @@ impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
         }
     }
 
-    pub fn done(&self, new_work: Vec<(W, P)>) {
+    pub fn done(&self, new_work: Vec<W>) {
         let mut worklist = self.work.lock().unwrap();
         worklist.work_count -= 1;
-        worklist.done_count += 1;
 
-        for (w, p) in new_work {
-            if let None = worklist.work_items.push(w, p) {
+        for w in new_work {
+            let mut h = DefaultHasher::new();
+            w.hash(&mut h);
+            let w64 = h.finish();
+            if worklist.items_seen.insert(w64) {
+                worklist.work_items.push_back(w);
                 worklist.work_count += 1;
+            } else {
+                worklist.duplicate_count += 1
             }
         }
 
         self.cvar.notify_all();
     }
 
-    pub fn push(&self, work: W, priority: P) -> bool {
+    pub fn push(&self, work: W) -> bool {
         let mut worklist = self.work.lock().unwrap();
         if worklist.work_items.len() > self.max_len {
             return false;
         }
-        if let None = worklist.work_items.push(work, priority) {
-            worklist.work_count += 1; // Only update the counter if we're not replacing an existing entry
+        let mut h = DefaultHasher::new();
+        work.hash(&mut h);
+        let w64 = h.finish();
+        if worklist.items_seen.insert(w64) {
+            worklist.work_items.push_back(work);
+            worklist.work_count += 1;
+        } else {
+            worklist.duplicate_count += 1
         }
         self.cvar.notify_one();
         true
@@ -63,7 +79,7 @@ impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
     pub fn pop(&self) -> Option<W> {
         let mut worklist = self.work.lock().unwrap();
         loop {
-            if let Some((work, _priority)) = worklist.work_items.pop() {
+            if let Some(work) = worklist.work_items.pop_front() {
                 return Some(work);
             } else if worklist.work_count == 0 {
                 return None;
@@ -74,16 +90,18 @@ impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
 
     pub fn items_processed(&self) -> usize {
         let worklist = self.work.lock().unwrap();
-        worklist.done_count
+        worklist.items_seen.len() - worklist.work_count
     }
 }
 
-impl<W: Hash + Eq, P: Ord> Drop for WorkQueue<W, P> {
+impl<W: Hash + Eq> Drop for WorkQueue<W> {
     fn drop(&mut self) {
         let worklist = self.work.lock().unwrap();
         println!(
-            "work queue termination after processing {} items ({} left)",
-            worklist.done_count, worklist.work_count,
+            "work queue termination after processing {} items ({} duplicates dropped, {} left)",
+            worklist.items_seen.len() - worklist.work_count,
+            worklist.duplicate_count,
+            worklist.work_count,
         )
     }
 }

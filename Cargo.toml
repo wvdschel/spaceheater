@@ -10,15 +10,11 @@ name = "topsnek"
 name = "topsnek-server"
 
 [[bin]]
+name = "bench-spaceheater"
+
+[[bin]]
 name = "replay"
 
-[[bench]]
-name = "spaceheater"
-harness = false
-
-[[bench]]
-name = "scoring"
-harness = false
 
 [profile.release]
 debug = 1
@@ -40,6 +36,3 @@ sanitize-filename = "0.4.0"
 num_cpus = "1.13.1"
 itertools = "0.10.5"
 flate2 = "1.0.24"
-
-[dev-dependencies]
-criterion = "0.4.0"

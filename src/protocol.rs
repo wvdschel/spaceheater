@@ -72,7 +72,7 @@ pub struct Board {
 }
 
 // See https://docs.battlesnake.com/api/objects/battlesnake
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Hash)]
 pub struct Snake {
     pub id: String,
     pub name: String,
@@ -86,7 +86,7 @@ pub struct Snake {
     pub customizations: Customizations,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Hash)]
 pub struct Customizations {
     pub color: String,
     pub head: String,

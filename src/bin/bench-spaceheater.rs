@@ -1,22 +1,13 @@
-use std::{fs, time::Instant};
+use std::{fs, io::stdin, time::Instant};
 
-use crate::{
+use topsnek::{
     logic::{self, scoring, Direction},
     snakes,
     util::gamelogger,
 };
 
-fn load_replays() -> Vec<gamelogger::Game> {
-    let mut res = vec![];
-
-    for replay in fs::read_dir("./benches/gamedata").unwrap() {
-        let replay = replay.unwrap();
-        let mut file = fs::File::open(replay.path()).unwrap();
-        let game = gamelogger::Game::load(&mut file).unwrap();
-        res.push(game);
-    }
-
-    res
+fn load_replay() -> gamelogger::Game {
+    gamelogger::Game::load(&mut stdin()).unwrap()
 }
 
 fn solve_game(
@@ -33,10 +24,8 @@ fn solve_game(
     )
 }
 
-#[test]
-fn test_solver() {
-    let replays = load_replays();
-    let game = logic::Game::from(&replays[0].start_request);
+fn main() {
+    let game = logic::Game::from(&load_replay().start_request);
 
     for d in 1..4 {
         let start = Instant::now();

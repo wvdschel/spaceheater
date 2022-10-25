@@ -35,7 +35,7 @@ macro_rules! move_label {
     };
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Clone)]
 struct WorkItem {
     path_so_far: Vec<Direction>,
     game: Game,
@@ -46,7 +46,7 @@ pub struct GameSolver<T>
 where
     T: Ord + Default + Copy + Display + Send,
 {
-    work_queue: Arc<WorkQueue<WorkItem, usize>>,
+    work_queue: Arc<WorkQueue<WorkItem>>,
     pub scores: Arc<Scorecard<T>>,
     current_depth: Arc<AtomicUsize>,
     score_fn: fn(&Game) -> T,
@@ -71,9 +71,9 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
     ) -> (Direction, T) {
         let base_label = move_label!("{}", game);
         let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label);
+        println!("first games: {}", first_games.len());
         for work in first_games {
-            let priority = usize::MAX - work.path_so_far.len();
-            self.work_queue.push(work, priority);
+            self.work_queue.push(work);
         }
 
         let mut joinhandles = vec![];
@@ -123,10 +123,7 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                             &scores,
                             &work.label,
                         );
-                        let new_work = next_games.into_iter().filter(|w| w.path_so_far.len() <= max_depth).map(|w| {
-                            let p = usize::MAX - w.path_so_far.len();
-                            (w, p)
-                        }).collect();
+                        let new_work = next_games.into_iter().filter(|w| w.path_so_far.len() <= max_depth).collect();
                         queue.done(new_work);
                     } else {
                         log!("worker {}: out of work", _i);

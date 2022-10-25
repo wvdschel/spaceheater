@@ -2,3 +2,4 @@
 .compile_commands.log
 logs/
 *.log
+callgrind.*

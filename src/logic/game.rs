@@ -24,7 +24,10 @@ impl PartialEq for Game {
 
 impl Hash for Game {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write(format!("{}", self).as_bytes());
+        self.board.to_string().hash(state);
+        self.others.hash(state);
+        self.you.hash(state);
+        self.turn.hash(state);
     }
 }
 
