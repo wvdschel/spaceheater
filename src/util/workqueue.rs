@@ -34,10 +34,17 @@ impl<W: Hash + Eq, P: Ord> WorkQueue<W, P> {
         }
     }
 
-    pub fn done(&self) {
+    pub fn done(&self, new_work: Vec<(W, P)>) {
         let mut worklist = self.work.lock().unwrap();
         worklist.work_count -= 1;
         worklist.done_count += 1;
+
+        for (w, p) in new_work {
+            if let None = worklist.work_items.push(w, p) {
+                worklist.work_count += 1;
+            }
+        }
+
         self.cvar.notify_all();
     }
 

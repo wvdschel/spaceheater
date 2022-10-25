@@ -96,7 +96,7 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                     if let Some(work) = queue.pop() {
                         if let Some(deadline) = deadline {
                             if deadline > Instant::now() {
-                                queue.done();
+                                queue.done(vec![]);
                                 break;
                             }
                         }
@@ -104,11 +104,12 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                         let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
                         if depth_finished > old_depth {
                             println!(
-                                "{}: {}ms: finished depth {} (coming from {})",
+                                "{}: {}ms: finished depth {} (coming from {}) after processing {} items",
                                 label,
                                 (Instant::now() - start_time).as_millis(),
                                 depth_finished,
-                                old_depth
+                                old_depth,
+                                queue.items_processed()
                             );
                             scores.max_step(depth_finished)
                         } else if depth_finished < old_depth {
@@ -122,13 +123,11 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                             &scores,
                             &work.label,
                         );
-                        for more_work in next_games.into_iter().filter(|w| w.path_so_far.len() <= max_depth) {
-                            let priority = usize::MAX - more_work.path_so_far.len();
-                            if !queue.push(more_work, priority) {
-                                println!("warning: discarding work because work queue is full");
-                            }
-                        }
-                        queue.done();
+                        let new_work = next_games.into_iter().filter(|w| w.path_so_far.len() <= max_depth).map(|w| {
+                            let p = usize::MAX - w.path_so_far.len();
+                            (w, p)
+                        }).collect();
+                        queue.done(new_work);
                     } else {
                         log!("worker {}: out of work", _i);
                         break;

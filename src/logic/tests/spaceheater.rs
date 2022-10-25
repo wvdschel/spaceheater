@@ -24,7 +24,7 @@ fn solve_game(
     max_depth: usize,
 ) -> (Direction, scoring::TournamentVoronoiScore) {
     let mut solver = snakes::spaceheater::GameSolver::new(scoring::tournament_voronoi);
-    println!("Attempting to solve for depth {}: {}", max_depth, game);
+
     solver.solve(
         format!("solver for depth {}", max_depth).as_str(),
         &game,
