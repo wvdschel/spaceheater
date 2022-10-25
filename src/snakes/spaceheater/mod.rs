@@ -11,7 +11,7 @@ use std::{
 use crate::{log, logic::Game, protocol, Battlesnake};
 
 mod game_solver;
-use game_solver::GameSolver;
+pub use game_solver::GameSolver;
 use rand::Rng;
 
 mod scorecard;
@@ -137,7 +137,8 @@ where
             start_time, latency, deadline
         );
         let game = Game::from(req);
-        let (best_dir, top_score) = GameSolver::new(self.score_fn).solve(&game, &deadline);
+        let (best_dir, top_score) =
+            GameSolver::new(self.score_fn).solve("", &game, Some(&deadline), usize::MAX);
 
         println!(
             "----- Turn {}: top score {} when moving {} -----\n{}\n{}",

@@ -199,6 +199,7 @@ impl Game {
         return -1;
     }
 }
+
 impl Clone for Game {
     fn clone(&self) -> Self {
         Self {

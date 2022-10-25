@@ -151,12 +151,17 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
     let h = game.board.height() as usize;
 
     let mut res_board = Vec::with_capacity(w);
+    let mut len_board = Vec::with_capacity(w);
     let mut res_counts = HashMap::new();
 
     for _ in 0..w {
         let mut col = Vec::with_capacity(h);
         col.resize(h, None);
         res_board.push(col);
+
+        let mut col = Vec::with_capacity(h);
+        col.resize(h, 0 as usize);
+        len_board.push(col);
     }
 
     let mut all_snakes = Vec::from([&game.you]);
@@ -181,14 +186,18 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
         });
     }
 
-    let mut distances_grid = res_board.clone();
+    let mut distance_board = res_board.clone();
     while let Some(work) = queue.pop_front() {
         let (x, y) = (work.point.x as usize, work.point.y as usize);
 
         let cur_snake = all_snakes[work.snake];
-        let mut first = work.distance < distances_grid[x][y].unwrap_or(usize::MAX);
-        if work.distance == distances_grid[x][y].unwrap_or(usize::MAX) {
+        let mut first = work.distance < distance_board[x][y].unwrap_or(usize::MAX);
+        if work.distance == distance_board[x][y].unwrap_or(usize::MAX) {
             // Draw - longest snake wins
+            let prev_snake_len = len_board[x][y];
+            if cur_snake.length > prev_snake_len {
+                first = true;
+            }
             if let Some(prev_snake_idx) = res_board[x][y] {
                 if prev_snake_idx == work.snake {
                     continue; // Already processed this tile
@@ -196,21 +205,17 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
 
                 let prev_snake = all_snakes[prev_snake_idx];
 
-                if cur_snake.length > prev_snake.length {
-                    first = true;
-                }
-
                 if prev_snake.length <= cur_snake.length {
                     let count = res_counts.get_mut(&prev_snake.name).unwrap();
                     *count -= 1;
                 }
-                // TODO: can't remove prev_snake from res_board here or a third snake might incorrectly claim the tile.
-                // but this makes the res_board return value incorrect...
+                res_board[x][y] = None
             }
         }
         if first {
-            distances_grid[x][y] = Some(work.distance);
+            distance_board[x][y] = Some(work.distance);
             res_board[x][y] = Some(work.snake);
+            len_board[x][y] = cur_snake.length;
             let count = res_counts.get_mut(&cur_snake.name).unwrap();
             *count += 1;
 
@@ -226,7 +231,7 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
 
                 let (nx, ny) = (next_point.x as usize, next_point.y as usize);
 
-                if let Some(cur_dist) = distances_grid[nx][ny] {
+                if let Some(cur_dist) = distance_board[nx][ny] {
                     if cur_dist < work.distance + 1 {
                         continue;
                     }

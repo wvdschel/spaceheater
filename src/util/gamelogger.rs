@@ -11,10 +11,10 @@ use crate::{protocol, Battlesnake};
 
 #[derive(Serialize, Deserialize)]
 pub struct Game {
-    timestamp: Option<String>,
-    start_request: protocol::Request,
-    end_request: Option<protocol::Request>,
-    moves: Vec<(protocol::Request, Option<protocol::MoveResponse>)>,
+    pub timestamp: Option<String>,
+    pub start_request: protocol::Request,
+    pub end_request: Option<protocol::Request>,
+    pub moves: Vec<(protocol::Request, Option<protocol::MoveResponse>)>,
 }
 
 type Result = std::result::Result<String, String>;

@@ -47,7 +47,7 @@ where
     T: Ord + Default + Copy + Display + Send,
 {
     work_queue: Arc<WorkQueue<WorkItem, usize>>,
-    scores: Arc<Scorecard<T>>,
+    pub scores: Arc<Scorecard<T>>,
     current_depth: Arc<AtomicUsize>,
     score_fn: fn(&Game) -> T,
 }
@@ -62,7 +62,13 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
         }
     }
 
-    pub fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, T) {
+    pub fn solve(
+        &mut self,
+        label: &str,
+        game: &Game,
+        deadline: Option<&Instant>,
+        max_depth: usize,
+    ) -> (Direction, T) {
         let base_label = move_label!("{}", game);
         let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label);
         for work in first_games {
@@ -70,28 +76,36 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
             self.work_queue.push(work, priority);
         }
 
-        for _ in 0..thread_count() {
+        let mut joinhandles = vec![];
+        for _i in 0..thread_count() {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
-            let deadline = deadline.clone();
+            let deadline = deadline.map(|d| d.clone());
             let current_depth = Arc::clone(&self.current_depth);
             let score_fn = self.score_fn.clone();
-            thread::spawn(move || {
+            let label = String::from(label);
+            joinhandles.push(thread::spawn(move || {
                 let start_time = Instant::now();
                 loop {
-                    if Instant::now() > deadline {
-                        break;
+                    if let Some(deadline) = deadline {
+                        if deadline > Instant::now() {
+                            break;
+                        }
                     }
 
                     if let Some(work) = queue.pop() {
-                        if Instant::now() > deadline {
-                            break;
+                        if let Some(deadline) = deadline {
+                            if deadline > Instant::now() {
+                                queue.done();
+                                break;
+                            }
                         }
                         let depth_finished = work.path_so_far.len() - 1;
                         let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
                         if depth_finished > old_depth {
                             println!(
-                                "{}ms: finished depth {} (coming from {})",
+                                "{}: {}ms: finished depth {} (coming from {})",
+                                label,
                                 (Instant::now() - start_time).as_millis(),
                                 depth_finished,
                                 old_depth
@@ -108,7 +122,7 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                             &scores,
                             &work.label,
                         );
-                        for more_work in next_games {
+                        for more_work in next_games.into_iter().filter(|w| w.path_so_far.len() <= max_depth) {
                             let priority = usize::MAX - more_work.path_so_far.len();
                             if !queue.push(more_work, priority) {
                                 println!("warning: discarding work because work queue is full");
@@ -116,18 +130,22 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                         }
                         queue.done();
                     } else {
-                        log!("out of work");
+                        log!("worker {}: out of work", _i);
                         break;
                     }
                 }
-            });
+            }));
         }
 
-        let sleep_time = *deadline - Instant::now();
-        println!("Sleeping for {}ms", sleep_time.as_millis());
-        thread::sleep(sleep_time);
+        if let Some(deadline) = deadline {
+            let sleep_time = *deadline - Instant::now();
+            thread::sleep(sleep_time);
+        } else {
+            for j in joinhandles {
+                j.join().unwrap();
+            }
+        }
 
-        log!("{}", self.scores);
         return self.scores.top_score();
     }
 }

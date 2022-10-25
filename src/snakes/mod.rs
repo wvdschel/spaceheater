@@ -2,7 +2,7 @@ mod simple;
 use std::collections::HashMap;
 
 pub use simple::SimpleSnake;
-mod spaceheater;
+pub mod spaceheater;
 pub use spaceheater::SpaceHeater;
 
 use crate::{logic, Battlesnake};
