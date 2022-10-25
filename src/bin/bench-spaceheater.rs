@@ -1,4 +1,4 @@
-use std::{fs, io::stdin, time::Instant};
+use std::{io::stdin, time::Instant};
 
 use topsnek::{
     logic::{self, scoring, Direction},
@@ -27,7 +27,10 @@ fn solve_game(
 fn main() {
     let game = logic::Game::from(&load_replay().start_request);
 
-    for d in 1..4 {
+    let mut args = std::env::args();
+    let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(4)).unwrap_or(4);
+
+    for d in 2..max_iter {
         let start = Instant::now();
         let (dir, score) = solve_game(&game, d);
         let stop = Instant::now();
