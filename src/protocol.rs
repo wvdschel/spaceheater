@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
 pub struct Point {
-    pub x: isize,
-    pub y: isize,
+    pub x: i8,
+    pub y: i8,
 }
 
 // See https://docs.battlesnake.com/api/requests/info
@@ -29,14 +29,14 @@ pub struct Game {
     pub source: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Ruleset {
     pub name: String,
     pub version: String,
     pub settings: RulesetSettings,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RulesetSettings {
     pub food_spawn_chance: usize,
@@ -46,13 +46,13 @@ pub struct RulesetSettings {
     pub squad: SquadRules,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RoyaleRules {
     pub shrink_every_n_turns: usize,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SquadRules {
     pub allow_body_collisions: bool,
@@ -72,7 +72,7 @@ pub struct Board {
 }
 
 // See https://docs.battlesnake.com/api/objects/battlesnake
-#[derive(Serialize, Deserialize, Clone, Hash)]
+#[derive(Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct Snake {
     pub id: String,
     pub name: String,
@@ -86,7 +86,7 @@ pub struct Snake {
     pub customizations: Customizations,
 }
 
-#[derive(Serialize, Deserialize, Clone, Hash)]
+#[derive(Serialize, Deserialize, Clone, Hash, Eq, PartialEq)]
 pub struct Customizations {
     pub color: String,
     pub head: String,

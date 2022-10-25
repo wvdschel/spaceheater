@@ -330,8 +330,8 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
 
 fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
     match game.board.get(p) {
-        Tile::Hazard | Tile::HazardWithSnake | Tile::HazardWithHead => {
-            game.rules.settings.hazard_damage_per_turn > hp
+        Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
+            game.rules.settings.hazard_damage_per_turn * x as isize > hp
         }
         Tile::Wall => true,
         // TODO model starvation?

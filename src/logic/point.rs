@@ -34,11 +34,13 @@ impl Point {
         .map(|d| (d, self.neighbour(d)))
     }
 
-    pub fn out_of_bounds(&self, w: isize, h: isize) -> bool {
-        self.x < 0 || self.y < 0 || self.x >= w || self.y >= h
+    pub fn out_of_bounds(&self, width: isize, height: isize) -> bool {
+        let (width, height) = (width as i8, height as i8);
+        self.x < 0 || self.y < 0 || self.x >= width || self.y >= height
     }
 
     pub fn warp(&self, width: isize, height: isize) -> Point {
+        let (width, height) = (width as i8, height as i8);
         let mut res = self.clone();
         if self.x == -1 {
             res.x = width - 1;

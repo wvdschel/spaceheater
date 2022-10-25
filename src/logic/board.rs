@@ -1,49 +1,197 @@
-use std::sync::Arc;
+use crate::{
+    log,
+    protocol::{self, Point},
+};
 
-use crate::protocol::{self, Point};
+use super::Tile;
 
-use super::{BoardLike, Tile};
-
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Board {
-    tiles: Vec<Vec<Tile>>,
+    data: Vec<u8>,
+}
+
+const TILE_MASK: u8 = 0b1111;
+const HAZARD_MASK: u8 = 0b1100;
+const TILE_TYPE_MASK: u8 = 0b0011;
+const EMPTY: u8 = 0b00;
+const SNAKE: u8 = 0b01;
+const HEAD: u8 = 0b10;
+const FOOD: u8 = 0b11;
+
+macro_rules! get_tile {
+    ($data:expr, $x:expr, $y:expr, $mask:expr) => {{
+        let w = $data[0] as usize;
+        let (x, y) = ($x as usize, $y as usize);
+        let idx = x + y * w;
+        if idx % 2 == 0 {
+            ($data[2 + idx / 2] >> 4) & $mask
+        } else {
+            $data[2 + idx / 2] & $mask
+        }
+    }};
+}
+
+macro_rules! set_tile {
+    ($data:expr, $x:expr, $y:expr, $mask:expr, $value:expr) => {{
+        let w = $data[0] as usize;
+        let (x, y) = ($x as usize, $y as usize);
+        let idx = x + y * w;
+        if idx % 2 == 0 {
+            let mask = $mask << 4;
+            let value = $value << 4;
+            $data[2 + idx / 2] = (!mask & $data[2 + idx / 2] | mask & value);
+        } else {
+            $data[2 + idx / 2] = (!$mask & $data[2 + idx / 2] | $mask & $value);
+        }
+    }};
 }
 
 impl Board {
     pub fn new(w: usize, h: usize) -> Board {
-        let mut tiles = Vec::with_capacity(w);
-        for i in 0..w {
-            tiles.push(Vec::with_capacity(h));
-            tiles[i].resize(h, Tile::Empty);
+        let mut count = w * h + 2;
+        if count % 2 == 1 {
+            count += 1
         }
-        Board { tiles }
+        let mut data = Vec::with_capacity(count);
+        data.resize(count, 0 as u8);
+        data[0] = w as u8;
+        data[1] = h as u8;
+        Board { data }
     }
-}
 
-impl BoardLike for Board {
-    fn get(&self, p: &Point) -> Tile {
-        if p.x < 0 || p.y < 0 || p.x >= self.width() || p.y >= self.height() {
-            return Tile::Wall;
+    #[inline(always)]
+    fn check_type(&self, p: &Point, mask: u8) -> bool {
+        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+            return false;
         }
-        self.tiles[p.x as usize][p.y as usize]
+        get_tile!(self.data, p.x, p.y, mask) == mask
     }
 
-    fn set(&mut self, p: &Point, v: Tile) {
-        if p.x >= 0 && p.y >= 0 && p.x < self.width() && p.y < self.height() {
-            self.tiles[p.x as usize][p.y as usize] = v
+    #[inline(always)]
+    pub fn is_snake(&self, p: &Point) -> bool {
+        self.check_type(p, SNAKE)
+    }
+
+    #[inline(always)]
+    pub fn is_head(&self, p: &Point) -> bool {
+        self.check_type(p, HEAD)
+    }
+
+    #[inline(always)]
+    pub fn is_food(&self, p: &Point) -> bool {
+        self.check_type(p, FOOD)
+    }
+
+    #[inline(always)]
+    pub fn is_empty(&self, p: &Point) -> bool {
+        self.check_type(p, EMPTY)
+    }
+
+    #[inline(always)]
+    pub fn hazard_count(&self, p: &Point) -> u8 {
+        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+            return 0;
+        }
+        get_tile!(self.data, p.x, p.y, HAZARD_MASK) >> 2
+    }
+
+    pub fn set(&mut self, p: &Point, t: Tile) {
+        match t {
+            Tile::Empty => set_tile!(self.data, p.x, p.y, TILE_MASK, EMPTY),
+            Tile::Snake => set_tile!(self.data, p.x, p.y, TILE_MASK, SNAKE),
+            Tile::Head => set_tile!(self.data, p.x, p.y, TILE_MASK, HEAD),
+            Tile::Food => set_tile!(self.data, p.x, p.y, TILE_MASK, FOOD),
+            Tile::Hazard(x) => set_tile!(self.data, p.x, p.y, TILE_MASK, (x as u8 & 3) << 2),
+            Tile::HazardWithFood(x) => {
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | FOOD)
+            }
+            Tile::HazardWithSnake(x) => {
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | SNAKE)
+            }
+            Tile::HazardWithHead(x) => {
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | HEAD)
+            }
+            Tile::Wall => {
+                log!("warning: attempt to configure a tile as a wall, this should never happen. Adding max hazards instead.");
+                set_tile!(self.data, p.x, p.y, TILE_MASK, 3 << 2);
+            }
         }
     }
 
-    fn width(&self) -> isize {
-        self.tiles.len() as isize
-    }
-
-    fn height(&self) -> isize {
-        if self.tiles.len() == 0 {
-            0
+    pub fn get(&self, p: &Point) -> Tile {
+        let value = get_tile!(self.data, p.x, p.y, TILE_MASK);
+        let hazards = (value & HAZARD_MASK) as usize >> 2;
+        if hazards > 0 {
+            match value & TILE_TYPE_MASK {
+                EMPTY => Tile::Hazard(hazards),
+                HEAD => Tile::HazardWithHead(hazards),
+                SNAKE => Tile::HazardWithSnake(hazards),
+                FOOD => Tile::HazardWithFood(hazards),
+                _ => panic!(),
+            }
         } else {
-            self.tiles[0].len() as isize
+            match value & TILE_TYPE_MASK {
+                EMPTY => Tile::Empty,
+                HEAD => Tile::Head,
+                SNAKE => Tile::Snake,
+                FOOD => Tile::Food,
+                _ => panic!(),
+            }
         }
+    }
+    pub fn add(&mut self, p: &Point, t: Tile) {
+        match t {
+            Tile::Empty => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, EMPTY),
+            Tile::Snake => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, SNAKE),
+            Tile::Head => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, HEAD),
+            Tile::Food => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, FOOD),
+            Tile::Hazard(x) => {
+                let mut hazard_count = self.hazard_count(p) + x as u8;
+                if hazard_count > 3 {
+                    hazard_count = 3;
+                }
+                set_tile!(self.data, p.x, p.y, HAZARD_MASK, hazard_count << 2);
+            }
+            Tile::HazardWithFood(x) => {
+                let mut hazard_count = self.hazard_count(p) + x as u8;
+                if hazard_count > 3 {
+                    hazard_count = 3;
+                }
+                set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | FOOD)
+            }
+            Tile::HazardWithSnake(x) => {
+                let mut hazard_count = self.hazard_count(p) + x as u8;
+                if hazard_count > 3 {
+                    hazard_count = 3;
+                }
+                set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | SNAKE)
+            }
+            Tile::HazardWithHead(x) => {
+                let mut hazard_count = self.hazard_count(p) + x as u8;
+                if hazard_count > 3 {
+                    hazard_count = 3;
+                }
+                set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | HEAD)
+            }
+            Tile::Wall => {
+                println!("warning: attempt to configure a tile as a wall, this should never happen. Adding max hazards instead.");
+                set_tile!(self.data, p.x, p.y, HAZARD_MASK, 3 << 2);
+            }
+        }
+    }
+
+    pub fn clear_snake(&mut self, p: &Point) {
+        self.add(p, Tile::Empty);
+    }
+
+    #[inline(always)]
+    pub fn width(&self) -> isize {
+        self.data[0] as isize
+    }
+
+    #[inline(always)]
+    pub fn height(&self) -> isize {
+        self.data[1] as isize
     }
 }
 
@@ -60,60 +208,28 @@ impl From<&protocol::Board> for Board {
             b.add(&food, Tile::Food)
         }
         for hazard in &g.hazards {
-            b.add(&hazard, Tile::Hazard)
+            b.add(&hazard, Tile::Hazard(1))
         }
         b
     }
 }
 
-pub struct BoardOverlay {
-    tiles: Vec<Vec<Option<Tile>>>,
-    below: Arc<dyn BoardLike + Send + Sync>,
-}
-
-impl BoardOverlay {
-    pub fn new(below: Arc<dyn BoardLike + Send + Sync>) -> BoardOverlay {
-        if below.layers() as isize > below.width() / 2 {
-            return Self::new(Arc::new(below.flatten()));
+impl ToString for Board {
+    fn to_string(&self) -> String {
+        let mut parts = vec![];
+        for y in 0..self.height() {
+            let y = self.height() - 1 - y;
+            for x in 0..self.width() {
+                parts.push(format!(
+                    "{}",
+                    self.get(&Point {
+                        x: x as i8,
+                        y: y as i8,
+                    })
+                ))
+            }
+            parts.push("\n".to_string());
         }
-
-        let w = below.width() as usize;
-        let h = below.height() as usize;
-        let mut tiles = Vec::with_capacity(w);
-        for x in 0..w {
-            tiles.push(Vec::with_capacity(h as usize));
-            tiles[x].resize(h, None);
-        }
-        BoardOverlay { tiles, below }
-    }
-}
-
-impl BoardLike for BoardOverlay {
-    fn get(&self, p: &Point) -> Tile {
-        if p.x < 0 || p.y < 0 || p.x >= self.width() || p.y >= self.height() {
-            return Tile::Wall;
-        }
-        match self.tiles[p.x as usize][p.y as usize] {
-            Some(t) => t,
-            None => self.below.get(p),
-        }
-    }
-
-    fn set(&mut self, p: &Point, v: Tile) {
-        if p.x >= 0 && p.y >= 0 && p.x < self.width() && p.y < self.height() {
-            self.tiles[p.x as usize][p.y as usize] = Some(v)
-        }
-    }
-
-    fn width(&self) -> isize {
-        self.below.width()
-    }
-
-    fn height(&self) -> isize {
-        self.below.height()
-    }
-
-    fn layers(&self) -> usize {
-        self.below.layers() + 1
+        parts.join("")
     }
 }

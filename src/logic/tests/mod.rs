@@ -2,6 +2,8 @@ use crate::protocol::{self};
 
 use super::{Direction, Game};
 
+mod board;
+
 #[test]
 fn head_to_head_collision() {}
 

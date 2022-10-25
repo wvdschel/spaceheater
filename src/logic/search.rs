@@ -7,17 +7,17 @@ use priority_queue::PriorityQueue;
 
 use crate::protocol::{Direction, Point};
 
-use super::{Board, BoardLike, Game, Tile};
+use super::{Board, Game, Tile};
 
 pub fn calculate_distances<T, C, B>(
-    board: &dyn BoardLike,
+    board: &Board,
     p: &Point,
     cost: C,
     bound: B,
 ) -> Vec<Vec<Option<T>>>
 where
     B: Fn(&Vec<Vec<Option<T>>>, &Point) -> bool,
-    C: Fn(&dyn BoardLike, &Point) -> (T, Vec<Point>),
+    C: Fn(&Board, &Point) -> (T, Vec<Point>),
     T: Clone + Copy + Ord + Default + Add<Output = T> + Neg<Output = T>,
 {
     let mut distances = Vec::with_capacity(board.width() as usize);
@@ -53,7 +53,11 @@ where
                 points
                     .into_iter()
                     .filter(|p| {
-                        if !(p.x >= 0 && p.y >= 0 && p.x < board.width() && p.y < board.height()) {
+                        if !(p.x >= 0
+                            && p.y >= 0
+                            && p.x < board.width() as i8
+                            && p.y < board.height() as i8)
+                        {
                             false
                         } else {
                             match distances[p.x as usize][p.y as usize] {

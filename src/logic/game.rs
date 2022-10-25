@@ -1,25 +1,18 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
-use super::{board::BoardOverlay, Board, BoardLike, Direction, Point, Snake, Tile};
+use super::{Board, Direction, Point, Snake, Tile};
 use crate::protocol;
 
+#[derive(Clone, Eq, PartialEq)]
 pub struct Game {
-    pub board: Arc<dyn BoardLike + Send + Sync>,
+    pub board: Board,
     pub others: Vec<Snake>,
     pub dead_snakes: usize,
     pub you: Snake,
     pub timeout: std::time::Duration,
     pub rules: Arc<protocol::Ruleset>,
     pub turn: usize,
-}
-
-impl Eq for Game {}
-
-impl PartialEq for Game {
-    fn eq(&self, other: &Self) -> bool {
-        format!("{}", self) == format!("{}", other)
-    }
 }
 
 impl Hash for Game {
@@ -63,7 +56,7 @@ impl Game {
     // - moving or expanding hazards
     // - spawning food
     pub fn execute_moves(&mut self, you: Direction, others: &Vec<Direction>) {
-        let mut new_board = BoardOverlay::new(self.board.clone());
+        let mut new_board = self.board.clone();
         self.you.apply_move(you, &mut new_board, &self.rules);
         for i in 0..others.len() {
             self.others[i].apply_move(others[i], &mut new_board, &self.rules)
@@ -88,11 +81,11 @@ impl Game {
         self.eliminate_dead_snakes(&mut new_board);
         self.draw_heads(&mut new_board);
 
-        self.board = Arc::new(new_board);
+        self.board = new_board;
         self.turn += 1;
     }
 
-    fn draw_heads(&self, board: &mut dyn BoardLike) {
+    fn draw_heads(&self, board: &mut Board) {
         if self.you.health > 0 {
             board.add(&self.you.head, Tile::Head);
         }
@@ -103,7 +96,7 @@ impl Game {
         }
     }
 
-    fn death_by_collission(&self, snake: &Snake, board: &dyn BoardLike) -> bool {
+    fn death_by_collission(&self, snake: &Snake, board: &Board) -> bool {
         if board.get(&snake.head) == Tile::Snake {
             return true;
         }
@@ -129,7 +122,7 @@ impl Game {
         false
     }
 
-    fn repair_crash_sites(&self, points: &Vec<Point>, new_board: &mut dyn BoardLike) {
+    fn repair_crash_sites(&self, points: &Vec<Point>, new_board: &mut Board) {
         for p in points {
             if self.you.health > 0 {
                 for b in &self.you.body {
@@ -155,7 +148,7 @@ impl Game {
         }
     }
 
-    fn eliminate_dead_snakes(&mut self, new_board: &mut dyn BoardLike) {
+    fn eliminate_dead_snakes(&mut self, new_board: &mut Board) {
         let mut crash_sites = vec![];
         if self.you.dead() {
             self.you.remove_from_board(new_board);
@@ -203,20 +196,6 @@ impl Game {
     }
 }
 
-impl Clone for Game {
-    fn clone(&self) -> Self {
-        Self {
-            board: Arc::new(BoardOverlay::new(self.board.clone())),
-            others: self.others.clone(),
-            dead_snakes: self.dead_snakes,
-            you: self.you.clone(),
-            timeout: self.timeout.clone(),
-            rules: self.rules.clone(),
-            turn: self.turn,
-        }
-    }
-}
-
 impl std::fmt::Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("Turn {}\n", self.turn))?;
@@ -228,12 +207,15 @@ impl std::fmt::Display for Game {
         for ny in 0..self.board.height() {
             let y = self.board.height() - 1 - ny;
             for x in 0..self.board.width() {
-                let p = Point { x, y };
+                let p = Point {
+                    x: x as i8,
+                    y: y as i8,
+                };
                 match self.board.get(&p) {
-                    Tile::Head | Tile::HazardWithHead => {
+                    Tile::Head | Tile::HazardWithHead(_) => {
                         f.write_fmt(format_args!("<{:2}>", self.snake_number(&p)))?;
                     }
-                    Tile::Snake | Tile::HazardWithSnake => {
+                    Tile::Snake | Tile::HazardWithSnake(_) => {
                         f.write_fmt(format_args!("[{:2}]", self.snake_number(&p)))?;
                     }
                     t => {
@@ -252,7 +234,7 @@ impl From<&protocol::Request> for Game {
     fn from(req: &protocol::Request) -> Self {
         let board: Board = (&req.board).into();
         Game {
-            board: Arc::new(board),
+            board: board,
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
             you: req.you.clone(),
             others: req

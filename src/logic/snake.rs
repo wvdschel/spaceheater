@@ -1,15 +1,10 @@
 use crate::protocol;
 pub use protocol::Snake;
 
-use super::{BoardLike, Direction, Tile};
+use super::{Board, Direction, Tile};
 
 impl Snake {
-    pub fn apply_move(
-        &mut self,
-        dir: Direction,
-        board: &mut dyn BoardLike,
-        rules: &protocol::Ruleset,
-    ) {
+    pub fn apply_move(&mut self, dir: Direction, board: &mut Board, rules: &protocol::Ruleset) {
         let new_head = if rules.warped_mode() {
             self.head.neighbour(dir).warp(board.width(), board.height())
         } else {
@@ -63,7 +58,7 @@ impl Snake {
         self.health <= 0
     }
 
-    pub fn remove_from_board(&self, board: &mut dyn BoardLike) {
+    pub fn remove_from_board(&self, board: &mut Board) {
         for t in self.body.iter() {
             board.clear_snake(t)
         }

@@ -1,12 +1,12 @@
 use crate::{
-    logic::{self, search, BoardLike, Direction, Point, Tile},
+    logic::{self, search, Board, Direction, Point, Tile},
     protocol, Battlesnake,
 };
 
 #[derive(Copy, Clone)]
 pub struct SimpleSnake {}
 
-fn look_ahead(board: &mut dyn BoardLike, head: &Point, turns: usize) -> (Direction, usize) {
+fn look_ahead(board: &mut Board, head: &Point, turns: usize) -> (Direction, usize) {
     let mut max_turns = 0;
     let mut best_dir = Direction::Down;
 
@@ -41,7 +41,7 @@ fn look_ahead(board: &mut dyn BoardLike, head: &Point, turns: usize) -> (Directi
 }
 
 fn wipeout(
-    board: &dyn BoardLike,
+    board: &Board,
     snakes: Vec<protocol::Snake>,
     you: &protocol::Snake,
     p: &Point,
@@ -187,7 +187,7 @@ impl Battlesnake for SimpleSnake {
             if board.get(&p).is_safe() {
                 if die {
                     // Just mark the tile of a heads-on collision as a hazard for the time being
-                    board.set(&p, Tile::Hazard);
+                    board.set(&p, Tile::Hazard(3));
                 } else if kill {
                     return Ok(protocol::MoveResponse {
                         direction,

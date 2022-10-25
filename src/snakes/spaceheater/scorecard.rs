@@ -108,7 +108,7 @@ impl<T: Ord + Default + Copy + Display> Scorecard<T> {
     pub fn post_certain_death(&self, path: Vec<Direction>) {
         let mut state = self.state.lock().unwrap();
         #[cfg(feature = "logging")]
-        if !deaths.contains(&path) {
+        if !state.certain_death.contains(&path) {
             log!("Marking as certain death: {:?}", path);
         }
         state.certain_death.insert(path);
