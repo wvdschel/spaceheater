@@ -9,7 +9,7 @@ RUN USER=root cargo new --lib topsnek
 WORKDIR /usr/src/topsnek
 COPY Cargo.toml Cargo.lock ./
 # Needs at least a main.rs file with a main function
-RUN mkdir -p src/bin && echo "fn main(){}" | tee src/bin/topsnek-server.rs src/bin/replay.rs
+RUN mkdir -p src/bin && echo "fn main(){}" | tee src/bin/topsnek-server.rs src/bin/replay.rs src/bin/bench-spaceheater.rs
 # Will build all dependent crates in release mode
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/src/topsnek/target \
