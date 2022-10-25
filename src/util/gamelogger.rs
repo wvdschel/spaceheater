@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::time::SystemTime;
 use std::{collections::HashMap, fs::File, sync};
 
 use flate2::bufread::GzDecoder;
@@ -10,6 +11,7 @@ use crate::{protocol, Battlesnake};
 
 #[derive(Serialize, Deserialize)]
 pub struct Game {
+    timestamp: Option<String>,
     start_request: protocol::Request,
     end_request: Option<protocol::Request>,
     moves: Vec<(protocol::Request, Option<protocol::MoveResponse>)>,
@@ -26,7 +28,12 @@ fn into_result<T, E: ToString>(v: std::result::Result<T, E>) -> std::result::Res
 
 impl Game {
     fn new(start_request: protocol::Request) -> Self {
+        let start_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
         Self {
+            timestamp: Some(format!("{}", start_time)),
             start_request,
             end_request: None,
             moves: Vec::new(),
