@@ -91,10 +91,10 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                         let old_depth = current_depth.swap(depth_finished, Ordering::Relaxed);
                         if depth_finished > old_depth {
                             println!(
-                                "{}ms: finished depth {} (coming from {})",
+                                "{}ms: finished depth {} (coming from {}, {} games processed)",
                                 (Instant::now() - start_time).as_millis(),
                                 depth_finished,
-                                old_depth
+                                old_depth, queue.done_count(),
                             );
                             scores.max_step(depth_finished)
                         } else if depth_finished < old_depth {
