@@ -5,26 +5,21 @@ pub use simple::SimpleSnake;
 pub mod spaceheater;
 pub use spaceheater::SpaceHeater;
 
-use crate::{logic, Battlesnake};
+use crate::{logic, protocol::Customizations, Battlesnake};
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
     snakes.insert("simple".to_string(), Box::new(SimpleSnake {}));
     snakes.insert(
-        "spaceheater_classic".to_string(),
-        Box::new(SpaceHeater::new(logic::scoring::classic)),
-    );
-    snakes.insert(
-        "spaceheater_v".to_string(),
-        Box::new(SpaceHeater::new(logic::scoring::voronoi)),
-    );
-    snakes.insert(
-        "spaceheater_vrl".to_string(),
-        Box::new(SpaceHeater::new(logic::scoring::voronoi_relative_length)),
-    );
-    snakes.insert(
-        "spaceheater_vt".to_string(),
-        Box::new(SpaceHeater::new(logic::scoring::tournament_voronoi)),
+        "battlesnack".to_string(),
+        Box::new(SpaceHeater::new(
+            logic::scoring::tournament_voronoi,
+            Customizations {
+                color: "#533d6a".to_string(),
+                head: "caffeine".to_string(),
+                tail: "cosmic-horror".to_string(),
+            },
+        )),
     );
 
     snakes

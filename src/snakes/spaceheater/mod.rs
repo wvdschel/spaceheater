@@ -3,11 +3,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{logic::Game, protocol, Battlesnake};
+use crate::{
+    logic::Game,
+    protocol::{self, Customizations},
+    Battlesnake,
+};
 
 mod game_solver;
 pub use game_solver::GameSolver;
-use rand::Rng;
 
 mod scorecard;
 
@@ -17,14 +20,18 @@ where
     T: Ord + Default + Copy + Display + Send,
 {
     score_fn: fn(&Game) -> T,
+    customizations: Customizations,
 }
 
 impl<T> SpaceHeater<T>
 where
     T: Ord + Default + Copy + Display + Send,
 {
-    pub fn new(score_fn: fn(&Game) -> T) -> Self {
-        Self { score_fn }
+    pub fn new(score_fn: fn(&Game) -> T, customizations: Customizations) -> Self {
+        Self {
+            score_fn,
+            customizations,
+        }
     }
 }
 
@@ -33,19 +40,13 @@ where
     T: Ord + Default + Copy + Display + Send + 'static,
 {
     fn snake_info(&self) -> protocol::SnakeInfo {
-        let mut rng = rand::thread_rng();
-        let red = rng.gen_range(128..256);
-        let green = rng.gen_range(32..red);
-        let blue = rng.gen_range(0..green);
-        let color = format!("#{:02x}{:02x}{:02x}", red, green, blue);
-
         protocol::SnakeInfo {
             apiversion: "1".to_string(),
-            author: "General Error".to_string(),
-            color,
-            head: "workout".to_string(),
-            tail: "flame".to_string(),
-            version: "115".to_string(),
+            author: "".to_string(),
+            color: self.customizations.color.clone(),
+            head: self.customizations.head.clone(),
+            tail: self.customizations.tail.clone(),
+            version: "0".to_string(),
         }
     }
 
