@@ -9,17 +9,23 @@ Weird choices to debug:
   - 76523316-d6c5-4051-9b97-c0d51c9c79d5
   - 0d3cf040-091d-4c40-afc3-72c9d635a26d
 
+# Valgrind
+Commands used for generating a callgrind file:
+  valgrind --tool=callgrind ./target/release/bench-spaceheater < logs/Spaceheater_f603f0b7-10ca-4bcd-b087-4e9902b052a4.json.gz
+  cat callgrind.out.* | rustfilt > callgrind-measurements/999-somefile.out.1
+  rm callgrind.out.*
+
 # Threading problems
 - Scorecard:
- - single global mutex
- - mpsc channels for submitting scores
+ - [x] single global mutex
+ - [ ] mpsc channels for submitting scores
 - work queue:
- - append all, notify all
- - append by using mpsc?
- - single operation for appending + popping with a single lock/unlock?
+ - [x] append all, notify all in one lock
+ - [ ] append by using mpsc?
+ - [ ] single operation for appending + popping with a single lock/unlock?
 
 # Game logic
 ## Unsupported game features
 - stacked hazards:
-  - example: 15290976-48e4-47df-bed5-48e2c48c72b9 turn 19
+  - currently limited to max 3 hazards on a tile
   
