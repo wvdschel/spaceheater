@@ -30,7 +30,7 @@ fn main() {
     let mut args = std::env::args();
     let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(4)).unwrap_or(4);
 
-    for d in 2..max_iter {
+    for d in 1..max_iter {
         let start = Instant::now();
         let (dir, score) = solve_game(&game, d);
         let stop = Instant::now();
