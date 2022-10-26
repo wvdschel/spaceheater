@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     log,
-    logic::{Game, Tile},
+    logic::{Game, Snake, Tile},
     protocol::{Direction, Point, ALL_DIRECTIONS},
     util::{thread_count, WorkQueue},
 };
@@ -192,8 +192,7 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     for my_dir in ALL_DIRECTIONS {
         // Eliminate directions which would lead to certain death
         let my_pos = game.warp(&game.you.head.neighbour(my_dir));
-        let hitting_my_neck = game.you.length > 1 && (game.you.body[1] == my_pos);
-        if hitting_my_neck || certain_death(game, &my_pos, game.you.health) {
+        if certain_death(game, &game.you, &my_pos, game.you.health) {
             direction_kills_me.insert(my_dir, true);
             continue;
         }
@@ -333,10 +332,23 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     res
 }
 
-fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
+fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: isize) -> bool {
     match game.board.get(p) {
         Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
             game.rules.settings.hazard_damage_per_turn * x as isize > hp
+        }
+        Tile::Snake => {
+            // check self collisions. you can only hit odd body parts.
+            // you should ignore your tail. you should not check other snakes
+            // because they might die.
+            let mut self_collision = false;
+            for i in (1..snake.length - 1).step_by(2) {
+                if *p == snake.body[i] {
+                    self_collision = true;
+                    break;
+                }
+            }
+            self_collision
         }
         Tile::Wall => true,
         // TODO model starvation?
@@ -351,12 +363,7 @@ fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
             .into_iter()
             .filter(|&dir| {
                 let pos = game.warp(&snake.head.neighbour(dir));
-                let mut survives = !certain_death(game, &pos, snake.health);
-                if snake.length > 1 {
-                    // Don't move into your own neck
-                    survives &= !(snake.body[1] == pos);
-                }
-                survives
+                !certain_death(game, snake, &pos, snake.health)
             })
             .collect();
 
