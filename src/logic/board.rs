@@ -96,6 +96,9 @@ impl Board {
     }
 
     pub fn set(&mut self, p: &Point, t: Tile) {
+        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+            return;
+        }
         match t {
             Tile::Empty => set_tile!(self.data, p.x, p.y, TILE_MASK, EMPTY),
             Tile::Snake => set_tile!(self.data, p.x, p.y, TILE_MASK, SNAKE),
@@ -119,6 +122,9 @@ impl Board {
     }
 
     pub fn get(&self, p: &Point) -> Tile {
+        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+            return Tile::Wall;
+        }
         let value = get_tile!(self.data, p.x, p.y, TILE_MASK);
         let hazards = (value & HAZARD_MASK) as usize >> 2;
         if hazards > 0 {
