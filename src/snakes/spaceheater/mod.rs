@@ -1,14 +1,9 @@
 use std::{
     fmt::Display,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-    thread,
     time::{Duration, Instant},
 };
 
-use crate::{log, logic::Game, protocol, Battlesnake};
+use crate::{logic::Game, protocol, Battlesnake};
 
 mod game_solver;
 pub use game_solver::GameSolver;
@@ -21,8 +16,6 @@ pub struct SpaceHeater<T>
 where
     T: Ord + Default + Copy + Display + Send,
 {
-    last_turn_latency_estimate: Arc<AtomicU64>,
-    recent_ping_average: Arc<AtomicU64>,
     score_fn: fn(&Game) -> T,
 }
 
@@ -31,64 +24,7 @@ where
     T: Ord + Default + Copy + Display + Send,
 {
     pub fn new(score_fn: fn(&Game) -> T) -> Self {
-        Self {
-            last_turn_latency_estimate: Arc::new(AtomicU64::new(100)),
-            recent_ping_average: Arc::new(AtomicU64::new(100)),
-            score_fn,
-        }
-    }
-
-    fn calculate_latency(&self, last_turn_time_ms: u64, max_turn_time_ms: u64) -> Duration {
-        let prev_latency_ms = self.last_turn_latency_estimate.load(Ordering::Acquire);
-        let mut latency_ms = prev_latency_ms;
-        if last_turn_time_ms > prev_latency_ms {
-            let last_turn_compute_time_ms = max_turn_time_ms - prev_latency_ms;
-            let mut last_turn_actual_latency = last_turn_time_ms - last_turn_compute_time_ms;
-            if last_turn_compute_time_ms > last_turn_time_ms {
-                println!("Warning: compute time is higher than total latency? Using 1ms latency");
-                last_turn_actual_latency = 1;
-            }
-
-            let mut ping_avg = self.recent_ping_average.load(Ordering::Acquire);
-            if last_turn_actual_latency > ping_avg {
-                // Override ping average if we got a worse ping
-                println!(
-                    "Bad ping: {}ms (previous average: {}ms)",
-                    last_turn_actual_latency, ping_avg
-                );
-                ping_avg = last_turn_actual_latency;
-            } else {
-                // Gradually decline if we got a better ping
-                ping_avg = (ping_avg * 95 + last_turn_actual_latency * 5) / 100;
-            }
-            self.recent_ping_average.store(ping_avg, Ordering::Release);
-
-            // 140% + 75ms seems like a sensible margin for ping fluctuations
-            latency_ms = ping_avg * 14 / 10 + 75;
-            log!("last turn took {}/{}ms, with {}ms slack for latency. Actual compute time {}, actual latency {}.",
-                last_turn_time_ms, max_turn_time_ms, prev_latency_ms, last_turn_compute_time_ms, last_turn_actual_latency);
-
-            if latency_ms > max_turn_time_ms {
-                latency_ms = max_turn_time_ms * 10 / 20;
-                log!(
-                    "estimated latency exceeds turn time - limiting to {}ms",
-                    latency_ms
-                );
-            }
-        }
-        // Don't allow latencies over 60% of the turn timer, to prevent one bad ping from wrecking our compute time forever.
-        // If true latency is this bad, we're ruined anyway.
-        let max_sensible_latency = max_turn_time_ms * 3 / 5;
-        if latency_ms > max_sensible_latency {
-            println!(
-                "latency of {}ms exceeds 60% of turn time, reducing to {}ms",
-                latency_ms, max_sensible_latency
-            );
-            latency_ms = max_sensible_latency;
-        }
-        self.last_turn_latency_estimate
-            .store(latency_ms, Ordering::Release);
-        Duration::from_millis(latency_ms)
+        Self { score_fn }
     }
 }
 
@@ -97,10 +33,6 @@ where
     T: Ord + Default + Copy + Display + Send + 'static,
 {
     fn snake_info(&self) -> protocol::SnakeInfo {
-        let ping = self.recent_ping_average.load(Ordering::Relaxed);
-        if ping < 500 {
-            thread::sleep(Duration::from_millis(500 - ping));
-        }
         let mut rng = rand::thread_rng();
         let red = rng.gen_range(128..256);
         let green = rng.gen_range(32..red);
@@ -128,13 +60,13 @@ where
     fn make_move(&self, req: &protocol::Request) -> Result<protocol::MoveResponse, String> {
         let last_turn_duration_ms = req.you.latency.parse::<u64>().unwrap_or(0);
         let max_turn_time_ms = req.game.timeout as u64;
-        let latency = self.calculate_latency(last_turn_duration_ms, max_turn_time_ms);
         let start_time = Instant::now();
-        let deadline = start_time + Duration::from_millis(max_turn_time_ms) - latency;
+        let deadline =
+            start_time + Duration::from_millis(max_turn_time_ms) - Duration::from_millis(110);
 
         println!(
-            "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
-            start_time, latency, deadline
+            "----- request received at {:?}, latency {}ms, deadline set at {:?} -----",
+            start_time, last_turn_duration_ms, deadline
         );
         let game = Game::from(req);
         let (best_dir, top_score) =
