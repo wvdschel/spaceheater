@@ -94,7 +94,8 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
                                 "{}ms: finished depth {} (coming from {}, {} games processed)",
                                 (Instant::now() - start_time).as_millis(),
                                 depth_finished,
-                                old_depth, queue.done_count(),
+                                old_depth,
+                                queue.done_count(),
                             );
                             scores.max_step(depth_finished)
                         } else if depth_finished < old_depth {
@@ -171,7 +172,8 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     for my_dir in ALL_DIRECTIONS {
         // Eliminate directions which would lead to certain death
         let my_pos = game.warp(&game.you.head.neighbour(my_dir));
-        if certain_death(game, &my_pos, game.you.health) {
+        let hitting_my_neck = game.you.length > 1 && (game.you.body[1] == my_pos);
+        if hitting_my_neck || certain_death(game, &my_pos, game.you.health) {
             direction_kills_me.insert(my_dir, true);
             continue;
         }
@@ -329,7 +331,12 @@ fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
             .into_iter()
             .filter(|&dir| {
                 let pos = game.warp(&snake.head.neighbour(dir));
-                !certain_death(game, &pos, snake.health)
+                let mut survives = !certain_death(game, &pos, snake.health);
+                if snake.length > 1 {
+                    // Don't move into your own neck
+                    survives &= !(snake.body[1] == pos);
+                }
+                survives
             })
             .collect();
 
