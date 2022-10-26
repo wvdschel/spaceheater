@@ -130,7 +130,7 @@ where
         let max_turn_time_ms = req.game.timeout as u64;
         let latency = self.calculate_latency(last_turn_duration_ms, max_turn_time_ms);
         let start_time = Instant::now();
-        let deadline = start_time + Duration::from_millis(max_turn_time_ms) - Duration::from_millis(90);
+        let deadline = start_time + Duration::from_millis(max_turn_time_ms) - Duration::from_millis(120);
 
         println!(
             "----- request received at {:?}, latency {:?}, deadline set at {:?} -----",
