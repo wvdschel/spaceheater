@@ -99,7 +99,7 @@ pub fn voronoi(game: &Game) -> VoronoiScore {
     let (_, control_count) = search::voronoi(game);
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: *control_count.get(&game.you.name).unwrap_or(&0),
+        tiles_controlled: *control_count.get(&game.you.id).unwrap_or(&0),
         kills: kills(game),
         length: game.you.length as isize,
     }
@@ -120,7 +120,7 @@ pub fn voronoi_relative_length(game: &Game) -> VoronoiScore {
     let (_, control_count) = search::voronoi(game);
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: *control_count.get(&game.you.name).unwrap_or(&0),
+        tiles_controlled: *control_count.get(&game.you.id).unwrap_or(&0),
         kills: kills(game),
         length: game.you.length as isize - max_length,
     }

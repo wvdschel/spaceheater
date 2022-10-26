@@ -156,7 +156,6 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
 
     let mut res_board = Vec::with_capacity(w);
     let mut len_board = Vec::with_capacity(w);
-    let mut res_counts = HashMap::new();
 
     for _ in 0..w {
         let mut col = Vec::with_capacity(h);
@@ -173,6 +172,8 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
         all_snakes.push(snake);
     }
     let all_snakes = all_snakes;
+    let mut counts = Vec::new();
+    counts.resize(all_snakes.len(), 0 as usize);
 
     struct NextTileOver {
         snake: usize,
@@ -182,7 +183,6 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
 
     let mut queue = VecDeque::new();
     for (snake_idx, snake) in all_snakes.iter().enumerate() {
-        res_counts.insert(snake.name.clone(), 0);
         queue.push_back(NextTileOver {
             snake: snake_idx,
             point: snake.head.clone(),
@@ -194,7 +194,9 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
     while let Some(work) = queue.pop_front() {
         let (x, y) = (work.point.x as usize, work.point.y as usize);
 
+        let cur_snake_idx = work.snake;
         let cur_snake = all_snakes[work.snake];
+
         let mut first = work.distance < distance_board[x][y].unwrap_or(usize::MAX);
         if work.distance == distance_board[x][y].unwrap_or(usize::MAX) {
             // Draw - longest snake wins
@@ -203,25 +205,23 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
                 first = true;
             }
             if let Some(prev_snake_idx) = res_board[x][y] {
-                if prev_snake_idx == work.snake {
+                if prev_snake_idx == cur_snake_idx {
                     continue; // Already processed this tile
                 }
 
                 let prev_snake = all_snakes[prev_snake_idx];
 
                 if prev_snake.length <= cur_snake.length {
-                    let count = res_counts.get_mut(&prev_snake.name).unwrap();
-                    *count -= 1;
+                    counts[prev_snake_idx] -= 1;
                 }
                 res_board[x][y] = None
             }
         }
         if first {
             distance_board[x][y] = Some(work.distance);
-            res_board[x][y] = Some(work.snake);
+            res_board[x][y] = Some(cur_snake_idx);
             len_board[x][y] = cur_snake.length;
-            let count = res_counts.get_mut(&cur_snake.name).unwrap();
-            *count += 1;
+            counts[cur_snake_idx] += 1;
 
             for (_, next_point) in work.point.neighbours() {
                 let next_point = game.warp(&next_point);
@@ -250,5 +250,13 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
         }
     }
 
-    return (res_board, res_counts);
+    return (
+        res_board,
+        HashMap::from_iter(
+            counts
+                .into_iter()
+                .enumerate()
+                .map(|(idx, count)| (all_snakes[idx].id.clone(), count)),
+        ),
+    );
 }
