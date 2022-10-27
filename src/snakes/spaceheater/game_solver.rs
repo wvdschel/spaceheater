@@ -73,15 +73,15 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
         }
 
         for _ in 0..thread_count() {
-            if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
-                println!("warning: failed to change worker thread priority");
-            }
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
             let current_depth = Arc::clone(&self.current_depth);
             let score_fn = self.score_fn.clone();
             thread::spawn(move || {
+                if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
+                    println!("warning: failed to change worker thread priority");
+                }
                 let start_time = Instant::now();
                 loop {
                     if Instant::now() > deadline {
