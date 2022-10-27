@@ -1,4 +1,4 @@
-use super::{search, Game};
+use super::{voronoi, Game};
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct SurvivalKillsLengthScore {
@@ -98,7 +98,7 @@ impl std::fmt::Display for VoronoiScore {
 pub fn voronoi(game: &Game) -> VoronoiScore {
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: search::voronoi_me(game),
+        tiles_controlled: voronoi::me(game),
         kills: kills(game),
         length: game.you.length as isize,
     }
@@ -118,7 +118,7 @@ pub fn voronoi_relative_length(game: &Game) -> VoronoiScore {
 
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: search::voronoi_me(game),
+        tiles_controlled: voronoi::me(game),
         kills: kills(game),
         length: game.you.length as isize - max_length,
     }
@@ -169,5 +169,10 @@ pub fn tournament_voronoi(game: &Game) -> TournamentVoronoiScore {
 }
 
 pub fn voronoi_me(game: &Game) -> usize {
-    search::voronoi_me(game)
+    voronoi::me(game)
+}
+
+pub fn voronoi_all(game: &Game) -> usize {
+    let counts = voronoi::all(game);
+    *counts.get(&game.you).unwrap_or(&0)
 }

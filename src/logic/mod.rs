@@ -4,6 +4,7 @@ use std::fmt::Display;
 mod tests;
 
 pub mod scoring;
+pub mod voronoi;
 
 mod board;
 pub use board::Board;
