@@ -96,10 +96,9 @@ impl std::fmt::Display for VoronoiScore {
 /// controlled by our snake.
 /// It ranks games by turns survived, tiles controlled, kills and length.
 pub fn voronoi(game: &Game) -> VoronoiScore {
-    let (_, control_count) = search::voronoi(game);
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: *control_count.get(&game.you.id).unwrap_or(&0),
+        tiles_controlled: search::voronoi_me(game),
         kills: kills(game),
         length: game.you.length as isize,
     }
@@ -117,10 +116,9 @@ pub fn voronoi_relative_length(game: &Game) -> VoronoiScore {
         .reduce(|max, len| if len > max { len } else { max })
         .unwrap_or(0) as isize;
 
-    let (_, control_count) = search::voronoi(game);
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: *control_count.get(&game.you.id).unwrap_or(&0),
+        tiles_controlled: search::voronoi_me(game),
         kills: kills(game),
         length: game.you.length as isize - max_length,
     }
@@ -168,4 +166,8 @@ pub fn tournament_voronoi(game: &Game) -> TournamentVoronoiScore {
         survived_by,
         voronoi: voronoi(game),
     }
+}
+
+pub fn voronoi_me(game: &Game) -> usize {
+    search::voronoi_me(game)
 }

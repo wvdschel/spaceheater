@@ -150,7 +150,8 @@ where
     path.into()
 }
 
-pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>) {
+#[allow(unused)]
+pub fn voronoi(game: &Game) -> HashMap<String, usize> {
     let w = game.board.width() as usize;
     let h = game.board.height() as usize;
 
@@ -250,13 +251,101 @@ pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>)
         }
     }
 
-    return (
-        res_board,
-        HashMap::from_iter(
-            counts
-                .into_iter()
-                .enumerate()
-                .map(|(idx, count)| (all_snakes[idx].id.clone(), count)),
-        ),
+    return HashMap::from_iter(
+        counts
+            .into_iter()
+            .enumerate()
+            .map(|(idx, count)| (all_snakes[idx].id.clone(), count)),
     );
+}
+
+pub fn voronoi_me<'a>(game: &'a Game) -> usize {
+    type NumType = u16;
+    let max_snakes = (NumType::MAX - 1) as usize;
+    if game.others.len() > max_snakes {
+        panic!(
+            "this voronoi implementation does not support more than {} snakes",
+            max_snakes
+        );
+    }
+
+    let mut count = 0;
+
+    let mut snakes = vec![&game.you];
+    for s in game.others.iter() {
+        snakes.push(s);
+    }
+    let snakes = snakes.as_slice();
+
+    #[derive(Clone)]
+    struct VoronoiTile {
+        distance: NumType,
+        snake: NumType,
+    }
+
+    #[derive(Clone)]
+    struct NextTile {
+        point: Point,
+        distance: NumType,
+        snake: NumType,
+    }
+
+    let (width, height) = (game.board.width() as usize, game.board.height() as usize);
+    let mut board = Vec::with_capacity(width * height);
+    board.resize(
+        width * height,
+        VoronoiTile {
+            distance: NumType::MAX,
+            snake: NumType::MAX,
+        },
+    );
+    let board = board.as_mut_slice();
+
+    let mut queue = VecDeque::with_capacity(snakes.len() * 3);
+    for (i, &s) in snakes.iter().enumerate() {
+        queue.push_back(NextTile {
+            point: s.head.clone(),
+            distance: 0,
+            snake: i as NumType,
+        })
+    }
+
+    while let Some(work) = queue.pop_front() {
+        let p_idx = work.point.x as usize + width * work.point.y as usize;
+        let mut first = false;
+        if board[p_idx].distance > work.distance {
+            first = true;
+        } else if board[p_idx].distance == work.distance {
+            let other = snakes[board[p_idx].snake as usize];
+            let me = snakes[work.snake as usize];
+            if me.length > other.length {
+                first = true;
+            }
+        }
+        if first {
+            if work.snake == 0 {
+                count += 1;
+            }
+            board[p_idx].distance = work.distance;
+            board[p_idx].snake = work.snake;
+            for (_, p) in work.point.neighbours() {
+                let p = game.warp(&p);
+                let p_idx = p.x as usize + width * p.y as usize;
+                if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
+                    // TODO: this ignores survivable hazards
+                    queue.push_back(NextTile {
+                        point: p,
+                        distance: work.distance + 1,
+                        snake: work.snake,
+                    })
+                }
+            }
+        }
+    }
+
+    // board.iter().fold(
+    //     0,
+    //     |count, tile| if tile.snake == 0 { count + 1 } else { count },
+    // )
+    count
 }

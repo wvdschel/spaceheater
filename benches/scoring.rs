@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs::File};
+use std::{fmt::Display, fs::File, time::Duration};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use topsnek::{
@@ -27,16 +27,23 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("classic", |b| {
         b.iter(|| score_game(scoring::classic, games.as_slice()))
     });
-    c.bench_function("voronoi", |b| {
-        b.iter(|| score_game(scoring::voronoi, games.as_slice()))
-    });
-    c.bench_function("voronoi_relative_length", |b| {
-        b.iter(|| score_game(scoring::voronoi_relative_length, games.as_slice()))
-    });
-    c.bench_function("tournament_voronoi", |b| {
-        b.iter(|| score_game(scoring::tournament_voronoi, games.as_slice()))
+    // c.bench_function("voronoi", |b| {
+    //     b.iter(|| score_game(scoring::voronoi, games.as_slice()))
+    // });
+    // c.bench_function("voronoi_relative_length", |b| {
+    //     b.iter(|| score_game(scoring::voronoi_relative_length, games.as_slice()))
+    // });
+    // c.bench_function("tournament_voronoi", |b| {
+    //     b.iter(|| score_game(scoring::tournament_voronoi, games.as_slice()))
+    // });
+    c.bench_function("voronoi_me", |b| {
+        b.iter(|| score_game(scoring::voronoi_me, games.as_slice()))
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+criterion_group! {
+  name = scoring;
+  config = Criterion::default().measurement_time(Duration::from_secs(15));
+  targets = criterion_benchmark
+}
+criterion_main!(scoring);
