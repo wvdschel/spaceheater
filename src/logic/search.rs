@@ -5,7 +5,10 @@ use std::{
 
 use priority_queue::PriorityQueue;
 
-use crate::protocol::{Direction, Point};
+use crate::{
+    logic::Snake,
+    protocol::{Direction, Point},
+};
 
 use super::{Board, Game, Tile};
 
@@ -261,63 +264,80 @@ pub fn voronoi(game: &Game) -> HashMap<String, usize> {
 
 pub fn voronoi_me<'a>(game: &'a Game) -> usize {
     type NumType = u16;
-    let max_snakes = (NumType::MAX - 1) as usize;
-    if game.others.len() > max_snakes {
-        panic!(
-            "this voronoi implementation does not support more than {} snakes",
-            max_snakes
-        );
-    }
-
-    let mut count = 0;
-
-    let mut snakes = vec![&game.you];
-    for s in game.others.iter() {
-        snakes.push(s);
-    }
-    let snakes = snakes.as_slice();
-
-    #[derive(Clone)]
+    #[derive(Clone, Copy)]
     struct VoronoiTile {
         distance: NumType,
         snake: NumType,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Copy)]
     struct NextTile {
-        point: Point,
+        x: i8,
+        y: i8,
         distance: NumType,
         snake: NumType,
     }
 
-    let (width, height) = (game.board.width() as usize, game.board.height() as usize);
-    let mut board = Vec::with_capacity(width * height);
-    board.resize(
-        width * height,
-        VoronoiTile {
-            distance: NumType::MAX,
-            snake: NumType::MAX,
-        },
-    );
-    let board = board.as_mut_slice();
+    const MAX_DIM: usize = 25;
+    const MAX_SNAKES: usize = if (NumType::MAX - 1) > 20 {
+        20
+    } else {
+        (NumType::MAX - 1) as usize
+    };
 
-    let mut queue = VecDeque::with_capacity(snakes.len() * 3);
-    for (i, &s) in snakes.iter().enumerate() {
+    macro_rules! snake {
+        ($i:expr) => {
+            if ($i == 0) {
+                &game.you
+            } else {
+                &game.others[$i - 1]
+            }
+        };
+    }
+
+    let mut count = 0;
+    let (width, height) = (game.board.width() as usize, game.board.height() as usize);
+    let mut board = [VoronoiTile {
+        distance: NumType::MAX,
+        snake: NumType::MAX,
+    }; MAX_DIM * MAX_DIM];
+    if game.others.len() > MAX_SNAKES {
+        panic!(
+            "this voronoi implementation does not support more than {} snakes",
+            MAX_SNAKES
+        );
+    }
+    if width > MAX_DIM || height > MAX_DIM {
+        panic!(
+            "this voronoi implementation does not support boards over {}x{}",
+            MAX_DIM, MAX_DIM,
+        )
+    }
+
+    let mut queue = VecDeque::with_capacity(game.others.len() * 3);
+    queue.push_back(NextTile {
+        x: game.you.head.x,
+        y: game.you.head.y,
+        distance: 0,
+        snake: 0,
+    });
+    for (i, s) in game.others.iter().enumerate() {
         queue.push_back(NextTile {
-            point: s.head.clone(),
+            x: s.head.x,
+            y: s.head.y,
             distance: 0,
-            snake: i as NumType,
+            snake: i as NumType + 1,
         })
     }
 
     while let Some(work) = queue.pop_front() {
-        let p_idx = work.point.x as usize + width * work.point.y as usize;
+        let p_idx = work.x as usize + width * work.y as usize;
         let mut first = false;
         if board[p_idx].distance > work.distance {
             first = true;
         } else if board[p_idx].distance == work.distance {
-            let other = snakes[board[p_idx].snake as usize];
-            let me = snakes[work.snake as usize];
+            let other = snake!(board[p_idx].snake as usize);
+            let me = snake!(work.snake as usize);
             if me.length > other.length {
                 first = true;
             }
@@ -328,13 +348,18 @@ pub fn voronoi_me<'a>(game: &'a Game) -> usize {
             }
             board[p_idx].distance = work.distance;
             board[p_idx].snake = work.snake;
-            for (_, p) in work.point.neighbours() {
+            let p = Point {
+                x: work.x,
+                y: work.y,
+            };
+            for (_, p) in p.neighbours() {
                 let p = game.warp(&p);
                 let p_idx = p.x as usize + width * p.y as usize;
                 if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
                     // TODO: this ignores survivable hazards
                     queue.push_back(NextTile {
-                        point: p,
+                        x: p.x,
+                        y: p.y,
                         distance: work.distance + 1,
                         snake: work.snake,
                     })
