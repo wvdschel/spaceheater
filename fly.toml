@@ -1,6 +1,6 @@
-# fly.toml file generated for topsnekd-2 on 2022-10-24T22:34:27+02:00
+# fly.toml file generated for topsnekd-main on 2022-10-26T16:19:06Z
 
-app = "topsnekd-2"
+app = "topsnekd-main"
 kill_signal = "SIGINT"
 kill_timeout = 5
 
