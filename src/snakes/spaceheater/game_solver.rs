@@ -10,6 +10,8 @@ use std::{
     time::Instant,
 };
 
+use thread_priority::{set_current_thread_priority, ThreadPriority};
+
 use crate::{
     log,
     logic::{Game, Snake, Tile},
@@ -87,6 +89,9 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
             let score_fn = self.score_fn.clone();
             let label = String::from(label);
             joinhandles.push(thread::spawn(move || {
+                if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
+                    println!("warning: failed to lower worker thread priority.");
+                }
                 loop {
                     if let Some(deadline) = deadline {
                         if deadline < Instant::now() {
