@@ -1,3 +1,5 @@
+use thread_priority::*;
+
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -70,11 +72,10 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
             self.work_queue.push(work, priority);
         }
 
-        let mut thread_count = thread_count() - 1;
-        if thread_count == 0 {
-            thread_count = 1;
-        }
-        for _ in 0..thread_count {
+        for _ in 0..thread_count() {
+            if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
+                println!("warning: failed to change worker thread priority");
+            }
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
