@@ -1,4 +1,4 @@
-# fly.toml file generated for topsnekd on 2022-10-26T20:29:03+02:00
+# fly.toml file generated for battlesnack on 2022-10-26T23:40:28+02:00
 
 app = "battlesnack"
 kill_signal = "SIGINT"
