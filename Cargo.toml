@@ -26,6 +26,7 @@ debug = 1
 default = []
 logging = []
 sequential = []
+profiling = ["dep:pprof"]
 
 [dependencies]
 rouille = "3.5"
@@ -40,6 +41,7 @@ num_cpus = "1.13.1"
 itertools = "0.10.5"
 flate2 = "1.0.24"
 thread-priority = "0.10.0"
+pprof = { version = "0.10", features = ["flamegraph"], optional = true }
 
 [dev-dependencies]
 criterion = "0.3"

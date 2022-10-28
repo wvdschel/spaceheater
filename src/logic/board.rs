@@ -24,9 +24,9 @@ macro_rules! get_tile {
         let (x, y) = ($x as usize, $y as usize);
         let idx = x + y * w;
         if idx % 2 == 0 {
-            ($data[2 + idx / 2] >> 4) & $mask
+            (unsafe { $data.get_unchecked(2 + idx / 2) } >> 4) & $mask
         } else {
-            $data[2 + idx / 2] & $mask
+            (unsafe { $data.get_unchecked(2 + idx / 2) }) & $mask
         }
     }};
 }
@@ -36,12 +36,13 @@ macro_rules! set_tile {
         let w = $data[0] as usize;
         let (x, y) = ($x as usize, $y as usize);
         let idx = x + y * w;
+        let v = unsafe { $data.get_unchecked_mut(2 + idx / 2) };
         if idx % 2 == 0 {
             let mask = $mask << 4;
             let value = $value << 4;
-            $data[2 + idx / 2] = (!mask & $data[2 + idx / 2] | mask & value);
+            *v = (!mask & *v | mask & value);
         } else {
-            $data[2 + idx / 2] = (!$mask & $data[2 + idx / 2] | $mask & $value);
+            *v = (!$mask & *v | $mask & $value);
         }
     }};
 }

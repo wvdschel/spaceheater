@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate rouille;
-extern crate html_escape;
-extern crate urlencoding;
 
 use std::sync::Mutex;
 

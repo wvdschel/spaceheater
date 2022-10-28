@@ -6,6 +6,7 @@ mod workqueue;
 pub use workqueue::WorkQueue;
 
 pub mod gamelogger;
+pub mod stackqueue;
 
 #[macro_export]
 #[cfg(feature = "logging")]

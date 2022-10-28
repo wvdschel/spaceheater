@@ -2,4 +2,4 @@
 /logs
 /callgrind-measurements
 *.log
-callgrind.*
+callgrind.*flamegraph.svg

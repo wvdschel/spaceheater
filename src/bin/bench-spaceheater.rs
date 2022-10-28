@@ -1,5 +1,8 @@
 use std::{io::stdin, time::Instant};
 
+#[cfg(feature = "profiling")]
+use std::fs::File;
+
 use topsnek::{
     logic::{self, scoring, Direction},
     snakes,
@@ -25,6 +28,13 @@ fn solve_game(
 }
 
 fn main() {
+    #[cfg(feature = "profiling")]
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "vdso"])
+        .build()
+        .unwrap();
+
     let game = logic::Game::from(&load_replay().start_request);
 
     let mut args = std::env::args();
@@ -42,5 +52,14 @@ fn main() {
             score,
             dir
         );
+    }
+
+    #[cfg(feature = "profiling")]
+    {
+        if let Ok(report) = guard.report().build() {
+            let file = File::create("flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+            println!("report: {:?}", &report);
+        };
     }
 }
