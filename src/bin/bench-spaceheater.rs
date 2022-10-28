@@ -30,7 +30,7 @@ fn solve_game(
 fn main() {
     #[cfg(feature = "profiling")]
     let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
+        .frequency(2000)
         .blocklist(&["libc", "libgcc", "vdso"])
         .build()
         .unwrap();
@@ -59,7 +59,6 @@ fn main() {
         if let Ok(report) = guard.report().build() {
             let file = File::create("flamegraph.svg").unwrap();
             report.flamegraph(file).unwrap();
-            println!("report: {:?}", &report);
         };
     }
 }

@@ -196,7 +196,8 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
 
     for my_dir in ALL_DIRECTIONS {
         // Eliminate directions which would lead to certain death
-        let my_pos = game.warp(&game.you.head.neighbour(my_dir));
+        let mut my_pos = game.you.head.neighbour(my_dir);
+        game.warp(&mut my_pos);
         if certain_death(game, &game.you, &my_pos, game.you.health) {
             direction_kills_me.insert(my_dir, true);
             continue;
@@ -337,10 +338,10 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     res
 }
 
-fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: isize) -> bool {
+fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: i8) -> bool {
     match game.board.get(p) {
         Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
-            game.rules.settings.hazard_damage_per_turn * x as isize > hp
+            game.rules.hazard_damage_per_turn * x as i8 > hp
         }
         Tile::Snake => {
             // check self collisions. you can only hit odd body parts.
@@ -367,7 +368,8 @@ fn all_possible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
         let mut viable_directions: Vec<Direction> = ALL_DIRECTIONS
             .into_iter()
             .filter(|&dir| {
-                let pos = game.warp(&snake.head.neighbour(dir));
+                let mut pos = snake.head.neighbour(dir);
+                game.warp(&mut pos);
                 !certain_death(game, snake, &pos, snake.health)
             })
             .collect();

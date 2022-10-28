@@ -110,11 +110,11 @@ pub fn all_stack<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
                 y: work.y,
             };
             if work.distance < NumType::MAX - 1 {
-                for (_, p) in p.neighbours() {
-                    let p = game.warp(&p);
+                for (_, mut p) in p.neighbours() {
+                    game.warp(&mut p);
                     let p_idx = p.x as usize + width * p.y as usize;
                     let tile = unsafe { board.get_unchecked_mut(p_idx) };
-                    if tile.distance > work.distance && game.board.get(&p).is_safe() {
+                    if tile.distance > work.distance && game.board.damage(&p, 1) > 0 {
                         // TODO: this ignores survivable hazards
                         queue.push_back(NextTile {
                             x: p.x,
@@ -210,11 +210,11 @@ pub fn me_stack(game: &Game) -> usize {
                 y: work.y,
             };
             if work.distance < NumType::MAX - 1 {
-                for (_, p) in p.neighbours() {
-                    let p = game.warp(&p);
+                for (_, mut p) in p.neighbours() {
+                    game.warp(&mut p);
                     let p_idx = p.x as usize + width * p.y as usize;
                     let tile = unsafe { board.get_unchecked_mut(p_idx) };
-                    if tile.distance > work.distance && game.board.get(&p).is_safe() {
+                    if tile.distance > work.distance && game.board.damage(&p, 1) > 0 {
                         // TODO: this ignores survivable hazards
                         queue.push_back(NextTile {
                             x: p.x,
@@ -295,8 +295,8 @@ pub fn all_heap<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
                 x: work.x,
                 y: work.y,
             };
-            for (_, p) in p.neighbours() {
-                let p = game.warp(&p);
+            for (_, mut p) in p.neighbours() {
+                game.warp(&mut p);
                 let p_idx = p.x as usize + width * p.y as usize;
                 if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
                     // TODO: this ignores survivable hazards
@@ -374,8 +374,8 @@ pub fn me_heap<'a>(game: &'a Game) -> usize {
                 x: work.x,
                 y: work.y,
             };
-            for (_, p) in p.neighbours() {
-                let p = game.warp(&p);
+            for (_, mut p) in p.neighbours() {
+                game.warp(&mut p);
                 let p_idx = p.x as usize + width * p.y as usize;
                 if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
                     // TODO: this ignores survivable hazards
@@ -393,7 +393,7 @@ pub fn me_heap<'a>(game: &'a Game) -> usize {
     count
 }
 
-pub fn old(game: &Game) -> HashMap<String, usize> {
+pub fn old<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
     let w = game.board.width() as usize;
     let h = game.board.height() as usize;
 
@@ -466,8 +466,8 @@ pub fn old(game: &Game) -> HashMap<String, usize> {
             len_board[x][y] = cur_snake.length;
             counts[cur_snake_idx] += 1;
 
-            for (_, next_point) in work.point.neighbours() {
-                let next_point = game.warp(&next_point);
+            for (_, mut next_point) in work.point.neighbours() {
+                game.warp(&mut next_point);
 
                 if next_point.out_of_bounds(w as isize, h as isize)
                     || !game.board.get(&next_point).is_safe()
@@ -497,6 +497,6 @@ pub fn old(game: &Game) -> HashMap<String, usize> {
         counts
             .into_iter()
             .enumerate()
-            .map(|(idx, count)| (all_snakes[idx].id.clone(), count)),
+            .map(|(idx, count)| (all_snakes[idx], count)),
     );
 }

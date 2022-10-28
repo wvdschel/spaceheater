@@ -11,8 +11,14 @@ pub struct Game {
     pub dead_snakes: usize,
     pub you: Snake,
     pub timeout: std::time::Duration,
-    pub rules: Arc<protocol::Ruleset>,
+    pub rules: Arc<Rules>,
     pub turn: usize,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct Rules {
+    pub game_mode: GameMode,
+    pub hazard_damage_per_turn: i8,
 }
 
 impl Hash for Game {
@@ -24,6 +30,7 @@ impl Hash for Game {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum GameMode {
     Standard,
     Constrictor,
@@ -31,24 +38,19 @@ pub enum GameMode {
     Royale,
 }
 
-impl Game {
-    pub fn contains_snake(&self, name: &str) -> bool {
-        if self.you.name == name && self.you.health > 0 {
-            return true;
-        }
-        for s in &self.others {
-            if s.name == name && s.health > 0 {
-                return true;
-            }
-        }
-        false
-    }
+// #[macro_export]
+// macro_rules! warp {
+//     ( $game:expr, $point:expr ) => {
+//         if $game.rules.game_mode == crate::logic::game::GameMode::Wrapped {
+//             $point.warp($game.board.data[0] as isize, $game.board.data[1] as isize)
+//         }
+//     };
+// }
 
-    pub fn warp(&self, p: &Point) -> Point {
-        if self.rules.warped_mode() {
+impl Game {
+    pub fn warp(&self, p: &mut Point) {
+        if self.rules.game_mode == GameMode::Wrapped {
             p.warp(self.board.width(), self.board.height())
-        } else {
-            p.clone()
         }
     }
 
@@ -102,7 +104,7 @@ impl Game {
         }
 
         for other in self.others.iter() {
-            if other.name == snake.name {
+            if other == snake {
                 continue;
             }
 
@@ -113,7 +115,7 @@ impl Game {
             }
         }
 
-        if snake.name != self.you.name && snake.head == self.you.head {
+        if snake != &self.you && snake.head == self.you.head {
             if snake.length <= self.you.length {
                 return true;
             }
@@ -236,42 +238,34 @@ impl From<&protocol::Request> for Game {
         Game {
             board: board,
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
-            you: req.you.clone(),
+            you: Snake::from(&req.you),
             others: req
                 .board
                 .snakes
                 .iter()
-                .filter(|s| s.name != req.you.name)
-                .map(|s| s.clone())
+                .filter(|s| s.id != req.you.id)
+                .map(|s| Snake::from(s))
                 .collect(),
-            rules: Arc::new(req.game.ruleset.clone()),
+            rules: Arc::new(Rules::from(&req.game.ruleset)),
             dead_snakes: 0,
             turn: req.turn,
         }
     }
 }
 
-impl protocol::Ruleset {
-    pub fn warped_mode(&self) -> bool {
-        match self.game_mode() {
-            GameMode::Wrapped => true,
-            _ => false,
-        }
-    }
-
-    pub fn constrictor_mode(&self) -> bool {
-        match self.game_mode() {
-            GameMode::Constrictor => true,
-            _ => false,
-        }
-    }
-
-    pub fn game_mode(&self) -> GameMode {
-        match self.name.as_str() {
-            "standard" => GameMode::Standard,
-            "royale" => GameMode::Royale,
-            "wrapped" => GameMode::Wrapped,
-            _ => GameMode::Standard,
+impl From<&protocol::Ruleset> for Rules {
+    fn from(r: &protocol::Ruleset) -> Self {
+        Self {
+            game_mode: match r.name.as_str() {
+                "standard" => GameMode::Standard,
+                "royale" => GameMode::Royale,
+                "wrapped" => GameMode::Wrapped,
+                _ => {
+                    println!("unknown game mode: {}", r.name);
+                    GameMode::Standard
+                }
+            },
+            hazard_damage_per_turn: r.settings.hazard_damage_per_turn as i8,
         }
     }
 }

@@ -188,5 +188,5 @@ pub fn voronoi_all_stack(game: &Game) -> usize {
 
 pub fn voronoi_all_old(game: &Game) -> usize {
     let counts = voronoi::old(game);
-    *counts.get(&game.you.id).unwrap_or(&0)
+    *counts.get(&game.you).unwrap_or(&0)
 }

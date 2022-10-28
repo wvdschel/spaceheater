@@ -7,7 +7,7 @@ use super::Tile;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Board {
-    data: Vec<u8>,
+    pub(super) data: Vec<u8>,
 }
 
 const TILE_MASK: u8 = 0b1111;
@@ -62,7 +62,7 @@ impl Board {
 
     #[inline(always)]
     fn check_type(&self, p: &Point, mask: u8) -> bool {
-        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+        if p.x < 0 || p.y < 0 || p.x >= self.data[0] as i8 || p.y >= self.data[1] as i8 {
             return false;
         }
         get_tile!(self.data, p.x, p.y, mask) == mask
@@ -122,12 +122,26 @@ impl Board {
         }
     }
 
+    #[inline(always)]
+    pub fn damage(&self, p: &Point, hazard_dmg: i8) -> i8 {
+        let t = get_tile!(self.data, p.x, p.y, TILE_MASK);
+        match t & TILE_TYPE_MASK {
+            EMPTY => {
+                let hazards = (t & HAZARD_MASK) as u8 >> 2;
+                hazard_dmg * hazards as i8
+            }
+            FOOD => 0,
+            SNAKE | HEAD => i8::MAX,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn get(&self, p: &Point) -> Tile {
         if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
             return Tile::Wall;
         }
         let value = get_tile!(self.data, p.x, p.y, TILE_MASK);
-        let hazards = (value & HAZARD_MASK) as usize >> 2;
+        let hazards = (value & HAZARD_MASK) as u8 >> 2;
         if hazards > 0 {
             match value & TILE_TYPE_MASK {
                 EMPTY => Tile::Hazard(hazards),

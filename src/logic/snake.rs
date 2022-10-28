@@ -1,26 +1,40 @@
-use crate::protocol;
-pub use protocol::Snake;
+use std::collections::VecDeque;
 
-use super::{Board, Direction, Tile};
+use crate::protocol;
+
+use super::{
+    game::{GameMode, Rules},
+    Board, Direction, Point, Tile,
+};
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub struct Snake {
+    #[cfg(feature = "logging")]
+    pub name: String,
+    pub health: i8,
+    pub body: VecDeque<Point>,
+    pub head: Point,
+    pub length: usize,
+    pub squad: u8,
+}
 
 impl Snake {
-    pub fn apply_move(&mut self, dir: Direction, board: &mut Board, rules: &protocol::Ruleset) {
-        let new_head = if rules.warped_mode() {
-            self.head.neighbour(dir).warp(board.width(), board.height())
-        } else {
-            self.head.neighbour(dir)
-        };
+    pub fn apply_move(&mut self, dir: Direction, board: &mut Board, rules: &Rules) {
+        let mut new_head = self.head.neighbour(dir);
+        if rules.game_mode == GameMode::Wrapped {
+            new_head.warp(board.width(), board.height())
+        }
 
         // Apply hazard damage
         if board.get(&new_head).is_hazard() {
-            self.health -= rules.settings.hazard_damage_per_turn;
+            self.health -= rules.hazard_damage_per_turn;
         }
 
         // Starve snake
         self.health -= 1;
 
         // Consume food
-        if board.get(&new_head).has_food() || rules.constrictor_mode() {
+        if board.get(&new_head).has_food() || rules.game_mode == GameMode::Constrictor {
             self.health = 100;
             self.length += 1;
         }
@@ -65,11 +79,26 @@ impl Snake {
     }
 }
 
+impl From<&protocol::Snake> for Snake {
+    fn from(s: &protocol::Snake) -> Self {
+        Snake {
+            #[cfg(feature = "logging")]
+            name: s.name,
+            health: s.health as i8,
+            body: s.body.clone(),
+            head: s.head.clone(),
+            length: s.length,
+            squad: s.squad.parse().unwrap_or(0),
+        }
+    }
+}
+
 impl std::fmt::Display for Snake {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(feature = "logging")]
+        f.write_fmt(format_args!("{:16} ", self.name))?;
         f.write_fmt(format_args!(
-            "{:16} {} (hp={}, len={})",
-            self.name,
+            "{} (hp={}, len={})",
             std::iter::repeat("o").take(self.length).collect::<String>(),
             self.health,
             self.length
