@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::{Board, Direction, Point, Snake, Tile};
 use crate::protocol;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Game {
     pub board: Board,
     pub others: Vec<Snake>,
@@ -15,37 +15,28 @@ pub struct Game {
     pub turn: usize,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Rules {
     pub game_mode: GameMode,
     pub hazard_damage_per_turn: i8,
 }
 
-impl Hash for Game {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.board.to_string().hash(state);
-        self.others.hash(state);
-        self.you.hash(state);
-        self.turn.hash(state);
-    }
-}
+// impl Hash for Game {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.board.hash(state);
+//         self.others.hash(state);
+//         self.you.hash(state);
+//         self.turn.hash(state);
+//     }
+// }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub enum GameMode {
     Standard,
     Constrictor,
     Wrapped,
     Royale,
 }
-
-// #[macro_export]
-// macro_rules! warp {
-//     ( $game:expr, $point:expr ) => {
-//         if $game.rules.game_mode == crate::logic::game::GameMode::Wrapped {
-//             $point.warp($game.board.data[0] as isize, $game.board.data[1] as isize)
-//         }
-//     };
-// }
 
 impl Game {
     pub fn warp(&self, p: &mut Point) {
