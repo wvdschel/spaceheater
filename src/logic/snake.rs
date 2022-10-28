@@ -7,15 +7,22 @@ use super::{
     Board, Direction, Point, Tile,
 };
 
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq)]
 pub struct Snake {
     #[cfg(feature = "logging")]
     pub name: String,
+    pub id: u8,
     pub health: i8,
     pub body: VecDeque<Point>,
     pub head: Point,
     pub length: usize,
     pub squad: u8,
+}
+
+impl PartialEq for Snake {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl Snake {
@@ -84,6 +91,7 @@ impl From<&protocol::Snake> for Snake {
         Snake {
             #[cfg(feature = "logging")]
             name: s.name,
+            id: 0,
             health: s.health as i8,
             body: s.body.clone(),
             head: s.head.clone(),

@@ -226,17 +226,28 @@ impl std::fmt::Display for Game {
 impl From<&protocol::Request> for Game {
     fn from(req: &protocol::Request) -> Self {
         let board: Board = (&req.board).into();
+
+        let mut you = Snake::from(&req.you);
+        you.id = 0;
+
+        let others = req
+            .board
+            .snakes
+            .iter()
+            .filter(|s| s.id != req.you.id)
+            .enumerate()
+            .map(|(i, s)| {
+                let mut s = Snake::from(s);
+                s.id = i as u8 + 1;
+                s
+            })
+            .collect();
+
         Game {
             board: board,
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
-            you: Snake::from(&req.you),
-            others: req
-                .board
-                .snakes
-                .iter()
-                .filter(|s| s.id != req.you.id)
-                .map(|s| Snake::from(s))
-                .collect(),
+            you,
+            others,
             rules: Arc::new(Rules::from(&req.game.ruleset)),
             dead_snakes: 0,
             turn: req.turn,
