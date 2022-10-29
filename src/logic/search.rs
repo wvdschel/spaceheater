@@ -12,12 +12,12 @@ use super::{Board, BoardLike, Game, Tile};
 pub fn calculate_distances<T, C, B>(
     board: &dyn BoardLike,
     p: &Point,
-    cost: C,
-    bound: B,
+    mut cost: C,
+    mut bound: B,
 ) -> Vec<Vec<Option<T>>>
 where
-    B: Fn(&Vec<Vec<Option<T>>>, &Point) -> bool,
-    C: Fn(&dyn BoardLike, &Point) -> (T, Vec<Point>),
+    B: FnMut(&Vec<Vec<Option<T>>>, &Point) -> bool,
+    C: FnMut(&dyn BoardLike, &Point) -> (T, Vec<Point>),
     T: Clone + Copy + Ord + Default + Add<Output = T> + Neg<Output = T>,
 {
     let mut distances = Vec::with_capacity(board.width() as usize);

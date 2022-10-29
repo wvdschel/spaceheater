@@ -3,7 +3,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{logic::Game, protocol, Battlesnake};
+use crate::{
+    logic::{scoring::ApproximateScore, Game},
+    protocol, Battlesnake,
+};
 
 mod game_solver;
 use game_solver::GameSolver;
@@ -24,15 +27,13 @@ where
     T: Ord + Default + Copy + Display + Send,
 {
     pub fn new(score_fn: fn(&Game) -> T) -> Self {
-        Self {
-            score_fn,
-        }
+        Self { score_fn }
     }
 }
 
 impl<T> Battlesnake for SpaceHeater<T>
 where
-    T: Ord + Default + Copy + Display + Send + 'static,
+    T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static,
 {
     fn snake_info(&self) -> protocol::SnakeInfo {
         let mut rng = rand::thread_rng();

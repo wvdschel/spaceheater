@@ -143,6 +143,20 @@ impl PartialOrd for TournamentVoronoiScore {
     }
 }
 
+impl ApproximateScore for TournamentVoronoiScore {
+    fn approximate(&self) -> Self {
+        Self {
+            survived_by: self.survived_by,
+            voronoi: VoronoiScore {
+                turns_survived: self.voronoi.turns_survived,
+                tiles_controlled: 0,
+                kills: 0,
+                length: 0,
+            },
+        }
+    }
+}
+
 impl std::fmt::Display for TournamentVoronoiScore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -150,6 +164,10 @@ impl std::fmt::Display for TournamentVoronoiScore {
             self.survived_by, self.voronoi,
         ))
     }
+}
+
+pub trait ApproximateScore: Ord {
+    fn approximate(&self) -> Self;
 }
 
 /// tournament_voronoi extends the voronoi_relative_length score function

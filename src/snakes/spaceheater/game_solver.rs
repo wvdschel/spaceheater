@@ -14,7 +14,7 @@ use std::{
 
 use crate::{
     log,
-    logic::{Game, Tile},
+    logic::{scoring::ApproximateScore, search, BoardLike, Game, Tile},
     protocol::{Direction, Point, ALL_DIRECTIONS},
     util::{thread_count, WorkQueue},
 };
@@ -54,7 +54,50 @@ where
     score_fn: fn(&Game) -> T,
 }
 
-impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
+fn search_for_food(board: &dyn BoardLike, head: &Point, warp: bool) -> Option<(Direction, isize)> {
+    let mut food: Option<Point> = None;
+    let (w, h) = (board.width(), board.height());
+    let distances = search::calculate_distances(
+        board,
+        head,
+        |_, p| {
+            let distance = if board.get(p).is_safe() {
+                1
+            } else {
+                isize::MAX
+            };
+            (
+                distance,
+                p.neighbours()
+                    .map(|(_dir, p)| if warp { p.warp(w, h) } else { p })
+                    .into(),
+            )
+        },
+        |_, p| {
+            if board.get(&p) == Tile::Food {
+                food = Some(p.clone());
+                true
+            } else {
+                false
+            }
+        },
+    );
+
+    if let Some(f) = food {
+        if let Some(distance) = distances[f.x as usize][f.y as usize] {
+            println!("distance to food at {} is {}", f, distance);
+            let path = search::find_path(&distances, head, &f);
+            match path.first() {
+                Some(v) => return Some((*v, distance)),
+                None => println!("can't find route to food, fall back to basic survival"),
+            };
+        }
+    }
+
+    None
+}
+
+impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> GameSolver<T> {
     pub fn new(score_fn: fn(&Game) -> T) -> Self {
         Self {
             work_queue: Arc::new(WorkQueue::new(32 * 1024 * 1024)),
@@ -134,7 +177,30 @@ impl<T: Ord + Default + Copy + Display + Send + 'static> GameSolver<T> {
         thread::sleep(sleep_time);
 
         log!("{}", self.scores);
-        return self.scores.top_score();
+
+        let (mut top_dir, mut top_score) = self.scores.top_score();
+
+        if let Some((food_dir, food_distance)) = search_for_food(
+            game.board.as_ref(),
+            &game.you.head,
+            game.rules.warped_mode(),
+        ) {
+            if game.you.health < 40 && food_distance < game.you.health {
+                if food_dir != top_dir {
+                    let food_score = self.scores.get(&vec![food_dir]);
+                    if food_dir != top_dir && food_score.approximate().eq(&top_score.approximate())
+                    {
+                        println!(
+                            "overwriting top score with food score: {} becomes {}",
+                            top_dir, food_dir
+                        );
+                        top_dir = food_dir;
+                        top_score = food_score;
+                    }
+                }
+            }
+        }
+        return (top_dir, top_score);
     }
 }
 
