@@ -172,6 +172,11 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
             });
         }
 
+        let food_res = search_for_food(
+            game.board.as_ref(),
+            &game.you.head,
+            game.rules.warped_mode(),
+        );
         let sleep_time = *deadline - Instant::now();
         println!("Sleeping for {}ms", sleep_time.as_millis());
         thread::sleep(sleep_time);
@@ -180,11 +185,7 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
 
         let (mut top_dir, mut top_score) = self.scores.top_score();
 
-        if let Some((food_dir, food_distance)) = search_for_food(
-            game.board.as_ref(),
-            &game.you.head,
-            game.rules.warped_mode(),
-        ) {
+        if let Some((food_dir, food_distance)) = food_res {
             if game.you.health < 40 && food_distance < game.you.health {
                 if food_dir != top_dir {
                     let food_score = self.scores.get(&vec![food_dir]);
