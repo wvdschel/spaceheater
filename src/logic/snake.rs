@@ -40,12 +40,6 @@ impl Snake {
         // Starve snake
         self.health -= 1;
 
-        // Consume food
-        if board.get(&new_head).has_food() || rules.game_mode == GameMode::Constrictor {
-            self.health = 100;
-            self.length += 1;
-        }
-
         // Apply out of bounds damage
         if new_head.out_of_bounds(board.width(), board.height()) {
             self.health = 0;
@@ -61,7 +55,7 @@ impl Snake {
         }
 
         self.head = new_head.clone();
-        self.body.push_front(new_head);
+        self.body.push_front(new_head.clone());
         if self.body.len() > self.length {
             if let Some(p) = self.body.pop_back() {
                 if let Some(p2) = self.body.back() {
@@ -72,6 +66,12 @@ impl Snake {
                     board.clear_snake(&p);
                 }
             }
+        }
+
+        // Consume food
+        if board.get(&new_head).has_food() || rules.game_mode == GameMode::Constrictor {
+            self.health = 100;
+            self.length += 1;
         }
     }
 
