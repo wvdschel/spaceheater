@@ -28,6 +28,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         Box::new(Spaceheater2::new(
             logic::scoring::tournament_voronoi,
             logic::scoring::tournament_voronoi,
+            logic::scoring::tournament_voronoi,
             None,
         )),
     );

@@ -21,33 +21,40 @@ pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
 const LATENCY_MARGIN: Duration = Duration::from_millis(130);
 
-pub struct Spaceheater2<F1, F2, S1, S2>
+pub struct Spaceheater2<Fscore, Fmin, Fmax, S1, S2, S3>
 where
-    F1: Fn(&Game) -> S1,
-    F2: Fn(&Game) -> S2,
-    S1: Ord + PartialEq<S2>,
-    S2: Ord + Display + Clone,
+    Fscore: Fn(&Game) -> S1,
+    Fmin: Fn(&Game) -> S2,
+    Fmax: Fn(&Game) -> S3,
+    S1: Ord + Display + Clone,
+    S2: Ord + PartialEq<S1>,
+    S3: Ord + PartialEq<S1>,
 {
-    cheap_score_fn: F1,
-    expensive_score_fn: F2,
+    expensive_score_fn: Fscore,
+    cheap_min_score_fn: Fmin,
+    cheap_max_score_fn: Fmax,
     customizations: Customizations,
 }
 
-impl<F1, F2, S1, S2> Spaceheater2<F1, F2, S1, S2>
+impl<Fscore, Fmin, Fmax, S1, S2, S3> Spaceheater2<Fscore, Fmin, Fmax, S1, S2, S3>
 where
-    F1: Fn(&Game) -> S1,
-    F2: Fn(&Game) -> S2,
-    S1: Ord + PartialEq<S2>,
-    S2: Ord + Display + Clone,
+    Fscore: Fn(&Game) -> S1,
+    Fmin: Fn(&Game) -> S2,
+    Fmax: Fn(&Game) -> S3,
+    S1: Ord + Display + Clone,
+    S2: Ord + PartialEq<S1>,
+    S3: Ord + PartialEq<S1>,
 {
     pub fn new(
-        cheap_score_fn: F1,
-        expensive_score_fn: F2,
+        expensive_score_fn: Fscore,
+        cheap_min_score_fn: Fmin,
+        cheap_max_score_fn: Fmax,
         customizations: Option<Customizations>,
     ) -> Self {
         Self {
-            cheap_score_fn,
             expensive_score_fn,
+            cheap_min_score_fn,
+            cheap_max_score_fn,
             customizations: customizations.unwrap_or(Customizations {
                 color: DEFAULT_COLOR.into(),
                 head: DEFAULT_HEAD.into(),
@@ -56,13 +63,14 @@ where
         }
     }
 
-    fn solve(&self, game: &Game, deadline: Instant, max_depth: usize) -> (Direction, S2) {
+    fn solve(&self, game: &Game, deadline: Instant, max_depth: usize) -> (Direction, S1) {
         let scores = Arc::new(scores::Scoretree::new());
 
         solve::solve(
             game,
-            &self.cheap_score_fn,
             &self.expensive_score_fn,
+            &self.cheap_min_score_fn,
+            &self.cheap_max_score_fn,
             scores.clone(),
             deadline,
             max_depth,
@@ -95,12 +103,16 @@ where
     }
 }
 
-impl<F1, F2, S1, S2> Battlesnake for Spaceheater2<F1, F2, S1, S2>
+
+
+impl<Fscore, Fmin, Fmax, S1, S2, S3> Battlesnake for  Spaceheater2<Fscore, Fmin, Fmax, S1, S2, S3>
 where
-    F1: Fn(&Game) -> S1,
-    F2: Fn(&Game) -> S2,
-    S1: Ord + PartialEq<S2>,
-    S2: Ord + Display + Clone,
+Fscore: Fn(&Game) -> S1,
+Fmin: Fn(&Game) -> S2,
+Fmax: Fn(&Game) -> S3,
+S1: Ord + Display + Clone,
+S2: Ord + PartialEq<S1>,
+S3: Ord + PartialEq<S1>,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {

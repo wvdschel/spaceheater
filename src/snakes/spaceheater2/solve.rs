@@ -4,17 +4,21 @@ use crate::logic::Game;
 
 use super::scores::Scoretree;
 
-pub fn solve<F1, F2, S1, S2>(
+pub fn solve<Fscore, Fmin, Fmax, S1, S2, S3>(
     game: &Game,
-    cheap_scoring_fn: &F1,
-    expensive_scoring_fn: &F2,
-    scores: Arc<Scoretree<S2>>,
+    expensive_score_fn: &Fscore,
+    cheap_min_score_fn: &Fmin,
+    cheap_max_score_fn: &Fmax,
+    scores: Arc<Scoretree<S1>>,
     deadline: Instant,
     max_depth: usize,
-) where
-    F1: Fn(&Game) -> S1,
-    F2: Fn(&Game) -> S2,
-    S1: Ord + PartialEq<S2>,
-    S2: Ord + Display + Clone,
+) 
+where
+    Fscore: Fn(&Game) -> S1,
+    Fmin: Fn(&Game) -> S2,
+    Fmax: Fn(&Game) -> S3,
+    S1: Ord + Display + Clone,
+    S2: Ord + PartialEq<S1>,
+    S3: Ord + PartialEq<S1>,
 {
 }
