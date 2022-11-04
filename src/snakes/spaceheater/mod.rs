@@ -46,7 +46,7 @@ where
             color: self.customizations.color.clone(),
             head: self.customizations.head.clone(),
             tail: self.customizations.tail.clone(),
-            version: "0".to_string(),
+            version: "1".to_string(),
         }
     }
 

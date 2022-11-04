@@ -1,6 +1,6 @@
-# fly.toml file generated for battlesnack on 2022-10-26T23:40:28+02:00
+# fly.toml file generated for topsnek on 2022-10-28T15:58:31+02:00
 
-app = "battlesnack"
+app = "topsnek"
 kill_signal = "SIGINT"
 kill_timeout = 5
 

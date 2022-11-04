@@ -1,7 +1,10 @@
 # Spaceheater
 # Weird choices to debug
 
-# Valgrind
+# Profiling
+Create flamegraph.svg:
+  cargo run --release --bin bench-spaceheater < logs/Spaceheater_f603f0b7-10ca-4bcd-b087-4e9902b052a4.json.gz
+
 Commands used for generating a callgrind file:
   cargo build --release
   valgrind --tool=callgrind ./target/release/bench-spaceheater < logs/Spaceheater_f603f0b7-10ca-4bcd-b087-4e9902b052a4.json.gz
