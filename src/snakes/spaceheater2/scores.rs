@@ -2,29 +2,40 @@ use std::{
     collections::HashMap,
     fmt::Display,
     sync::{
-        mpsc::{self, Receiver, Sender},
+        mpsc::{self, Sender},
         Mutex,
     },
     thread,
+    time::Instant,
 };
 
 use crate::logic::Direction;
 
 pub struct Scoretree<S>
 where
-    S: Ord + Display + Clone,
+    S: Ord + Display + Clone + Send,
 {
     scores: Mutex<HashMap<Vec<Direction>, S>>,
-    recv_score: Receiver<(Vec<Direction>, S)>,
     send_score: Sender<(Vec<Direction>, S)>,
 }
 
-impl<S: Ord + Display + Clone> Scoretree<S> {
-    pub fn new() -> Self {
+impl<S: Ord + Display + Clone + Send> Scoretree<S> {
+    pub fn new(deadline: Instant) -> Self {
         let (tx, rx) = mpsc::channel();
+        let scores = Mutex::new(HashMap::new());
+
+        thread::spawn(move || loop {
+            match rx.recv_timeout(deadline - Instant::now()) {
+                Ok((path, score)) => {
+                    let mut scores = scores.lock().unwrap();
+                    scores.insert(path, score);
+                }
+                Err(_) => break,
+            }
+        });
+
         Self {
-            scores: Mutex::new(HashMap::new()),
-            recv_score: rx,
+            scores,
             send_score: tx,
         }
     }
@@ -36,7 +47,15 @@ impl<S: Ord + Display + Clone> Scoretree<S> {
     }
 
     pub fn get_scores(&self, paths: &Vec<Vec<Direction>>) -> HashMap<Vec<Direction>, S> {
-        todo!()
+        let scores = self.scores.lock().unwrap();
+
+        let mut res = HashMap::new();
+        for path in paths.iter() {
+            if let Some(s) = scores.get(path).map(|s| s.clone()) {
+                res.insert(path.clone(), s);
+            }
+        }
+        res
     }
 
     pub fn get_submission_channel(&self) -> Sender<(Vec<Direction>, S)> {

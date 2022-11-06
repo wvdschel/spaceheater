@@ -1,6 +1,6 @@
 use crate::logic::{Game, Point, Snake, Tile};
 
-fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: i8) -> bool {
+pub fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: i8) -> bool {
     match game.board.get(p) {
         Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
             game.rules.hazard_damage_per_turn * x as i8 > hp

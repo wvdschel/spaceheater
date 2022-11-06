@@ -3,6 +3,8 @@ use super::Game;
 mod voronoi;
 pub use voronoi::*;
 
+pub mod pruning;
+
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct SurvivalKillsLengthScore {
     turns_survived: usize,

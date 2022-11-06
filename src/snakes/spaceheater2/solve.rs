@@ -12,12 +12,11 @@ pub fn solve<Fscore, Fmin, Fmax, S1, S2, S3>(
     scores: Arc<Scoretree<S1>>,
     deadline: Instant,
     max_depth: usize,
-) 
-where
+) where
     Fscore: Fn(&Game) -> S1,
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
-    S1: Ord + Display + Clone,
+    S1: Ord + Display + Clone + Send,
     S2: Ord + PartialEq<S1>,
     S3: Ord + PartialEq<S1>,
 {

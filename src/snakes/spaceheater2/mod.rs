@@ -26,7 +26,7 @@ where
     Fscore: Fn(&Game) -> S1,
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
-    S1: Ord + Display + Clone,
+    S1: Ord + Display + Clone + Send,
     S2: Ord + PartialEq<S1>,
     S3: Ord + PartialEq<S1>,
 {
@@ -41,7 +41,7 @@ where
     Fscore: Fn(&Game) -> S1,
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
-    S1: Ord + Display + Clone,
+    S1: Ord + Display + Clone + Send,
     S2: Ord + PartialEq<S1>,
     S3: Ord + PartialEq<S1>,
 {
@@ -63,8 +63,8 @@ where
         }
     }
 
-    fn solve(&self, game: &Game, deadline: Instant, max_depth: usize) -> (Direction, S1) {
-        let scores = Arc::new(scores::Scoretree::new());
+    fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> (Direction, S1) {
+        let scores = Arc::new(scores::Scoretree::new(deadline.clone()));
 
         solve::solve(
             game,
@@ -72,7 +72,7 @@ where
             &self.cheap_min_score_fn,
             &self.cheap_max_score_fn,
             scores.clone(),
-            deadline,
+            deadline.clone(),
             max_depth,
         );
 
@@ -90,29 +90,28 @@ where
         }
 
         // TODO: if choice is certain death, pick any other non certain death move
-    
+        if certain_death(&game) {}
+
         let top_score = match top_score {
             Some(s) => s.clone(),
             None => {
                 println!("WARNING: did not get a single valid score, returning score for current board instead");
                 (self.expensive_score_fn)(game)
-            },
+            }
         };
 
         (top_move, top_score)
     }
 }
 
-
-
-impl<Fscore, Fmin, Fmax, S1, S2, S3> Battlesnake for  Spaceheater2<Fscore, Fmin, Fmax, S1, S2, S3>
+impl<Fscore, Fmin, Fmax, S1, S2, S3> Battlesnake for Spaceheater2<Fscore, Fmin, Fmax, S1, S2, S3>
 where
-Fscore: Fn(&Game) -> S1,
-Fmin: Fn(&Game) -> S2,
-Fmax: Fn(&Game) -> S3,
-S1: Ord + Display + Clone,
-S2: Ord + PartialEq<S1>,
-S3: Ord + PartialEq<S1>,
+    Fscore: Fn(&Game) -> S1,
+    Fmin: Fn(&Game) -> S2,
+    Fmax: Fn(&Game) -> S3,
+    S1: Ord + Display + Clone + Send,
+    S2: Ord + PartialEq<S1>,
+    S3: Ord + PartialEq<S1>,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {
@@ -139,7 +138,7 @@ S3: Ord + PartialEq<S1>,
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let (best_dir, top_score) = self.solve(&game, deadline, usize::MAX);
+        let (best_dir, top_score) = self.solve(&game, &deadline, usize::MAX);
 
         Ok(protocol::MoveResponse {
             direction: best_dir,
