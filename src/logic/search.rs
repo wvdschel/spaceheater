@@ -222,8 +222,8 @@ pub fn voronoi<'a>(game: &'a Game) -> usize {
                 x: work.x as isize,
                 y: work.y as isize,
             };
-            for (_, mut p) in p.neighbours() {
-                game.warp(&mut p);
+            for (_, p) in p.neighbours() {
+                let p = game.warp(&p);
                 let p_idx = p.x as usize + width * p.y as usize;
                 if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
                     // TODO: this ignores survivable hazards
