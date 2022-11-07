@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::VecDeque,
     ops::{Add, Neg},
 };
 
@@ -148,14 +148,6 @@ where
 
 pub fn voronoi<'a>(game: &'a Game) -> usize {
     type NumType = u8;
-    const MAX_SNAKES: usize = (NumType::MAX - 1) as usize;
-
-    #[derive(Clone, Copy)]
-    struct VoronoiTileAll {
-        distance: NumType,
-        snake: NumType,
-        length: NumType,
-    }
 
     #[derive(Clone, Copy)]
     struct VoronoiTile {
