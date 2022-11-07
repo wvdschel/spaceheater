@@ -203,9 +203,17 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
             }
         }
 
-        if certain_death(game, &game.you.head.neighbour(top_dir), game.you.health) {
+        if certain_death(
+            game,
+            &game.warp(&game.you.head.neighbour(top_dir)),
+            game.you.health,
+        ) {
             for dir in ALL_DIRECTIONS {
-                if !certain_death(game, &game.you.head.neighbour(dir), game.you.health) {
+                if !certain_death(
+                    game,
+                    &&game.warp(&game.you.head.neighbour(dir)),
+                    game.you.health,
+                ) {
                     println!(
                         "overwriting certain death choice {} with maybe-death choice {}",
                         top_dir, dir

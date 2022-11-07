@@ -146,100 +146,105 @@ where
     path.into()
 }
 
-pub fn voronoi(game: &Game) -> (Vec<Vec<Option<usize>>>, HashMap<String, usize>) {
-    let w = game.board.width() as usize;
-    let h = game.board.height() as usize;
+pub fn voronoi<'a>(game: &'a Game) -> usize {
+    type NumType = u8;
+    const MAX_SNAKES: usize = (NumType::MAX - 1) as usize;
 
-    let mut res_board = Vec::with_capacity(w);
-    let mut res_counts = HashMap::new();
-
-    for _ in 0..w {
-        let mut col = Vec::with_capacity(h);
-        col.resize(h, None);
-        res_board.push(col);
+    #[derive(Clone, Copy)]
+    struct VoronoiTileAll {
+        distance: NumType,
+        snake: NumType,
+        length: NumType,
     }
 
-    let mut all_snakes = Vec::from([&game.you]);
-    for snake in game.others.iter() {
-        all_snakes.push(snake);
+    #[derive(Clone, Copy)]
+    struct VoronoiTile {
+        distance: NumType,
+        snake: NumType,
     }
-    let all_snakes = all_snakes;
 
-    struct NextTileOver {
-        snake: usize,
-        point: Point,
-        distance: usize,
+    #[derive(Clone, Copy, Default)]
+    struct NextTile {
+        x: i8,
+        y: i8,
+        distance: NumType,
+        snake: NumType,
     }
+
+    let max_snakes = (NumType::MAX - 1) as usize;
+    if game.others.len() > max_snakes {
+        panic!(
+            "this voronoi implementation does not support more than {} snakes",
+            max_snakes
+        );
+    }
+
+    let mut snakes = vec![&game.you];
+    for s in game.others.iter() {
+        snakes.push(s);
+    }
+    let snakes = snakes.as_slice();
+
+    let (width, height) = (game.board.width() as usize, game.board.height() as usize);
+    let mut board = Vec::with_capacity(width * height);
+    board.resize(
+        width * height,
+        VoronoiTile {
+            distance: NumType::MAX,
+            snake: NumType::MAX,
+        },
+    );
+    let board = board.as_mut_slice();
+    let mut count = 0;
 
     let mut queue = VecDeque::new();
-    for (snake_idx, snake) in all_snakes.iter().enumerate() {
-        res_counts.insert(snake.name.clone(), 0);
-        queue.push_back(NextTileOver {
-            snake: snake_idx,
-            point: snake.head.clone(),
+    for (i, &s) in snakes.iter().enumerate() {
+        queue.push_back(NextTile {
+            x: s.head.x as i8,
+            y: s.head.y as i8,
             distance: 0,
-        });
+            snake: i as NumType,
+        })
     }
 
-    let mut distances_grid = res_board.clone();
     while let Some(work) = queue.pop_front() {
-        let (x, y) = (work.point.x as usize, work.point.y as usize);
+        let p_idx = work.x as usize + width * work.y as usize;
+        let mut first = false;
+        if board[p_idx].distance > work.distance {
+            first = true;
+        } else if board[p_idx].distance == work.distance {
+            let other = snakes[board[p_idx].snake as usize];
 
-        let cur_snake = all_snakes[work.snake];
-        let mut first = work.distance < distances_grid[x][y].unwrap_or(usize::MAX);
-        if work.distance == distances_grid[x][y].unwrap_or(usize::MAX) {
-            // Draw - longest snake wins
-            if let Some(prev_snake_idx) = res_board[x][y] {
-                if prev_snake_idx == work.snake {
-                    continue; // Already processed this tile
-                }
-
-                let prev_snake = all_snakes[prev_snake_idx];
-
-                if cur_snake.length > prev_snake.length {
-                    first = true;
-                }
-
-                if prev_snake.length <= cur_snake.length {
-                    let count = res_counts.get_mut(&prev_snake.name).unwrap();
-                    *count -= 1;
-                }
-                // TODO: can't remove prev_snake from res_board here or a third snake might incorrectly claim the tile.
-                // but this makes the res_board return value incorrect...
+            let me = snakes[work.snake as usize];
+            if me.length > other.length {
+                first = true;
             }
         }
         if first {
-            distances_grid[x][y] = Some(work.distance);
-            res_board[x][y] = Some(work.snake);
-            let count = res_counts.get_mut(&cur_snake.name).unwrap();
-            *count += 1;
-
-            for (_, next_point) in work.point.neighbours() {
-                let next_point = game.warp(&next_point);
-
-                if next_point.out_of_bounds(w as isize, h as isize)
-                    || !game.board.get(&next_point).is_safe()
-                // TODO is_safe() doesn't take into account survivable hazards
-                {
-                    continue;
+            if work.snake == 0 {
+                count += 1
+            }
+            board[p_idx].distance = work.distance;
+            board[p_idx].snake = work.snake;
+            let p = Point {
+                x: work.x as isize,
+                y: work.y as isize,
+            };
+            for (_, mut p) in p.neighbours() {
+                game.warp(&mut p);
+                let p_idx = p.x as usize + width * p.y as usize;
+                if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
+                    // TODO: this ignores survivable hazards
+                    queue.push_back(NextTile {
+                        x: p.x as i8,
+                        y: p.y as i8,
+                        distance: work.distance + 1,
+                        snake: work.snake,
+                    })
                 }
-
-                let (nx, ny) = (next_point.x as usize, next_point.y as usize);
-
-                if let Some(cur_dist) = distances_grid[nx][ny] {
-                    if cur_dist < work.distance + 1 {
-                        continue;
-                    }
-                }
-
-                queue.push_back(NextTileOver {
-                    snake: work.snake,
-                    point: next_point,
-                    distance: work.distance + 1,
-                })
             }
         }
     }
 
-    return (res_board, res_counts);
+    count
 }
