@@ -222,17 +222,19 @@ pub fn voronoi<'a>(game: &'a Game) -> usize {
                 x: work.x as isize,
                 y: work.y as isize,
             };
-            for (_, p) in p.neighbours() {
-                let p = game.warp(&p);
+            for (_, mut p) in p.neighbours() {
+                p = game.warp(&p);
                 let p_idx = p.x as usize + width * p.y as usize;
-                if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
-                    // TODO: this ignores survivable hazards
-                    queue.push_back(NextTile {
-                        x: p.x as i8,
-                        y: p.y as i8,
-                        distance: work.distance + 1,
-                        snake: work.snake,
-                    })
+                if p_idx < board.len() {
+                    if board[p_idx].distance > work.distance && game.board.get(&p).is_safe() {
+                        // TODO: this ignores survivable hazards
+                        queue.push_back(NextTile {
+                            x: p.x as i8,
+                            y: p.y as i8,
+                            distance: work.distance + 1,
+                            snake: work.snake,
+                        })
+                    }
                 }
             }
         }
