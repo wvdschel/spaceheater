@@ -125,10 +125,7 @@ pub fn all_stack<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
                     }
                 }
             } else {
-                log!(
-                    "discarding new work after {:?} because distance counter is saturated",
-                    work
-                );
+                log!("discarding new work after because distance counter is saturated");
             }
         }
     }
@@ -225,10 +222,7 @@ pub fn me_stack(game: &Game) -> usize {
                     }
                 }
             } else {
-                log!(
-                    "discarding new work after {:?} because distance counter is saturated",
-                    work
-                );
+                log!("discarding new work after because distance counter is saturated");
             }
         }
     }

@@ -69,6 +69,7 @@ where
 
         solve::solve(
             game,
+            vec![],
             &self.expensive_score_fn,
             &self.cheap_min_score_fn,
             &self.cheap_max_score_fn,
@@ -80,14 +81,17 @@ where
         let move_scores = scores.get_scores(&vec![Vec::from(ALL_DIRECTIONS)]);
         let (mut top_move, mut top_score) = (Direction::Down, None);
         for dir in ALL_DIRECTIONS {
+            let mut new_p = game.you.head.neighbour(dir);
+            game.warp(&mut new_p);
+
             if !certain_death(
                 // This check is to compensate for "paranoid" scoring functions that
                 // do not distiguish between maybe dieing, and certain instant death.
-                // It's not perfect, but it makes the snake survive some
-                // scenarios in which an enemy snake doesn't go in for the kill.
+                // It's not perfect, but it makes the snake survive some scenarios
+                // in which an enemy snake doesn't go in for the kill.
                 &game,
                 &game.you,
-                &game.you.head.neighbour(dir),
+                &new_p,
                 game.you.health,
             ) {
                 if let Some(score) = move_scores.get(&vec![dir]) {

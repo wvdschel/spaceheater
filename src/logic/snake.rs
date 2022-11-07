@@ -90,7 +90,7 @@ impl From<&protocol::Snake> for Snake {
     fn from(s: &protocol::Snake) -> Self {
         Snake {
             #[cfg(feature = "logging")]
-            name: s.name,
+            name: s.name.clone(),
             id: 0,
             health: s.health as i8,
             body: s.body.clone(),
