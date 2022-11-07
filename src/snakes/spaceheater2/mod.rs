@@ -4,7 +4,6 @@ mod util;
 
 use std::{
     fmt::Display,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -16,6 +15,8 @@ use crate::{
     Battlesnake,
 };
 
+use self::util::certain_death;
+
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
@@ -26,9 +27,9 @@ where
     Fscore: Fn(&Game) -> S1,
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
-    S1: Ord + Display + Clone + Send,
-    S2: Ord + PartialEq<S1>,
-    S3: Ord + PartialEq<S1>,
+    S1: Ord + Display + Clone + Send + 'static,
+    S2: Ord + PartialOrd<S1>,
+    S3: Ord + PartialOrd<S1>,
 {
     expensive_score_fn: Fscore,
     cheap_min_score_fn: Fmin,
@@ -42,8 +43,8 @@ where
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
     S1: Ord + Display + Clone + Send,
-    S2: Ord + PartialEq<S1>,
-    S3: Ord + PartialEq<S1>,
+    S2: Ord + PartialOrd<S1>,
+    S3: Ord + PartialOrd<S1>,
 {
     pub fn new(
         expensive_score_fn: Fscore,
@@ -64,7 +65,7 @@ where
     }
 
     fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> (Direction, S1) {
-        let scores = Arc::new(scores::Scoretree::new(deadline.clone()));
+        let scores = scores::Scoretree::new(deadline.clone());
 
         solve::solve(
             game,
@@ -79,18 +80,26 @@ where
         let move_scores = scores.get_scores(&vec![Vec::from(ALL_DIRECTIONS)]);
         let (mut top_move, mut top_score) = (Direction::Down, None);
         for dir in ALL_DIRECTIONS {
-            if let Some(score) = move_scores.get(&vec![dir]) {
-                if top_score == None || top_score.unwrap() < score {
-                    top_score = Some(score);
-                    top_move = dir;
+            if !certain_death(
+                // This check is to compensate for "paranoid" scoring functions that
+                // do not distiguish between maybe dieing, and certain instant death.
+                // It's not perfect, but it makes the snake survive some
+                // scenarios in which an enemy snake doesn't go in for the kill.
+                &game,
+                &game.you,
+                &game.you.head.neighbour(dir),
+                game.you.health,
+            ) {
+                if let Some(score) = move_scores.get(&vec![dir]) {
+                    if top_score == None || top_score.unwrap() < score {
+                        top_score = Some(score);
+                        top_move = dir;
+                    }
+                } else {
+                    println!("WARNING: did not get a top level score for {}", dir)
                 }
-            } else {
-                println!("WARNING: did not get a top level score for {}", dir)
             }
         }
-
-        // TODO: if choice is certain death, pick any other non certain death move
-        if certain_death(&game) {}
 
         let top_score = match top_score {
             Some(s) => s.clone(),
@@ -110,8 +119,8 @@ where
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
     S1: Ord + Display + Clone + Send,
-    S2: Ord + PartialEq<S1>,
-    S3: Ord + PartialEq<S1>,
+    S2: Ord + PartialOrd<S1>,
+    S3: Ord + PartialOrd<S1>,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {

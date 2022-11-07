@@ -9,7 +9,7 @@ pub fn solve<Fscore, Fmin, Fmax, S1, S2, S3>(
     expensive_score_fn: &Fscore,
     cheap_min_score_fn: &Fmin,
     cheap_max_score_fn: &Fmax,
-    scores: Arc<Scoretree<S1>>,
+    scores: Scoretree<S1>,
     deadline: Instant,
     max_depth: usize,
 ) where
@@ -17,7 +17,7 @@ pub fn solve<Fscore, Fmin, Fmax, S1, S2, S3>(
     Fmin: Fn(&Game) -> S2,
     Fmax: Fn(&Game) -> S3,
     S1: Ord + Display + Clone + Send,
-    S2: Ord + PartialEq<S1>,
-    S3: Ord + PartialEq<S1>,
+    S2: Ord + PartialOrd<S1>,
+    S3: Ord + PartialOrd<S1>,
 {
 }

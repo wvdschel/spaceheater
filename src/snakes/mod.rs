@@ -5,9 +5,11 @@ pub mod spaceheater2;
 pub use simple::SimpleSnake;
 pub use spaceheater::SpaceHeater;
 pub use spaceheater2::Spaceheater2;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap};
 
-use crate::{logic, protocol::Customizations, Battlesnake};
+use crate::{logic, protocol::Customizations, Battlesnake, no_pruning};
+
+no_pruning!(logic::scoring::TournamentVoronoiScore);
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
@@ -27,8 +29,8 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         "spaceheater2".to_string(),
         Box::new(Spaceheater2::new(
             logic::scoring::tournament_voronoi,
-            logic::scoring::tournament_voronoi,
-            logic::scoring::tournament_voronoi,
+            logic::scoring::pruning::no_min_pruning,
+            logic::scoring::pruning::no_max_pruning,
             None,
         )),
     );

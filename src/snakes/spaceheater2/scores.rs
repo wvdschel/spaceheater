@@ -3,7 +3,7 @@ use std::{
     fmt::Display,
     sync::{
         mpsc::{self, Sender},
-        Mutex,
+        Arc, Mutex,
     },
     thread,
     time::Instant,
@@ -11,28 +11,32 @@ use std::{
 
 use crate::logic::Direction;
 
+#[derive(Clone)]
 pub struct Scoretree<S>
 where
     S: Ord + Display + Clone + Send,
 {
-    scores: Mutex<HashMap<Vec<Direction>, S>>,
+    scores: Arc<Mutex<HashMap<Vec<Direction>, S>>>,
     send_score: Sender<(Vec<Direction>, S)>,
 }
 
-impl<S: Ord + Display + Clone + Send> Scoretree<S> {
+impl<S: Ord + Display + Clone + Send + 'static> Scoretree<S> {
     pub fn new(deadline: Instant) -> Self {
         let (tx, rx) = mpsc::channel();
-        let scores = Mutex::new(HashMap::new());
+        let scores = Arc::new(Mutex::new(HashMap::new()));
 
-        thread::spawn(move || loop {
-            match rx.recv_timeout(deadline - Instant::now()) {
-                Ok((path, score)) => {
-                    let mut scores = scores.lock().unwrap();
-                    scores.insert(path, score);
+        {
+            let scores = scores.clone();
+            thread::spawn(move || loop {
+                match rx.recv_timeout(deadline - Instant::now()) {
+                    Ok((path, score)) => {
+                        let mut scores = scores.lock().unwrap();
+                        scores.insert(path, score);
+                    }
+                    Err(_) => break,
                 }
-                Err(_) => break,
-            }
-        });
+            });
+        }
 
         Self {
             scores,
