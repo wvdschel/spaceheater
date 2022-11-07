@@ -187,7 +187,7 @@ impl Battlesnake for SimpleSnake {
             if board.get(&p).is_safe() {
                 if die {
                     // Just mark the tile of a heads-on collision as a hazard for the time being
-                    board.set(&p, Tile::Hazard);
+                    board.set(&p, Tile::Hazard(3));
                 } else if kill {
                     return Ok(protocol::MoveResponse {
                         direction,

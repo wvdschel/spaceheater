@@ -177,11 +177,7 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
             });
         }
 
-        let food_res = search_for_food(
-            game.board.as_ref(),
-            &game.you.head,
-            game.rules.warped_mode(),
-        );
+        let food_res = search_for_food(&game.board, &game.you.head, game.rules.warped_mode());
         let sleep_time = *deadline - Instant::now();
         println!("Sleeping for {}ms", sleep_time.as_millis());
         thread::sleep(sleep_time);
@@ -406,8 +402,8 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
 
 fn certain_death(game: &Game, p: &Point, hp: isize) -> bool {
     match game.board.get(p) {
-        Tile::Hazard | Tile::HazardWithSnake | Tile::HazardWithHead => {
-            game.rules.settings.hazard_damage_per_turn > hp
+        Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
+            game.rules.settings.hazard_damage_per_turn * x as isize > hp
         }
         Tile::Wall => true,
         // TODO model starvation?

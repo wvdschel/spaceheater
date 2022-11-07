@@ -1,11 +1,11 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
-use super::{board::BoardOverlay, Board, BoardLike, Direction, Point, Snake, Tile};
+use super::{Board, BoardLike, Direction, Point, Snake, Tile};
 use crate::protocol;
 
 pub struct Game {
-    pub board: Arc<dyn BoardLike + Send + Sync>,
+    pub board: Board,
     pub others: Vec<Snake>,
     pub dead_snakes: usize,
     pub you: Snake,
@@ -60,7 +60,7 @@ impl Game {
     // - moving or expanding hazards
     // - spawning food
     pub fn execute_moves(&mut self, you: Direction, others: &Vec<Direction>) {
-        let mut new_board = BoardOverlay::new(self.board.clone());
+        let mut new_board = self.board.clone();
         self.you.apply_move(you, &mut new_board, &self.rules);
         for i in 0..others.len() {
             self.others[i].apply_move(others[i], &mut new_board, &self.rules)
@@ -85,7 +85,7 @@ impl Game {
         self.eliminate_dead_snakes(&mut new_board);
         self.draw_heads(&mut new_board);
 
-        self.board = Arc::new(new_board);
+        self.board = new_board;
         self.turn += 1;
     }
 
@@ -202,7 +202,7 @@ impl Game {
 impl Clone for Game {
     fn clone(&self) -> Self {
         Self {
-            board: Arc::new(BoardOverlay::new(self.board.clone())),
+            board: self.board.clone(),
             others: self.others.clone(),
             dead_snakes: self.dead_snakes,
             you: self.you.clone(),
@@ -226,10 +226,10 @@ impl std::fmt::Display for Game {
             for x in 0..self.board.width() {
                 let p = Point { x, y };
                 match self.board.get(&p) {
-                    Tile::Head | Tile::HazardWithHead => {
+                    Tile::Head | Tile::HazardWithHead(_) => {
                         f.write_fmt(format_args!("<{:2}>", self.snake_number(&p)))?;
                     }
-                    Tile::Snake | Tile::HazardWithSnake => {
+                    Tile::Snake | Tile::HazardWithSnake(_) => {
                         f.write_fmt(format_args!("[{:2}]", self.snake_number(&p)))?;
                     }
                     t => {
@@ -248,7 +248,7 @@ impl From<&protocol::Request> for Game {
     fn from(req: &protocol::Request) -> Self {
         let board: Board = (&req.board).into();
         Game {
-            board: Arc::new(board),
+            board: board,
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
             you: req.you.clone(),
             others: req
