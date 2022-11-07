@@ -115,7 +115,12 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
             self.work_queue.push(work, priority);
         }
 
-        for _ in 0..thread_count() {
+        let mut thread_count = thread_count();
+        if thread_count > 1 {
+            thread_count -= 1;
+        }
+
+        for _ in 0..thread_count {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
