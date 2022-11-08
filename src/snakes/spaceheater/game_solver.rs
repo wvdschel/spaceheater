@@ -1,5 +1,3 @@
-use thread_priority::*;
-
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -109,28 +107,27 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
 
     pub fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, T) {
         let base_label = move_label!("{}", game);
-        let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label, deadline);
+        let first_games = evaluate_game(
+            vec![],
+            game,
+            self.score_fn,
+            &self.scores,
+            &base_label,
+            deadline,
+        );
         for work in first_games {
             let priority = usize::MAX - work.path_so_far.len();
             self.work_queue.push(work, priority);
         }
 
-        let mut thread_count = thread_count();
-        if thread_count > 1 {
-            thread_count -= 1;
-        }
-
         let mut join_handles = vec![];
-        for _ in 0..thread_count {
+        for _ in 0..thread_count() {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
             let current_depth = Arc::clone(&self.current_depth);
             let score_fn = self.score_fn.clone();
             join_handles.push(thread::spawn(move || {
-                if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
-                    println!("warning: failed to change worker thread priority");
-                }
                 let start_time = Instant::now();
                 loop {
                     if Instant::now() > deadline {
@@ -185,7 +182,10 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
         for h in join_handles {
             h.join().unwrap();
         }
-        println!("finished work {}ms after deadline", (Instant::now() - *deadline).as_millis());
+        println!(
+            "finished work {}ms after deadline",
+            (Instant::now() - *deadline).as_millis()
+        );
 
         log!("{}", self.scores);
 
