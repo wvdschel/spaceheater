@@ -109,7 +109,7 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
 
     pub fn solve(&mut self, game: &Game, deadline: &Instant) -> (Direction, T) {
         let base_label = move_label!("{}", game);
-        let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label);
+        let first_games = evaluate_game(vec![], game, self.score_fn, &self.scores, &base_label, deadline);
         for work in first_games {
             let priority = usize::MAX - work.path_so_far.len();
             self.work_queue.push(work, priority);
@@ -120,13 +120,14 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
             thread_count -= 1;
         }
 
+        let mut join_handles = vec![];
         for _ in 0..thread_count {
             let scores = Arc::clone(&self.scores);
             let queue = Arc::clone(&self.work_queue);
             let deadline = deadline.clone();
             let current_depth = Arc::clone(&self.current_depth);
             let score_fn = self.score_fn.clone();
-            thread::spawn(move || {
+            join_handles.push(thread::spawn(move || {
                 if !set_current_thread_priority(ThreadPriority::Min).is_ok() {
                     println!("warning: failed to change worker thread priority");
                 }
@@ -161,6 +162,7 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
                             score_fn,
                             &scores,
                             &work.label,
+                            &deadline
                         );
                         for more_work in next_games {
                             let priority = usize::MAX - more_work.path_so_far.len();
@@ -174,13 +176,16 @@ impl<T: Ord + Default + Copy + Display + Send + ApproximateScore + 'static> Game
                         break;
                     }
                 }
-            });
+            }));
         }
 
         let food_res = search_for_food(&game.board, &game.you.head, game.rules.warped_mode());
         let sleep_time = *deadline - Instant::now();
-        println!("Sleeping for {}ms", sleep_time.as_millis());
-        thread::sleep(sleep_time);
+        println!("{}ms until deadline", sleep_time.as_millis());
+        for h in join_handles {
+            h.join().unwrap();
+        }
+        println!("finished work {}ms after deadline", (Instant::now() - *deadline).as_millis());
 
         log!("{}", self.scores);
 
@@ -236,6 +241,7 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
     score_fn: fn(&Game) -> T,
     scores: &Scorecard<T>,
     _label: &str,
+    deadline: &Instant,
 ) -> Vec<WorkItem> {
     log!("start eval: {:?} {}", prev_moves, game);
     if scores.is_certain_death(&prev_moves) {
@@ -280,6 +286,10 @@ fn evaluate_game<T: Ord + Default + Copy + Display + Send>(
         let full_path = full_path;
         let mut min_game = String::new();
         for other_moves in other_moves_catalog.iter() {
+            if Instant::now() > *deadline {
+                return vec![];
+            }
+
             let mut ngame = game.clone();
             ngame.execute_moves(my_dir, &other_moves);
             let score = (score_fn)(&ngame);
