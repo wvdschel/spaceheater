@@ -1,0 +1,117 @@
+{
+  "game": {
+    "id": "bfd7e456-5f00-4f01-9fe3-484c8521c06f",
+    "ruleset": {
+      "name": "wrapped",
+      "version": "v1.1.20",
+      "settings": {
+        "foodSpawnChance": 15,
+        "minimumFood": 1,
+        "hazardDamagePerTurn": 50,
+        "royale": {
+          "shrinkEveryNTurns": 0
+        },
+        "squad": {
+          "allowBodyCollisions": false,
+          "sharedElimination": false,
+          "sharedHealth": false,
+          "sharedLength": false
+        }
+      }
+    },
+    "map": "hz_scatter",
+    "timeout": 500,
+    "source": "ladder"
+  },
+  "turn": 3,
+  "board": {
+    "height": 11,
+    "width": 11,
+    "food": [
+      {
+        "x": 6,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 6
+      },
+      {
+        "x": 5,
+        "y": 5
+      }
+    ],
+    "hazards": [
+      {
+        "x": 3,
+        "y": 3
+      }
+    ],
+    "snakes": [
+      {
+        "id": "gs_cmfBvBdpWxVf89vKcWhJJ46f",
+        "name": "Spaceheater",
+        "health": 97,
+        "body": [
+          {
+            "x": 4,
+            "y": 5
+          },
+          {
+            "x": 3,
+            "y": 5
+          },
+          {
+            "x": 2,
+            "y": 5
+          }
+        ],
+        "latency": "370",
+        "head": {
+          "x": 4,
+          "y": 5
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#ea302c",
+          "head": "workout",
+          "tail": "flame"
+        }
+      }
+    ]
+  },
+  "you": {
+    "id": "gs_cmfBvBdpWxVf89vKcWhJJ46f",
+    "name": "Spaceheater",
+    "health": 97,
+    "body": [
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 3,
+        "y": 5
+      },
+      {
+        "x": 2,
+        "y": 5
+      }
+    ],
+    "latency": "370",
+    "head": {
+      "x": 4,
+      "y": 5
+    },
+    "length": 3,
+    "shout": "",
+    "squad": "",
+    "customizations": {
+      "color": "#ea302c",
+      "head": "workout",
+      "tail": "flame"
+    }
+  }
+}

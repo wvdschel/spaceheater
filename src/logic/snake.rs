@@ -72,6 +72,7 @@ impl Snake {
         if board.get(&new_head).has_food() || rules.game_mode == GameMode::Constrictor {
             self.health = 100;
             self.length += 1;
+            self.body.push_back(self.body.back().unwrap().clone())
         }
     }
 
