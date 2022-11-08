@@ -10,11 +10,10 @@ impl Snake {
         board: &mut dyn BoardLike,
         rules: &protocol::Ruleset,
     ) {
-        let new_head = if rules.warped_mode() {
-            self.head.neighbour(dir).warp(board.width(), board.height())
-        } else {
-            self.head.neighbour(dir)
-        };
+        let mut new_head = self.head.neighbour(dir);
+        if rules.warped_mode() {
+            new_head = new_head.warp(board.width(), board.height())
+        }
 
         // Apply hazard damage
         if board.get(&new_head).is_hazard() {
@@ -23,12 +22,6 @@ impl Snake {
 
         // Starve snake
         self.health -= 1;
-
-        // Consume food
-        if board.get(&new_head).has_food() || rules.constrictor_mode() {
-            self.health = 100;
-            self.length += 1;
-        }
 
         // Apply out of bounds damage
         if new_head.out_of_bounds(board.width(), board.height()) {
@@ -45,7 +38,7 @@ impl Snake {
         }
 
         self.head = new_head.clone();
-        self.body.push_front(new_head);
+        self.body.push_front(new_head.clone());
         if self.body.len() > self.length {
             if let Some(p) = self.body.pop_back() {
                 if let Some(p2) = self.body.back() {
@@ -56,6 +49,13 @@ impl Snake {
                     board.clear_snake(&p);
                 }
             }
+        }
+
+        // Consume food
+        if board.get(&new_head).has_food() || rules.constrictor_mode() {
+            self.health = 100;
+            self.length += 1;
+            self.body.push_back(self.body.back().unwrap().clone())
         }
     }
 
