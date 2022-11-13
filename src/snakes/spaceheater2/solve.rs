@@ -90,7 +90,7 @@ where
             // TODO instrument: break if min score is smaller than max score (ab pruning)
             if let Some(max_score) = &max_score {
                 if let Some(min_score) = &min_score {
-                    if min_score < max_score {
+                    if min_score <= max_score {
                         break;
                     }
                 }
@@ -113,7 +113,7 @@ where
         // TODO instrument: ab pruning
         if let Some(max_score) = &max_score {
             if let Some(min_score) = &parent_min_score {
-                if max_score > min_score {
+                if max_score >= min_score {
                     break;
                 }
             }
