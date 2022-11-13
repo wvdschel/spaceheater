@@ -5,9 +5,9 @@ pub mod spaceheater2;
 pub use simple::SimpleSnake;
 pub use spaceheater::SpaceHeater;
 pub use spaceheater2::Spaceheater2;
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use crate::{logic, protocol::Customizations, Battlesnake, no_pruning};
+use crate::{logic, no_pruning, protocol::Customizations, Battlesnake};
 
 no_pruning!(logic::scoring::TournamentVoronoiScore);
 

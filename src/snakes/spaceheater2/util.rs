@@ -1,9 +1,13 @@
-use crate::logic::{Game, Point, Snake, Tile};
+use crate::{
+    log,
+    logic::{Direction, Game, Point, Snake, Tile},
+    protocol::ALL_DIRECTIONS,
+};
 
-pub fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: i8) -> bool {
+pub fn certain_death(game: &Game, snake: &Snake, p: &Point) -> bool {
     match game.board.get(p) {
         Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
-            game.rules.hazard_damage_per_turn * x as i8 > hp
+            game.rules.hazard_damage_per_turn * x as i8 > snake.health
         }
         Tile::Snake => {
             // check self collisions. you can only hit odd body parts.
@@ -22,4 +26,48 @@ pub fn certain_death(game: &Game, snake: &Snake, p: &Point, hp: i8) -> bool {
         // TODO model starvation?
         _ => false,
     }
+}
+
+pub fn all_sensible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
+    if game.others.len() == 0 {
+        return vec![vec![]];
+    }
+
+    let mut all_enemy_moves: Vec<Vec<Direction>> = vec![];
+
+    for enemy in &game.others {
+        let enemy_moves: Vec<Direction> = ALL_DIRECTIONS
+            .into_iter()
+            .filter(|d| {
+                let mut p = enemy.head.neighbour(*d);
+                game.warp(&mut p);
+                !certain_death(game, enemy, &p)
+            })
+            .collect();
+
+        if enemy_moves.len() == 0 {
+            // This snake dies for sure in every direction, so just record one move for it (up)
+            log!("{} is going to die anyway, hardcoded up move.", enemy);
+            for enemy_combo in &mut all_enemy_moves {
+                enemy_combo.push(Direction::Up)
+            }
+        } else {
+            log!("{} is considering {:?}", enemy, enemy_moves);
+            if all_enemy_moves.is_empty() {
+                all_enemy_moves = enemy_moves.into_iter().map(|d| vec![d]).collect();
+            } else {
+                let other_snake_moves = all_enemy_moves;
+                all_enemy_moves = Vec::with_capacity(other_snake_moves.len() * enemy_moves.len());
+                for enemy_move in enemy_moves {
+                    for other_snake_combo in &other_snake_moves {
+                        let mut combo = other_snake_combo.clone();
+                        combo.push(enemy_move);
+                        all_enemy_moves.push(combo);
+                    }
+                }
+            }
+        }
+    }
+
+    all_enemy_moves
 }

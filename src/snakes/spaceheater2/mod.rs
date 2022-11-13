@@ -1,5 +1,5 @@
-mod scores;
-mod solve;
+pub mod scores;
+pub mod solve;
 mod util;
 
 use std::{
@@ -73,9 +73,10 @@ where
             &self.expensive_score_fn,
             &self.cheap_min_score_fn,
             &self.cheap_max_score_fn,
-            scores.clone(),
+            &scores,
             deadline.clone(),
             max_depth,
+            None,
         );
 
         let move_scores = scores.get_scores(&vec![Vec::from(ALL_DIRECTIONS)]);
@@ -89,10 +90,7 @@ where
                 // do not distiguish between maybe dieing, and certain instant death.
                 // It's not perfect, but it makes the snake survive some scenarios
                 // in which an enemy snake doesn't go in for the kill.
-                &game,
-                &game.you,
-                &new_p,
-                game.you.health,
+                &game, &game.you, &new_p,
             ) {
                 if let Some(score) = move_scores.get(&vec![dir]) {
                     if top_score == None || top_score.unwrap() < score {
