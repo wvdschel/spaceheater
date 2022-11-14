@@ -69,7 +69,7 @@ where
     fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> (Direction, S1) {
         let scores = scores::Scoretree::new(deadline.clone());
 
-        solve::solve(
+        let (best_path, mut top_score) = solve::solve(
             game,
             vec![],
             &self.expensive_score_fn,
@@ -80,39 +80,42 @@ where
             None,
         );
 
-        let move_scores = scores.get_scores(&vec![Vec::from(ALL_DIRECTIONS)]);
-        let (mut top_move, mut top_score) = (Direction::Down, None);
-        for dir in ALL_DIRECTIONS {
-            let mut new_p = game.you.head.neighbour(dir);
-            game.warp(&mut new_p);
+        //let move_scores = scores.get_scores(&vec![Vec::from(ALL_DIRECTIONS)]);
+        //let (mut top_move, mut top_score) = (Direction::Down, None);
+        // for dir in ALL_DIRECTIONS {
+        //     let mut new_p = game.you.head.neighbour(dir);
+        //     game.warp(&mut new_p);
 
-            if !certain_death(
-                // This check is to compensate for "paranoid" scoring functions that
-                // do not distiguish between maybe dieing, and certain instant death.
-                // It's not perfect, but it makes the snake survive some scenarios
-                // in which an enemy snake doesn't go in for the kill.
-                &game, &game.you, &new_p,
-            ) {
-                if let Some(score) = move_scores.get(&vec![dir]) {
-                    if top_score == None || top_score.unwrap() < score {
-                        top_score = Some(score);
-                        top_move = dir;
-                    }
-                } else {
-                    println!("WARNING: did not get a top level score for {}", dir)
-                }
-            }
-        }
+        //     if !certain_death(
+        //         // This check is to compensate for "paranoid" scoring functions that
+        //         // do not distiguish between maybe dieing, and certain instant death.
+        //         // It's not perfect, but it makes the snake survive some scenarios
+        //         // in which an enemy snake doesn't go in for the kill.
+        //         &game, &game.you, &new_p,
+        //     ) {
+        //         if let Some(score) = move_scores.get(&vec![dir]) {
+        //             if top_score == None || top_score.unwrap() < score {
+        //                 top_score = Some(score);
+        //                 top_move = dir;
+        //             }
+        //         } else {
+        //             println!("WARNING: did not get a top level score for {}", dir)
+        //         }
+        //     }
+        // }
 
-        let top_score = match top_score {
-            Some(s) => s.clone(),
-            None => {
-                println!("WARNING: did not get a single valid score, returning score for current board instead");
-                (self.expensive_score_fn)(game)
-            }
-        };
+        // let top_score = match top_score {
+        //     Some(s) => s.clone(),
+        //     None => {
+        //         println!("WARNING: did not get a single valid score, returning score for current board instead");
+        //         (self.expensive_score_fn)(game)
+        //     }
+        // };
 
-        (top_move, top_score)
+        (
+            best_path.first().map(|d| *d).unwrap_or(Direction::Down),
+            top_score,
+        )
     }
 }
 
