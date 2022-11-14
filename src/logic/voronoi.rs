@@ -7,8 +7,8 @@ use crate::{
 
 use super::{Game, Snake};
 
-type NumType = u8;
-const MAX_SNAKES: usize = (NumType::MAX - 1) as usize;
+type NumType = u16;
+const MAX_SNAKES: usize = 32;
 const MAX_BOARD_DIMENSION: usize = 25;
 const NO_SNAKE: NumType = NumType::MAX;
 
