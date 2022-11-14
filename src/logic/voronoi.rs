@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{logic::Point, util::stackqueue::StackQueue};
+use crate::{
+    logic::{game::GameMode, Point},
+    util::stackqueue::StackQueue,
+};
 
 use super::{Game, Snake};
 
@@ -19,6 +22,8 @@ struct VoronoiTile {
 }
 
 fn stack_voronoi(game: &Game) -> [usize; MAX_SNAKES] {
+    let warp = game.rules.game_mode == GameMode::Wrapped;
+
     let mut queue = StackQueue::new();
     let mut scores: [usize; MAX_SNAKES] = [0; MAX_SNAKES];
     let mut board = [VoronoiTile {
@@ -100,7 +105,9 @@ fn stack_voronoi(game: &Game) -> [usize; MAX_SNAKES] {
                 y: work.y,
             };
             for (_dir, mut next_p) in p.neighbours() {
-                game.warp(&mut next_p);
+                if warp {
+                    next_p.warp(w, h);
+                }
                 // This next check does not allow traversing survivable hazards, unless hey have food.
                 if next_p.out_of_bounds(w, h)
                     || game.board.hazard_count(&next_p) > 0
