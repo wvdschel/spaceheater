@@ -34,10 +34,10 @@ fn solve_game(
 fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
-) -> (Direction, scoring::TournamentVoronoiScore) {
+) -> (Vec<Direction>, scoring::TournamentVoronoiScore) {
     let deadline = Instant::now() + Duration::from_secs(100);
     let scores = snakes::spaceheater2::scores::Scoretree::new(deadline.clone());
-    let (mut path, score) = snakes::spaceheater2::solve::solve(
+    snakes::spaceheater2::solve::solve(
         game,
         vec![],
         &scoring::tournament_voronoi,
@@ -46,10 +46,7 @@ fn solve_game2(
         max_depth,
         None,
         None,
-    );
-
-    let first_move = path.pop().unwrap();
-    return (first_move, score);
+    )
 }
 
 fn main() {
@@ -72,7 +69,7 @@ fn main() {
         let stop = Instant::now();
         let duration = stop - start;
         println!(
-            "Solved for depth {} in {}ms: {} going {}",
+            "Solved for depth {} in {}ms: {} going {:?}",
             d,
             duration.as_millis(),
             score,

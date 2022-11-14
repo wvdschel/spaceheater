@@ -11,7 +11,6 @@ use super::{
     util::{all_sensible_enemy_moves, certain_death},
 };
 
-// TODO pass min/max bound for alpha-beta?
 pub fn solve<Fscore, S1>(
     game: &Game,
     path_so_far: Vec<Direction>,
@@ -33,6 +32,17 @@ where
 
     let mut alpha = alpha;
     let mut beta = beta;
+    log!(
+        "start: path so far: {:?}, alpha = [{}], beta = [{}]",
+        path_so_far,
+        alpha
+            .as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or("None".to_string()),
+        beta.as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or("None".to_string()),
+    );
 
     let mut max_score: Option<S1> = None;
     let mut best_move = vec![];
@@ -70,7 +80,7 @@ where
                 successor
             );
 
-            let min = match &max_score {
+            let min = match &min_score {
                 Some(s) => s,
                 None => &succ_score,
             };
@@ -93,7 +103,7 @@ where
 
             if let Some(max_score) = &alpha {
                 if let Some(min_score) = &beta {
-                    if max_score >= min_score {
+                    if max_score > min_score {
                         break;
                     }
                 }
@@ -101,6 +111,9 @@ where
         }
 
         let succ_score = min_score.unwrap();
+        _ = scores
+            .get_submission_channel()
+            .send((path, succ_score.clone()));
         let max = match &max_score {
             Some(s) => s,
             None => &succ_score,
@@ -121,7 +134,7 @@ where
 
         if let Some(max_score) = &alpha {
             if let Some(min_score) = &beta {
-                if max_score >= min_score {
+                if max_score > min_score {
                     break;
                 }
             }
