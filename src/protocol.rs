@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Clone, Copy)]
 pub struct Point {
     pub x: i8,
     pub y: i8,

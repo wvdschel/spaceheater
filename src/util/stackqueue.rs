@@ -1,4 +1,4 @@
-const MAX_QUEUE_LEN: usize = 64;
+const MAX_QUEUE_LEN: usize = 512;
 
 pub struct StackQueue<T>
 where
@@ -21,6 +21,10 @@ where
             tail: 0,
             count: 0,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.count
     }
 
     pub fn pop_front(&mut self) -> Option<T> {
@@ -52,4 +56,23 @@ where
             self.count += 1;
         }
     }
+}
+
+#[test]
+fn test_push_pop() {
+    let mut q = StackQueue::new();
+
+    assert_eq!(q.pop_front(), None);
+
+    for i in 0..MAX_QUEUE_LEN {
+        q.push_back(i);
+        assert_eq!(q.len(), i + 1);
+    }
+
+    for i in 0..MAX_QUEUE_LEN {
+        assert_eq!(q.pop_front(), Some(i));
+        assert_eq!(q.len(), MAX_QUEUE_LEN - i - 1);
+    }
+
+    assert_eq!(q.pop_front(), None);
 }

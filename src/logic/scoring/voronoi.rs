@@ -1,7 +1,6 @@
 use crate::logic::{voronoi, Game};
 
-use super::{turns_survived, kills};
-
+use super::{kills, turns_survived};
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct VoronoiScore {
@@ -45,7 +44,7 @@ impl std::fmt::Display for VoronoiScore {
 pub fn voronoi(game: &Game) -> VoronoiScore {
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: voronoi::me_stack(game),
+        tiles_controlled: voronoi::me(game),
         kills: kills(game),
         length: game.you.length as isize,
     }
@@ -65,7 +64,7 @@ pub fn voronoi_relative_length(game: &Game) -> VoronoiScore {
 
     VoronoiScore {
         turns_survived: turns_survived(game),
-        tiles_controlled: voronoi::me_stack(game),
+        tiles_controlled: voronoi::me(game),
         kills: kills(game),
         length: game.you.length as isize - max_length,
     }
@@ -115,25 +114,11 @@ pub fn tournament_voronoi(game: &Game) -> TournamentVoronoiScore {
     }
 }
 
-pub fn voronoi_me_stack(game: &Game) -> usize {
-    voronoi::me_stack(game)
+pub fn voronoi_me(game: &Game) -> usize {
+    voronoi::me(game)
 }
 
-pub fn voronoi_me_heap(game: &Game) -> usize {
-    voronoi::me_heap(game)
-}
-
-pub fn voronoi_all_heap(game: &Game) -> usize {
-    let counts = voronoi::all_heap(game);
-    *counts.get(&game.you).unwrap_or(&0)
-}
-
-pub fn voronoi_all_stack(game: &Game) -> usize {
-    let counts = voronoi::all_stack(game);
-    *counts.get(&game.you).unwrap_or(&0)
-}
-
-pub fn voronoi_all_old(game: &Game) -> usize {
-    let counts = voronoi::old(game);
+pub fn voronoi_all(game: &Game) -> usize {
+    let counts = voronoi::all(game);
     *counts.get(&game.you).unwrap_or(&0)
 }

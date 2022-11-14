@@ -30,20 +30,11 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("classic", |b| {
         b.iter(|| score_game(scoring::classic, games.as_slice()))
     });
-    c.bench_function("voronoi_me_stack", |b| {
-        b.iter(|| score_game(scoring::voronoi_me_stack, games.as_slice()))
+    c.bench_function("voronoi_me", |b| {
+        b.iter(|| score_game(scoring::voronoi_me, games.as_slice()))
     });
-    c.bench_function("voronoi_me_heap", |b| {
-        b.iter(|| score_game(scoring::voronoi_me_heap, games.as_slice()))
-    });
-    c.bench_function("voronoi_all_stack", |b| {
-        b.iter(|| score_game(scoring::voronoi_all_stack, games.as_slice()))
-    });
-    c.bench_function("voronoi_all_heap", |b| {
-        b.iter(|| score_game(scoring::voronoi_all_heap, games.as_slice()))
-    });
-    c.bench_function("voronoi_all_old", |b| {
-        b.iter(|| score_game(scoring::voronoi_all_old, games.as_slice()))
+    c.bench_function("voronoi_all", |b| {
+        b.iter(|| score_game(scoring::voronoi_all, games.as_slice()))
     });
 }
 

@@ -5,6 +5,7 @@ use crate::protocol::{self};
 use super::{Direction, Game};
 
 mod board;
+mod voronoi;
 
 #[test]
 fn head_to_head_collision() {}

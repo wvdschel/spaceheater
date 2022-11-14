@@ -65,7 +65,7 @@ impl Board {
         if p.x < 0 || p.y < 0 || p.x >= self.data[0] as i8 || p.y >= self.data[1] as i8 {
             return false;
         }
-        get_tile!(self.data, p.x, p.y, mask) == mask
+        get_tile!(self.data, p.x, p.y, TILE_TYPE_MASK) == mask
     }
 
     #[inline(always)]
