@@ -16,6 +16,7 @@ fn load_replay() -> gamelogger::Game {
     gamelogger::Game::load(&mut stdin()).unwrap()
 }
 
+#[allow(unused)]
 fn solve_game(
     game: &logic::Game,
     max_depth: usize,
@@ -40,11 +41,10 @@ fn solve_game2(
         game,
         vec![],
         &scoring::tournament_voronoi,
-        &scoring::pruning::no_min_pruning,
-        &scoring::pruning::no_max_pruning,
         &scores,
         deadline,
         max_depth,
+        None,
         None,
     );
 

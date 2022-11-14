@@ -1,0 +1,361 @@
+{
+  "game": {
+    "id": "f603f0b7-10ca-4bcd-b087-4e9902b052a4",
+    "ruleset": {
+      "name": "wrapped",
+      "version": "v1.1.20",
+      "settings": {
+        "foodSpawnChance": 15,
+        "minimumFood": 1,
+        "hazardDamagePerTurn": 100,
+        "royale": {
+          "shrinkEveryNTurns": 0
+        },
+        "squad": {
+          "allowBodyCollisions": false,
+          "sharedElimination": false,
+          "sharedHealth": false,
+          "sharedLength": false
+        }
+      }
+    },
+    "map": "hz_islands_bridges",
+    "timeout": 500,
+    "source": "league"
+  },
+  "turn": 0,
+  "board": {
+    "height": 11,
+    "width": 11,
+    "food": [
+      {
+        "x": 8,
+        "y": 2
+      },
+      {
+        "x": 2,
+        "y": 2
+      },
+      {
+        "x": 10,
+        "y": 8
+      },
+      {
+        "x": 2,
+        "y": 10
+      }
+    ],
+    "hazards": [
+      {
+        "x": 5,
+        "y": 10
+      },
+      {
+        "x": 5,
+        "y": 9
+      },
+      {
+        "x": 5,
+        "y": 7
+      },
+      {
+        "x": 5,
+        "y": 6
+      },
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 5,
+        "y": 3
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 1
+      },
+      {
+        "x": 6,
+        "y": 5
+      },
+      {
+        "x": 7,
+        "y": 5
+      },
+      {
+        "x": 9,
+        "y": 5
+      },
+      {
+        "x": 10,
+        "y": 5
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 3,
+        "y": 5
+      },
+      {
+        "x": 1,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      },
+      {
+        "x": 1,
+        "y": 10
+      },
+      {
+        "x": 9,
+        "y": 10
+      },
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 9,
+        "y": 0
+      },
+      {
+        "x": 10,
+        "y": 1
+      },
+      {
+        "x": 10,
+        "y": 0
+      },
+      {
+        "x": 10,
+        "y": 10
+      },
+      {
+        "x": 10,
+        "y": 9
+      },
+      {
+        "x": 0,
+        "y": 10
+      },
+      {
+        "x": 0,
+        "y": 9
+      },
+      {
+        "x": 0,
+        "y": 1
+      },
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 6
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 10,
+        "y": 4
+      },
+      {
+        "x": 6,
+        "y": 10
+      },
+      {
+        "x": 4,
+        "y": 10
+      },
+      {
+        "x": 6,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      }
+    ],
+    "snakes": [
+      {
+        "id": "gs_wXjTWgDJdYwGMj9pjjkRqR6S",
+        "name": "Jaeger",
+        "health": 100,
+        "body": [
+          {
+            "x": 9,
+            "y": 7
+          },
+          {
+            "x": 9,
+            "y": 7
+          },
+          {
+            "x": 9,
+            "y": 7
+          }
+        ],
+        "latency": "",
+        "head": {
+          "x": 9,
+          "y": 7
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#1766b9",
+          "head": "viper",
+          "tail": "rattle"
+        }
+      },
+      {
+        "id": "gs_vVxwcXtCfrcphRyHV7Q9pKW6",
+        "name": "Tiam",
+        "health": 100,
+        "body": [
+          {
+            "x": 3,
+            "y": 9
+          },
+          {
+            "x": 3,
+            "y": 9
+          },
+          {
+            "x": 3,
+            "y": 9
+          }
+        ],
+        "latency": "",
+        "head": {
+          "x": 3,
+          "y": 9
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#002080",
+          "head": "alligator",
+          "tail": "cosmic-horror"
+        }
+      },
+      {
+        "id": "gs_4cwY7CgxFbgb6BK6R6m3dvWX",
+        "name": "Spaceheater",
+        "health": 100,
+        "body": [
+          {
+            "x": 7,
+            "y": 1
+          },
+          {
+            "x": 7,
+            "y": 1
+          },
+          {
+            "x": 7,
+            "y": 1
+          }
+        ],
+        "latency": "",
+        "head": {
+          "x": 7,
+          "y": 1
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#e1724b",
+          "head": "workout",
+          "tail": "flame"
+        }
+      },
+      {
+        "id": "gs_MP8DX7Kt6QtKg3xMPDXgHF3f",
+        "name": "Fer-De-Lance",
+        "health": 100,
+        "body": [
+          {
+            "x": 3,
+            "y": 1
+          },
+          {
+            "x": 3,
+            "y": 1
+          },
+          {
+            "x": 3,
+            "y": 1
+          }
+        ],
+        "latency": "",
+        "head": {
+          "x": 3,
+          "y": 1
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#dbc696",
+          "head": "fang",
+          "tail": "curled"
+        }
+      }
+    ]
+  },
+  "you": {
+    "id": "gs_4cwY7CgxFbgb6BK6R6m3dvWX",
+    "name": "Spaceheater",
+    "health": 100,
+    "body": [
+      {
+        "x": 7,
+        "y": 1
+      },
+      {
+        "x": 7,
+        "y": 1
+      },
+      {
+        "x": 7,
+        "y": 1
+      }
+    ],
+    "latency": "",
+    "head": {
+      "x": 7,
+      "y": 1
+    },
+    "length": 3,
+    "shout": "",
+    "squad": "",
+    "customizations": {
+      "color": "#e1724b",
+      "head": "workout",
+      "tail": "flame"
+    }
+  }
+}

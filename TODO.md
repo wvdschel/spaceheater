@@ -16,6 +16,10 @@ Profiling all lines of code, not just calls:
 
 # Misc
 
+# Metrics
+- Pruned branch counter
+- Evaluated games counter
+
 # Threading problems
 - use score card
 - work queue

@@ -12,31 +12,29 @@ use super::{
 };
 
 // TODO pass min/max bound for alpha-beta?
-pub fn solve<Fscore, Fmin, Fmax, S1, S2, S3>(
+pub fn solve<Fscore, S1>(
     game: &Game,
     path_so_far: Vec<Direction>,
-    expensive_score_fn: &Fscore,
-    cheap_min_score_fn: &Fmin,
-    cheap_max_score_fn: &Fmax,
+    score_fn: &Fscore,
     scores: &Scoretree<S1>,
     deadline: Instant,
     max_depth: usize,
-    parent_min_score: Option<S1>,
+    alpha: Option<S1>,
+    beta: Option<S1>,
 ) -> (Vec<Direction>, S1)
 where
     Fscore: Fn(&Game) -> S1,
-    Fmin: Fn(&Game) -> S2,
-    Fmax: Fn(&Game) -> S3,
     S1: Ord + Display + Clone + Send + 'static,
-    S2: Ord + PartialOrd<S1>,
-    S3: Ord + PartialOrd<S1>,
 {
     // return if dead, return if max depth, return if timeline exceeded
     if game.you.health <= 0 || path_so_far.len() == max_depth || deadline < Instant::now() {
-        return (vec![], expensive_score_fn(game));
+        return (vec![], score_fn(game));
     }
 
-    let mut max_score = None;
+    let mut alpha = alpha;
+    let mut beta = beta;
+
+    let mut max_score: Option<S1> = None;
     let mut best_move = vec![];
     for my_dir in ALL_DIRECTIONS {
         log!("Evaluating {}", my_dir);
@@ -49,7 +47,7 @@ where
             continue;
         }
 
-        let mut min_score = None;
+        let mut min_score: Option<S1> = None;
         let mut best_min_move = vec![];
         for enemy_moves in all_sensible_enemy_moves(game) {
             let mut successor = game.clone();
@@ -57,13 +55,12 @@ where
             let (next_move, succ_score) = solve(
                 &successor,
                 path.clone(),
-                expensive_score_fn,
-                cheap_min_score_fn,
-                cheap_max_score_fn,
+                score_fn,
                 scores,
                 deadline,
                 max_depth,
-                min_score.clone(),
+                alpha.clone(),
+                beta.clone(),
             );
             log!(
                 "Evaluated {} + {:?} = {}:\n{}\n",
@@ -73,46 +70,57 @@ where
                 successor
             );
 
-            if let Some(min) = &min_score {
-                if min > &succ_score {
-                    best_min_move = next_move;
-                    min_score = Some(succ_score)
-                }
-            } else {
+            let min = match &max_score {
+                Some(s) => s,
+                None => &succ_score,
+            };
+            if min >= &succ_score {
                 best_min_move = next_move;
-                min_score = Some(succ_score);
+                min_score = Some(succ_score.clone());
+
+                let beta_score = match &beta {
+                    Some(s) => s,
+                    None => &succ_score,
+                };
+                if beta_score >= &succ_score {
+                    beta = Some(succ_score);
+                }
             }
 
-            // TODO instrument: break loop if deadline exceeded
             if deadline < Instant::now() {
                 break;
             }
-            // TODO instrument: break if min score is smaller than max score (ab pruning)
-            if let Some(max_score) = &max_score {
-                if let Some(min_score) = &min_score {
-                    if min_score <= max_score {
+
+            if let Some(max_score) = &alpha {
+                if let Some(min_score) = &beta {
+                    if max_score >= min_score {
                         break;
                     }
                 }
             }
         }
 
-        let min_score = min_score.unwrap();
-        max_score = Some(match max_score {
-            Some(max) => {
-                if max < min_score {
-                    best_move = vec![my_dir];
-                    best_move.append(&mut best_min_move);
-                    min_score
-                } else {
-                    max
-                }
+        let succ_score = min_score.unwrap();
+        let max = match &max_score {
+            Some(s) => s,
+            None => &succ_score,
+        };
+        if max <= &succ_score {
+            best_move = vec![my_dir];
+            best_move.append(&mut best_min_move);
+            max_score = Some(succ_score.clone());
+
+            let alpha_score = match &alpha {
+                Some(s) => s,
+                None => &succ_score,
+            };
+            if alpha_score <= &succ_score {
+                alpha = Some(succ_score);
             }
-            None => min_score,
-        });
-        // TODO instrument: ab pruning
-        if let Some(max_score) = &max_score {
-            if let Some(min_score) = &parent_min_score {
+        }
+
+        if let Some(max_score) = &alpha {
+            if let Some(min_score) = &beta {
                 if max_score >= min_score {
                     break;
                 }

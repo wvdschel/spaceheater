@@ -32,7 +32,9 @@ where
     S3: Ord + PartialOrd<S1>,
 {
     expensive_score_fn: Fscore,
+    #[allow(unused)]
     cheap_min_score_fn: Fmin,
+    #[allow(unused)]
     cheap_max_score_fn: Fmax,
     customizations: Customizations,
 }
@@ -71,11 +73,10 @@ where
             game,
             vec![],
             &self.expensive_score_fn,
-            &self.cheap_min_score_fn,
-            &self.cheap_max_score_fn,
             &scores,
             deadline.clone(),
             max_depth,
+            None,
             None,
         );
 
