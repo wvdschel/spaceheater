@@ -6,6 +6,7 @@ mod workqueue;
 pub use workqueue::WorkQueue;
 
 pub mod gamelogger;
+pub mod invert;
 pub mod stackqueue;
 
 #[macro_export]
