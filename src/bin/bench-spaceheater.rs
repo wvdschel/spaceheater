@@ -34,19 +34,15 @@ fn solve_game(
 fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
-) -> (Vec<Direction>, scoring::TournamentVoronoiScore) {
+) -> (Direction, scoring::TournamentVoronoiScore) {
     let deadline = Instant::now() + Duration::from_secs(100);
-    let scores = snakes::spaceheater2::scores::Scoretree::new(deadline.clone());
-    snakes::spaceheater2::solve::solve(
-        game,
-        vec![],
-        &scoring::tournament_voronoi,
-        &scores,
-        deadline,
+    snakes::spaceheater3::solve::solve(
+        game.clone(),
+        &deadline,
         max_depth,
-        None,
-        None,
+        &scoring::tournament_voronoi,
     )
+    .unwrap()
 }
 
 fn main() {
@@ -61,9 +57,9 @@ fn main() {
 
     let mut args = std::env::args();
     args.next();
-    let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(4)).unwrap_or(4);
+    let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(6)).unwrap_or(6);
 
-    for d in 1..max_iter {
+    for d in 4..max_iter {
         let start = Instant::now();
         let (dir, score) = solve_game2(&game, d);
         let stop = Instant::now();
