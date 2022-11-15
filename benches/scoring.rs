@@ -5,6 +5,7 @@ use topsnek::{
     logic::{
         self,
         scoring::{self},
+        voronoi,
     },
     util::gamelogger,
 };
@@ -27,11 +28,13 @@ fn criterion_benchmark(c: &mut Criterion) {
         .map(|(request, _response)| logic::Game::from(request))
         .collect::<Vec<logic::Game>>();
 
+    println!("scoring {} games", games.len());
+
     c.bench_function("classic", |b| {
         b.iter(|| score_game(scoring::classic, games.as_slice()))
     });
     c.bench_function("voronoi_me", |b| {
-        b.iter(|| score_game(scoring::voronoi_me, games.as_slice()))
+        b.iter(|| score_game(voronoi::me, games.as_slice()))
     });
     c.bench_function("voronoi_all", |b| {
         b.iter(|| score_game(scoring::voronoi_all, games.as_slice()))

@@ -59,7 +59,7 @@ fn main() {
     args.next();
     let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(6)).unwrap_or(6);
 
-    for d in 4..max_iter {
+    for d in 3..max_iter {
         let start = Instant::now();
         let (dir, score) = solve_game2(&game, d);
         let stop = Instant::now();

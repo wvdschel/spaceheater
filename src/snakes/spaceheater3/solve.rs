@@ -15,7 +15,7 @@ pub struct MaximizingNode<S: Ord + Display + Clone + Send + 'static> {
 }
 
 impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
-    fn solve<FScore>(
+    fn solve_fork<FScore>(
         &mut self,
         deadline: &Instant,
         max_depth: usize,
@@ -26,20 +26,11 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
     where
         FScore: Fn(&Game) -> S,
     {
-        if self.game.you.dead() {
-            if self.score == None {
-                self.score = Some((Direction::Up, score_fn(&self.game)));
-                return self.score.clone();
-            }
-        }
-        if max_depth == 0 {
-            self.score = Some((Direction::Up, score_fn(&self.game)));
-            return self.score.clone();
-        }
-        if Instant::now() > *deadline {
-            return None;
-        }
+        // TODO
+        self.solve(deadline, max_depth, score_fn, alpha, beta)
+    }
 
+    fn update_children(&mut self) {
         if self.children.len() == 0 {
             self.children = ALL_DIRECTIONS
                 .iter()
@@ -55,9 +46,48 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
                 })
                 .collect();
         } else {
-            // TODO order nodes, max scores first
             self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
         }
+    }
+
+    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
+    where
+        FScore: Fn(&Game) -> S,
+    {
+        if self.game.you.dead() {
+            if self.score == None {
+                self.score = Some((Direction::Up, score_fn(&self.game)));
+                return true;
+            }
+        }
+        if max_depth == 0 {
+            self.score = Some((Direction::Up, score_fn(&self.game)));
+            return true;
+        }
+
+        false
+    }
+
+    fn solve<FScore>(
+        &mut self,
+        deadline: &Instant,
+        max_depth: usize,
+        score_fn: &FScore,
+        alpha: Option<S>,
+        beta: Option<S>,
+    ) -> Option<(Direction, S)>
+    where
+        FScore: Fn(&Game) -> S,
+    {
+        if self.check_bounds(max_depth, score_fn) {
+            return self.score.clone();
+        }
+
+        if Instant::now() > *deadline {
+            return None;
+        }
+
+        self.update_children();
 
         if self.children.len() == 0 {
             // All paths are certain death, just score this board and return
@@ -141,7 +171,6 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
                 })
                 .collect();
         } else {
-            // TODO order nodes, min scores first
             self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
         }
 
@@ -210,13 +239,12 @@ where
     };
 
     let base_depth = 3;
-
     let start = Instant::now();
-    let max_depth = cmp::max(base_depth + 1, max_depth);
+    let max_depth = cmp::max(base_depth + 1, max_depth + 1);
 
     let mut best_score = None;
     for current_depth in base_depth..max_depth {
-        let res = root.solve(deadline, current_depth, score_fn, None, None);
+        let res = root.solve_fork(deadline, current_depth, score_fn, None, None);
         if res != None {
             best_score = res.clone();
             let (dir, score) = res.unwrap();
