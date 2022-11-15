@@ -11,11 +11,9 @@ use protocol::Direction;
 
 use crate::{
     logic::Game,
-    protocol::{self, Customizations, ALL_DIRECTIONS},
+    protocol::{self, Customizations},
     Battlesnake,
 };
-
-use self::util::certain_death;
 
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
@@ -69,7 +67,7 @@ where
     fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> (Direction, S1) {
         let scores = scores::Scoretree::new(deadline.clone());
 
-        let (best_path, mut top_score) = solve::solve(
+        let (best_path, top_score) = solve::solve(
             game,
             vec![],
             &self.expensive_score_fn,
@@ -153,7 +151,7 @@ where
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let (best_dir, top_score) = self.solve(&game, &deadline, usize::MAX);
+        let (best_dir, top_score) = self.solve(&game, &deadline, 5);
 
         Ok(protocol::MoveResponse {
             direction: best_dir,
