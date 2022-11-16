@@ -79,12 +79,12 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
     where
         FScore: Fn(&Game) -> S,
     {
-        if self.check_bounds(max_depth, score_fn) {
-            return self.score.clone();
-        }
-
         if Instant::now() > *deadline {
             return None;
+        }
+
+        if self.check_bounds(max_depth, score_fn) {
+            return self.score.clone();
         }
 
         self.update_children();
@@ -107,6 +107,10 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
                 alpha.clone(),
                 beta.clone(),
             );
+
+            if next_score == None {
+                return None; // Deadline exceeded
+            }
 
             if max_score < next_score {
                 best_dir = min_node.my_move;
@@ -187,12 +191,16 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
                 )
                 .map(|r| r.1);
 
+            if next_score == None {
+                return None; // Deadline exceeded
+            }
+
             if min_score != None {
                 min_score = cmp::min(min_score, next_score.clone());
             } else {
                 min_score = next_score.clone();
             }
-            if beta != None && next_score != None {
+            if beta != None {
                 beta = cmp::min(beta, next_score);
             } else {
                 beta = next_score;
