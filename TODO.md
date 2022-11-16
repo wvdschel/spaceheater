@@ -1,6 +1,6 @@
 # Spaceheater
 # Weird choices to debug
-✕ cargo run --bin replay --release --features=logging,sequential spaceheater3 49 49 < logs/Spaceheater\ 3\ Thermal\ Throttling_b056f941-9ac4-4ecd-8e3f-a02047f37d22.json.gz 
+- 3d5498ab-9d5a-41d4-956c-683d941c58c fast moves & invalid responses at the end 
 
 # Profiling
 Create flamegraph.svg:
