@@ -1,5 +1,4 @@
 use crate::{
-    log,
     logic::{Direction, Game, Point, Snake, Tile},
     protocol::ALL_DIRECTIONS,
 };
@@ -47,12 +46,10 @@ pub fn all_sensible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
 
         if enemy_moves.len() == 0 {
             // This snake dies for sure in every direction, so just record one move for it (up)
-            log!("{} is going to die anyway, hardcoded up move.", enemy);
             for enemy_combo in &mut all_enemy_moves {
                 enemy_combo.push(Direction::Up)
             }
         } else {
-            log!("{} is considering {:?}", enemy, enemy_moves);
             if all_enemy_moves.is_empty() {
                 all_enemy_moves = enemy_moves.into_iter().map(|d| vec![d]).collect();
             } else {
