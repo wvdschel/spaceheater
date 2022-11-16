@@ -1,5 +1,6 @@
 # Spaceheater
 # Weird choices to debug
+✕ cargo run --bin replay --release --features=logging,sequential spaceheater3 49 49 < logs/Spaceheater\ 3\ Thermal\ Throttling_b056f941-9ac4-4ecd-8e3f-a02047f37d22.json.gz 
 
 # Profiling
 Create flamegraph.svg:
@@ -20,12 +21,7 @@ Profiling all lines of code, not just calls:
 - Pruned branch counter
 - Evaluated games counter
 
-# Threading problems
-- use score card
-- work queue
-
 # Scoring
-- Double check if tile count is correct!?
 - Scoring function self alive / dead snakes / flood fill?
 
 # Game logic
