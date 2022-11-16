@@ -70,50 +70,6 @@ pub fn voronoi_relative_length(game: &Game) -> VoronoiScore {
     }
 }
 
-#[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
-pub struct TournamentVoronoiScore {
-    survived_by: usize,
-    voronoi: VoronoiScore,
-}
-
-impl PartialOrd for TournamentVoronoiScore {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match other.survived_by.partial_cmp(&self.survived_by) {
-            // Inverse ordering here
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        self.voronoi.partial_cmp(&other.voronoi)
-    }
-}
-
-impl std::fmt::Display for TournamentVoronoiScore {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "survived_by={}, {}",
-            self.survived_by, self.voronoi,
-        ))
-    }
-}
-
-/// tournament_voronoi extends the voronoi_relative_length score function
-/// by adding a new, top priority metric: the minimum number of snakes that will outlive
-/// our snake. This is used to determine the points allocated in tournament games,
-/// so the fewer, the better.
-pub fn tournament_voronoi(game: &Game) -> TournamentVoronoiScore {
-    let survived_by: usize = if game.you.dead() {
-        game.others
-            .iter()
-            .fold(0, |c, s| if s.dead() { c } else { c + 1 })
-    } else {
-        0
-    };
-    TournamentVoronoiScore {
-        survived_by,
-        voronoi: voronoi(game),
-    }
-}
-
 pub fn voronoi_me(game: &Game) -> usize {
     voronoi::me(game)
 }

@@ -15,7 +15,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert(
         "spaceheater".to_string(),
         Box::new(SpaceHeater::new(
-            logic::scoring::tournament_voronoi,
+            logic::scoring::tournament_score,
             Customizations {
                 color: "#E77200".to_string(),
                 head: "workout".to_string(),
@@ -25,7 +25,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     );
     snakes.insert(
         "spaceheater3".to_string(),
-        Box::new(Spaceheater3::new(logic::scoring::tournament_voronoi, None)),
+        Box::new(Spaceheater3::new(logic::scoring::tournament_score, None)),
     );
 
     snakes

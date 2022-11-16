@@ -4,6 +4,8 @@ mod voronoi;
 pub use voronoi::*;
 
 pub mod pruning;
+pub mod tournament;
+pub use tournament::tournament as tournament_score;
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct SurvivalKillsLengthScore {

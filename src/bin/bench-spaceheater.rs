@@ -20,8 +20,8 @@ fn load_replay() -> gamelogger::Game {
 fn solve_game(
     game: &logic::Game,
     max_depth: usize,
-) -> (Direction, scoring::TournamentVoronoiScore) {
-    let mut solver = snakes::spaceheater::GameSolver::new(scoring::tournament_voronoi);
+) -> (Direction, scoring::tournament::TournamentScore) {
+    let mut solver = snakes::spaceheater::GameSolver::new(scoring::tournament_score);
 
     solver.solve(
         format!("solver for depth {}", max_depth).as_str(),
@@ -34,13 +34,13 @@ fn solve_game(
 fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
-) -> (Direction, scoring::TournamentVoronoiScore) {
+) -> (Direction, scoring::tournament::TournamentScore) {
     let deadline = Instant::now() + Duration::from_secs(100);
     snakes::spaceheater3::solve::solve(
         game.clone(),
         &deadline,
         max_depth,
-        &scoring::tournament_voronoi,
+        &scoring::tournament_score,
     )
     .unwrap()
 }

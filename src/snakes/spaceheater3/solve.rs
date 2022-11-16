@@ -1,6 +1,7 @@
 use std::{cmp, fmt::Display, time::Instant};
 
 use crate::{
+    log,
     logic::{Direction, Game},
     protocol::ALL_DIRECTIONS,
     util::invert::invert,
@@ -140,6 +141,37 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
             None => cmp::Ordering::Greater,
         }
     }
+
+    fn format_tree(&self, depth: usize) -> String {
+        let mut strings = Vec::<String>::new();
+        strings.push(format!(
+            "{} MAX DEPTH {} ({} children):",
+            "#".repeat(depth * 2 + 1),
+            depth,
+            self.children.len()
+        ));
+        match &self.score {
+            Some((dir, score)) => {
+                strings.push(format!("best move is {} with score {}", dir, score))
+            }
+            None => {}
+        };
+        strings.push(format!("{}", self.game));
+
+        let mut children: Vec<&MinimizingNode<S>> = self.children.iter().collect();
+        children.sort_by(|c1, c2| c1.cmp_scores(c2));
+        for c in children {
+            strings.push(c.format_tree(depth));
+        }
+
+        strings.join("\n")
+    }
+}
+
+impl<S: Ord + Display + Clone + Send + 'static> std::fmt::Display for MaximizingNode<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.format_tree(0).as_str())
+    }
 }
 
 pub struct MinimizingNode<S: Ord + Display + Clone + Send + 'static> {
@@ -175,7 +207,7 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
                 })
                 .collect();
         } else {
-            self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+            self.sort_children()
         }
 
         let mut min_score = None;
@@ -216,6 +248,10 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
         min_score
     }
 
+    fn sort_children(&mut self) {
+        self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+    }
+
     fn cmp_scores(&self, other: &Self) -> cmp::Ordering {
         if self.score == other.score {
             return cmp::Ordering::Equal;
@@ -227,6 +263,28 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
             },
             None => cmp::Ordering::Greater,
         }
+    }
+
+    fn format_tree(&self, depth: usize) -> String {
+        let mut strings = Vec::<String>::new();
+        strings.push(format!(
+            "{} MIN DEPTH {} ({} children):",
+            "#".repeat(depth * 2 + 2),
+            depth,
+            self.children.len()
+        ));
+        match &self.score {
+            Some(score) => strings.push(format!("best score is {}", score)),
+            None => {}
+        };
+
+        let mut children: Vec<&MaximizingNode<S>> = self.children.iter().collect();
+        children.sort_by(|c1, c2| c1.cmp_scores(c2));
+        for c in children {
+            strings.push(c.format_tree(depth + 1));
+        }
+
+        strings.join(format!("\n").as_str())
     }
 }
 
@@ -262,7 +320,8 @@ where
                 current_depth,
                 dir,
                 score,
-            )
+            );
+            log!("complete tree for depth {}:\n{}", current_depth, root);
         } else {
             println!(
                 "{}ms: aborted depth {}",
