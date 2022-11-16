@@ -57,8 +57,8 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
         if self.game.you.dead() {
             if self.score == None {
                 self.score = Some((Direction::Up, score_fn(&self.game)));
-                return true;
             }
+            return true;
         }
         if max_depth == 0 {
             self.score = Some((Direction::Up, score_fn(&self.game)));
