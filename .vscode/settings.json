@@ -1,0 +1,11 @@
+{
+    "editor.formatOnSave": true,
+    "search.exclude": {
+        "logs": true,
+        "target": true
+    },
+    "files.exclude": {
+        "logs": true,
+        "target": true
+    }
+}
