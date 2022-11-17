@@ -1,3 +1,4 @@
+use std::cmp;
 use std::io::prelude::*;
 use std::time::SystemTime;
 use std::{collections::HashMap, fs::File, sync};
@@ -72,8 +73,15 @@ impl Game {
             start = s;
         }
         if let Some(e) = end_turn {
-            end = e + 1;
+            end = cmp::min(e + 1, end);
         }
+        println!(
+            "Replaying {} from turn {} until turn {} (game has {} turns)",
+            self.start_request.game.id,
+            start,
+            end,
+            self.moves.len()
+        );
         for (r, _) in &self.moves[start..end] {
             let mut req = r.clone();
             if let Some(millis) = time_per_turn {

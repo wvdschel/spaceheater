@@ -82,7 +82,9 @@ impl Snake {
 
     pub fn remove_from_board(&self, board: &mut Board) {
         for t in self.body.iter() {
-            board.clear_snake(t)
+            if ! t.out_of_bounds(board.width(), board.height()) {
+                board.clear_snake(t)
+            }
         }
     }
 }

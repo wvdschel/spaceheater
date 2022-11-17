@@ -298,6 +298,7 @@ where
     Fscore: Fn(&Game) -> S,
     S: Ord + Display + Clone + Send + 'static,
 {
+    let turn = game.turn;
     let mut root = MaximizingNode {
         game,
         score: None,
@@ -306,16 +307,28 @@ where
 
     let base_depth = 3;
     let start = Instant::now();
-    let max_depth = cmp::max(base_depth + 1, max_depth + 1);
+    let max_depth = cmp::max(base_depth + 1, max_depth);
+
+    println!(
+        "turn {}: start: calculating depths {} through {}",
+        turn, base_depth, max_depth
+    );
 
     let mut best_score = None;
     for current_depth in base_depth..max_depth {
+        println!(
+            "turn {}: {}ms: starting depth {}",
+            turn,
+            start.elapsed().as_millis(),
+            current_depth,
+        );
         let res = root.solve_fork(deadline, current_depth, score_fn, None, None);
         if res != None {
             best_score = res.clone();
             let (dir, score) = res.unwrap();
             println!(
-                "{}ms: completed depth {}: {} {}",
+                "turn {}: {}ms: completed depth {}: {} {}",
+                turn,
                 start.elapsed().as_millis(),
                 current_depth,
                 dir,
@@ -324,7 +337,8 @@ where
             log!("complete tree for depth {}:\n{}", current_depth, root);
         } else {
             println!(
-                "{}ms: aborted depth {}",
+                "turn {}: {}ms: aborted depth {}",
+                turn,
                 start.elapsed().as_millis(),
                 current_depth
             )
@@ -333,6 +347,16 @@ where
             break;
         }
     }
+
+    println!(
+        "turn {}: {}ms: returning {}",
+        turn,
+        start.elapsed().as_millis(),
+        best_score
+            .clone()
+            .map(|v| v.0.to_string())
+            .unwrap_or("None".to_string())
+    );
 
     best_score
 }

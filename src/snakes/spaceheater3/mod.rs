@@ -80,7 +80,7 @@ where
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let (best_dir, top_score) = self.solve(&game, &deadline, 5);
+        let (best_dir, top_score) = self.solve(&game, &deadline, usize::MAX);
 
         Ok(protocol::MoveResponse {
             direction: best_dir,
