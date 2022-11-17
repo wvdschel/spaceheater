@@ -25,6 +25,9 @@ Profiling all lines of code, not just calls:
 # Scoring
 - Scoring function self alive / dead snakes / flood fill?
 
+# Performance
+- Why doesn't it complete 1 layer in 8 player games? It should only be 65k nodes
+
 # Game logic
 ## Unsupported game features
 - stacked hazards:

@@ -35,7 +35,7 @@ fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
 ) -> (Direction, scoring::tournament::TournamentScore) {
-    let deadline = Instant::now() + Duration::from_secs(100);
+    let deadline = Instant::now() + Duration::from_secs(5);
     snakes::spaceheater3::solve::solve(
         game.clone(),
         &deadline,
@@ -53,13 +53,23 @@ fn main() {
         .build()
         .unwrap();
 
-    let game = logic::Game::from(&load_replay().start_request);
+    let start_request = load_replay().start_request;
+    println!(
+        "running game {}: {}, {} snakes, {}x{}",
+        start_request.game.id,
+        start_request.game.map,
+        start_request.board.snakes.len(),
+        start_request.board.width,
+        start_request.board.height,
+    );
+
+    let game = logic::Game::from(&start_request);
 
     let mut args = std::env::args();
     args.next();
     let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(6)).unwrap_or(6);
 
-    for d in 3..max_iter {
+    for d in 1..max_iter {
         let start = Instant::now();
         let (dir, score) = solve_game2(&game, d);
         let stop = Instant::now();

@@ -1,18 +1,17 @@
-pub mod solve;
-mod util;
-
+use crate::{
+    logic::Game,
+    protocol::{self, Customizations, Direction},
+    Battlesnake,
+};
 use std::{
     fmt::Display,
     time::{Duration, Instant},
 };
 
-use protocol::Direction;
-
-use crate::{
-    logic::Game,
-    protocol::{self, Customizations},
-    Battlesnake,
-};
+mod max;
+mod min;
+pub mod solve;
+mod util;
 
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
