@@ -62,7 +62,8 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
             return true;
         }
         if max_depth == 0 {
-            self.score = Some((Direction::Up, score_fn(&self.game)));
+            let score = score_fn(&self.game);
+            self.score = Some((Direction::Up, score));
             return true;
         }
 
@@ -92,7 +93,8 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
 
         if self.children.len() == 0 {
             // All paths are certain death, just score this board and return
-            self.score = Some((Direction::Up, score_fn(&self.game)));
+            let score = score_fn(&self.game);
+            self.score = Some((Direction::Up, score));
             return self.score.clone();
         }
 
@@ -323,28 +325,28 @@ where
             current_depth,
         );
         let res = root.solve_fork(deadline, current_depth, score_fn, None, None);
-        if res != None {
-            best_score = res.clone();
-            let (dir, score) = res.unwrap();
-            println!(
-                "turn {}: {}ms: completed depth {}: {} {}",
-                turn,
-                start.elapsed().as_millis(),
-                current_depth,
-                dir,
-                score,
-            );
-            log!("complete tree for depth {}:\n{}", current_depth, root);
-        } else {
-            println!(
-                "turn {}: {}ms: aborted depth {}",
-                turn,
-                start.elapsed().as_millis(),
-                current_depth
-            )
-        }
-        if current_depth == max_depth || Instant::now() > *deadline {
-            break;
+        match &res {
+            Some((dir, score)) => {
+                best_score = res.clone();
+                println!(
+                    "turn {}: {}ms: completed depth {}: {} {}",
+                    turn,
+                    start.elapsed().as_millis(),
+                    current_depth,
+                    dir,
+                    score,
+                );
+                log!("complete tree for depth {}:\n{}", current_depth, root);
+            }
+            None => {
+                println!(
+                    "turn {}: {}ms: aborted depth {}",
+                    turn,
+                    start.elapsed().as_millis(),
+                    current_depth
+                );
+                break;
+            }
         }
     }
 

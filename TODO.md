@@ -1,6 +1,7 @@
 # Spaceheater
 # Weird choices to debug
-- 3d5498ab-9d5a-41d4-956c-683d941c58c fast moves & invalid responses at the end 
+- 8c35901d-e3bb-48d4-950a-dd6bcbde88bb turn 151 invalid response
+- 8c35901d-e3bb-48d4-950a-dd6bcbde88bb turn 281 timeout
 
 # Profiling
 Create flamegraph.svg:

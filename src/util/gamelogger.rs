@@ -82,12 +82,15 @@ impl Game {
             end,
             self.moves.len()
         );
-        for (r, _) in &self.moves[start..end] {
-            let mut req = r.clone();
-            if let Some(millis) = time_per_turn {
-                req.game.timeout = millis as isize;
+
+        if start < end {
+            for (r, _) in &self.moves[start..end] {
+                let mut req = r.clone();
+                if let Some(millis) = time_per_turn {
+                    req.game.timeout = millis as isize;
+                }
+                _ = snake.make_move(&req);
             }
-            _ = snake.make_move(&req);
         }
         if let Some(end_request) = &self.end_request {
             let mut end_req = end_request.clone();

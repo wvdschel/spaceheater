@@ -44,23 +44,21 @@ pub fn all_sensible_enemy_moves(game: &Game) -> Vec<Vec<Direction>> {
             })
             .collect();
 
-        if enemy_moves.len() == 0 {
-            // This snake dies for sure in every direction, so just record one move for it (up)
-            for enemy_combo in &mut all_enemy_moves {
-                enemy_combo.push(Direction::Up)
-            }
+        let enemy_moves = if enemy_moves.len() == 0 {
+            vec![Direction::Up]
         } else {
-            if all_enemy_moves.is_empty() {
-                all_enemy_moves = enemy_moves.into_iter().map(|d| vec![d]).collect();
-            } else {
-                let other_snake_moves = all_enemy_moves;
-                all_enemy_moves = Vec::with_capacity(other_snake_moves.len() * enemy_moves.len());
-                for enemy_move in enemy_moves {
-                    for other_snake_combo in &other_snake_moves {
-                        let mut combo = other_snake_combo.clone();
-                        combo.push(enemy_move);
-                        all_enemy_moves.push(combo);
-                    }
+            enemy_moves
+        };
+        if all_enemy_moves.is_empty() {
+            all_enemy_moves = enemy_moves.into_iter().map(|d| vec![d]).collect();
+        } else {
+            let other_snake_moves = all_enemy_moves;
+            all_enemy_moves = Vec::with_capacity(other_snake_moves.len() * enemy_moves.len());
+            for enemy_move in enemy_moves {
+                for other_snake_combo in &other_snake_moves {
+                    let mut combo = other_snake_combo.clone();
+                    combo.push(enemy_move);
+                    all_enemy_moves.push(combo);
                 }
             }
         }
