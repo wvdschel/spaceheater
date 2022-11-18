@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     logic::{game::GameMode, Point},
-    util::stackqueue::StackQueue,
+    util::stackqueue::StackDequeue,
 };
 
 use super::{Game, Snake};
@@ -24,7 +24,7 @@ struct VoronoiTile {
 fn stack_voronoi(game: &Game, max_distance: NumType) -> [usize; MAX_SNAKES] {
     let warp = game.rules.game_mode == GameMode::Wrapped;
 
-    let mut queue = StackQueue::new();
+    let mut queue: StackDequeue<VoronoiTile, 256> = StackDequeue::new();
     let mut scores: [usize; MAX_SNAKES] = [0; MAX_SNAKES];
     let mut board = [VoronoiTile {
         x: 0,
