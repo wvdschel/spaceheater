@@ -54,7 +54,7 @@ where
             Some((dir, score)) => {
                 best_score = res.clone();
                 println!(
-                    "turn {}: {}ms: completed depth {}, evaulated {} games: {} {}",
+                    "turn {}: {}ms: completed depth {}, evaluated {} games: {} {}",
                     turn,
                     start.elapsed().as_millis(),
                     current_depth,

@@ -1,5 +1,8 @@
 use std::{io::stdin, thread, time::Duration};
 
+#[cfg(feature = "profiling")]
+use std::fs::File;
+
 use topsnek::{util::gamelogger, *};
 
 fn main() {
@@ -30,7 +33,28 @@ fn main() {
     let snake = snakes.get(&snake_name).unwrap();
 
     match gamelogger::Game::load(&mut stdin()) {
-        Ok(game) => game.replay(snake.as_ref(), start_turn, end_turn, millis),
+        Ok(game) => {
+            #[cfg(feature = "profiling")]
+            let guard = pprof::ProfilerGuardBuilder::default()
+                .frequency(2000)
+                .blocklist(&["libc", "libgcc", "vdso"])
+                .build()
+                .unwrap();
+
+            game.replay(snake.as_ref(), start_turn, end_turn, millis);
+
+            #[cfg(feature = "profiling")]
+            {
+                if let Ok(report) = guard.report().build() {
+                    let file = File::create(format!(
+                        "flamegraph_{}_{}.svg",
+                        snake_name, game.start_request.game.id
+                    ))
+                    .unwrap();
+                    report.flamegraph(file).unwrap();
+                };
+            }
+        }
         Err(e) => {
             println!("failed to load game: {}", e);
             std::process::exit(1);

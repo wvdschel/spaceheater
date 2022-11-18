@@ -21,7 +21,7 @@ struct VoronoiTile {
     length: NumType,
 }
 
-fn stack_voronoi(game: &Game) -> [usize; MAX_SNAKES] {
+fn stack_voronoi(game: &Game, max_distance: NumType) -> [usize; MAX_SNAKES] {
     let warp = game.rules.game_mode == GameMode::Wrapped;
 
     let mut queue = StackQueue::new();
@@ -138,7 +138,7 @@ fn stack_voronoi(game: &Game) -> [usize; MAX_SNAKES] {
                 }
 
                 let next_idx = tile_index(&next_p);
-                if next_distance <= board[next_idx].distance {
+                if next_distance <= board[next_idx].distance && next_distance < max_distance {
                     #[cfg(test)]
                     println!("Queueing {} for snake #{}", next_p, work.snake);
                     queue.push_back(VoronoiTile {
@@ -180,7 +180,7 @@ fn stack_voronoi(game: &Game) -> [usize; MAX_SNAKES] {
 pub fn all<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
     let mut res = HashMap::new();
 
-    let scores = stack_voronoi(game);
+    let scores = stack_voronoi(game, NumType::MAX);
     res.insert(&game.you, scores[0]);
     for (i, snake) in game.others.iter().enumerate() {
         res.insert(&snake, scores[i + 1]);
@@ -190,5 +190,9 @@ pub fn all<'a>(game: &'a Game) -> HashMap<&'a Snake, usize> {
 }
 
 pub fn me(game: &Game) -> usize {
-    stack_voronoi(game)[0]
+    stack_voronoi(game, NumType::MAX)[0]
+}
+
+pub fn me_range_limit(game: &Game, max_distance: NumType) -> usize {
+    stack_voronoi(game, max_distance)[0]
 }

@@ -37,41 +37,6 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
         self.solve(deadline, max_depth, score_fn, alpha, beta)
     }
 
-    fn update_children(&mut self) {
-        if self.children.len() == 0 {
-            self.children = ALL_DIRECTIONS
-                .iter()
-                .filter(|&my_dir| {
-                    let mut my_pos = self.game.you.head.neighbour(*my_dir);
-                    self.game.warp(&mut my_pos);
-                    !certain_death(&self.game, &self.game.you, &my_pos)
-                })
-                .map(|my_dir| MinimizingNode::new(*my_dir))
-                .collect();
-        } else {
-            self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
-        }
-    }
-
-    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &mut FScore) -> bool
-    where
-        FScore: FnMut(&Game) -> S,
-    {
-        if self.game.you.dead() {
-            if self.score == None {
-                self.score = Some((Direction::Up, score_fn(&self.game)));
-            }
-            return true;
-        }
-        if max_depth == 0 {
-            let score = score_fn(&self.game);
-            self.score = Some((Direction::Up, score));
-            return true;
-        }
-
-        false
-    }
-
     pub fn solve<FScore>(
         &mut self,
         deadline: &Instant,
@@ -131,6 +96,41 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
 
         self.score = max_score.map(|s| (best_dir, s));
         self.score.clone()
+    }
+
+    fn update_children(&mut self) {
+        if self.children.len() == 0 {
+            self.children = ALL_DIRECTIONS
+                .iter()
+                .filter(|&my_dir| {
+                    let mut my_pos = self.game.you.head.neighbour(*my_dir);
+                    self.game.warp(&mut my_pos);
+                    !certain_death(&self.game, &self.game.you, &my_pos)
+                })
+                .map(|my_dir| MinimizingNode::new(*my_dir))
+                .collect();
+        } else {
+            self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+        }
+    }
+
+    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &mut FScore) -> bool
+    where
+        FScore: FnMut(&Game) -> S,
+    {
+        if self.game.you.dead() {
+            if self.score == None {
+                self.score = Some((Direction::Up, score_fn(&self.game)));
+            }
+            return true;
+        }
+        if max_depth == 0 {
+            let score = score_fn(&self.game);
+            self.score = Some((Direction::Up, score));
+            return true;
+        }
+
+        false
     }
 
     pub fn cmp_scores(&self, other: &Self) -> cmp::Ordering {

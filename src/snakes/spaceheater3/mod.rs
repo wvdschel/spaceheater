@@ -43,9 +43,8 @@ where
         }
     }
 
-    fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> (Direction, S) {
-        let res = solve::solve(game.clone(), deadline, max_depth, &self.score_fn);
-        res.unwrap()
+    fn solve(&self, game: &Game, deadline: &Instant, max_depth: usize) -> Option<(Direction, S)> {
+        solve::solve(game.clone(), deadline, max_depth, &self.score_fn)
     }
 }
 
@@ -79,11 +78,15 @@ where
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let (best_dir, top_score) = self.solve(&game, &deadline, usize::MAX);
+        let res = self.solve(&game, &deadline, usize::MAX);
+
+        let (best_dir, top_score) = res
+            .map(|(dir, score)| (dir, format!("{}", score)))
+            .unwrap_or((Direction::Up, "no result".to_string()));
 
         Ok(protocol::MoveResponse {
             direction: best_dir,
-            shout: format!("{}", top_score),
+            shout: top_score,
         })
     }
 }

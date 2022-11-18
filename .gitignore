@@ -4,4 +4,4 @@
 *.log
 *.log.*
 callgrind.*
-flamegraph.svg
+flamegraph*.svg
