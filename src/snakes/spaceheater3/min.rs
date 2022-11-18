@@ -35,14 +35,13 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
         FScore: FnMut(&Game) -> S,
     {
         if self.children.len() == 0 {
-            self.children = all_sensible_enemy_moves(game)
-                .iter()
-                .map(|enemy_moves| {
-                    let mut game = game.clone();
-                    game.execute_moves(self.my_move, enemy_moves);
-                    MaximizingNode::new(game)
-                })
-                .collect();
+            self.children = Vec::with_capacity((3 as usize).pow(game.others.len() as u32));
+            for combo in all_sensible_enemy_moves(game) {
+                let mut game = game.clone();
+                game.execute_moves(self.my_move, &combo);
+
+                self.children.push(MaximizingNode::new(game));
+            }
         } else {
             self.sort_children()
         }

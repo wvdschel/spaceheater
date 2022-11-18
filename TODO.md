@@ -26,7 +26,8 @@ Profiling all lines of code, not just calls:
 - Scoring function self alive / dead snakes / flood fill?
 
 # Performance
-- Why doesn't it complete 1 layer in 8 player games? It should only be 65k nodes
+- Why doesn't it complete 1 layer in 8 player games? It should only be 65k nodes -> big map flood fill is very slow, limit range?
+- Iterating and collecting to filter valid moves is not efficient, takes about 10% of all time
 
 # Game logic
 ## Unsupported game features
