@@ -1,5 +1,4 @@
 use std::hash::Hash;
-use std::sync::Arc;
 
 use super::{Board, Direction, Point, Snake, Tile};
 use crate::protocol;
@@ -11,7 +10,7 @@ pub struct Game {
     pub dead_snakes: usize,
     pub you: Snake,
     pub timeout: std::time::Duration,
-    pub rules: Arc<Rules>,
+    pub rules: Rules,
     pub turn: usize,
 }
 
@@ -20,15 +19,6 @@ pub struct Rules {
     pub game_mode: GameMode,
     pub hazard_damage_per_turn: i8,
 }
-
-// impl Hash for Game {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         self.board.hash(state);
-//         self.others.hash(state);
-//         self.you.hash(state);
-//         self.turn.hash(state);
-//     }
-// }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub enum GameMode {
@@ -248,7 +238,7 @@ impl From<&protocol::Request> for Game {
             timeout: std::time::Duration::from_millis(req.game.timeout as u64),
             you,
             others,
-            rules: Arc::new(Rules::from(&req.game.ruleset)),
+            rules: Rules::from(&req.game.ruleset),
             dead_snakes: 0,
             turn: req.turn,
         }

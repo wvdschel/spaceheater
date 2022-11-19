@@ -1,5 +1,7 @@
 use std::{cmp, fmt::Display, time::Instant};
 
+use bumpalo::Bump;
+
 use crate::{
     log,
     logic::{Direction, Game},
@@ -16,9 +18,10 @@ where
     FScore: Fn(&Game) -> S,
     S: Ord + Display + Clone + Send + 'static,
 {
+    let bump = Bump::new();
     let enemy_count = game.others.len();
     let turn = game.turn;
-    let mut root = MaximizingNode::new(game);
+    let root = MaximizingNode::new(game, &bump);
 
     let base_depth = match enemy_count {
         0 => 3,

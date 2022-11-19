@@ -23,7 +23,7 @@ harness = false
 debug = 1
 
 [features]
-default = []
+default = ["profiling"]
 logging = []
 sequential = []
 profiling = ["dep:pprof"]
@@ -42,6 +42,7 @@ itertools = "0.10.5"
 flate2 = "1.0.24"
 thread-priority = "0.10.0"
 pprof = { version = "0.10", features = ["flamegraph"], optional = true }
+bumpalo = { version = "3.11.1", features = ["collections"] }
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }

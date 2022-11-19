@@ -35,7 +35,7 @@ fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
 ) -> (Direction, scoring::tournament::TournamentScore) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_millis(6000);
     snakes::spaceheater3::solve::solve(
         game.clone(),
         &deadline,
@@ -67,21 +67,18 @@ fn main() {
 
     let mut args = std::env::args();
     args.next();
-    let max_iter: usize = args.next().map(|f| f.parse().unwrap_or(6)).unwrap_or(6);
+    let max_depth: usize = args.next().map(|f| f.parse().unwrap_or(5)).unwrap_or(5);
 
-    for d in 1..max_iter {
-        let start = Instant::now();
-        let (dir, score) = solve_game2(&game, d);
-        let stop = Instant::now();
-        let duration = stop - start;
-        println!(
-            "Solved for depth {} in {}ms: {} going {:?}",
-            d,
-            duration.as_millis(),
-            score,
-            dir
-        );
-    }
+    let start = Instant::now();
+    let (dir, score) = solve_game2(&game, max_depth);
+    let duration = start.elapsed();
+    println!(
+        "Solved for depth {} in {}ms: {} going {:?}",
+        max_depth,
+        duration.as_millis(),
+        score,
+        dir
+    );
 
     #[cfg(feature = "profiling")]
     {

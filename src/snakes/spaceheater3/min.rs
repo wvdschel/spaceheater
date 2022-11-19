@@ -1,5 +1,7 @@
 use std::{cmp, fmt::Display, time::Instant};
 
+use bumpalo::{collections::Vec, Bump};
+
 use crate::{
     logic::{Direction, Game},
     util::invert::invert,
@@ -7,19 +9,21 @@ use crate::{
 
 use super::{max::MaximizingNode, util::all_sensible_enemy_moves};
 
-pub struct MinimizingNode<S: Ord + Display + Clone + Send + 'static> {
+pub struct MinimizingNode<'a, S: Ord + Display + Clone + Send + 'static> {
     pub my_move: Direction,
     score: Option<S>,
-    children: Vec<MaximizingNode<S>>,
+    children: Vec<'a, &'a mut MaximizingNode<'a, S>>,
+    bump: &'a Bump,
 }
 
-impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
-    pub fn new(my_move: Direction) -> Self {
-        Self {
+impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
+    pub fn new(my_move: Direction, bump: &'a Bump) -> &'a mut Self {
+        bump.alloc(Self {
             my_move,
             score: None,
-            children: vec![],
-        }
+            children: Vec::new_in(bump),
+            bump,
+        })
     }
 
     pub fn solve<FScore>(
@@ -35,12 +39,10 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
         FScore: FnMut(&Game) -> S,
     {
         if self.children.len() == 0 {
-            self.children = Vec::with_capacity((3 as usize).pow(game.others.len() as u32));
             for combo in all_sensible_enemy_moves(game) {
                 let mut game = game.clone();
                 game.execute_moves(self.my_move, &combo);
-
-                self.children.push(MaximizingNode::new(game));
+                self.children.push(MaximizingNode::new(game, self.bump));
             }
         } else {
             self.sort_children()
@@ -102,7 +104,7 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
     }
 
     pub fn format_tree(&self, depth: usize) -> String {
-        let mut strings = Vec::<String>::new();
+        let mut strings = std::vec::Vec::<String>::new();
         strings.push(format!(
             "{} MIN DEPTH {} ({} children):",
             "#".repeat(depth * 2 + 2),
@@ -114,7 +116,7 @@ impl<S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
             None => {}
         };
 
-        let mut children: Vec<&MaximizingNode<S>> = self.children.iter().collect();
+        let mut children: std::vec::Vec<&&mut MaximizingNode<S>> = self.children.iter().collect();
         children.sort_by(|c1, c2| c1.cmp_scores(c2));
         for c in children {
             strings.push(c.format_tree(depth + 1));

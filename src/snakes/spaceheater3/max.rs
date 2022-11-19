@@ -1,5 +1,7 @@
 use std::{cmp, fmt::Display, time::Instant};
 
+use bumpalo::{collections::Vec, Bump};
+
 use crate::{
     logic::{Direction, Game},
     protocol::ALL_DIRECTIONS,
@@ -7,19 +9,21 @@ use crate::{
 
 use super::{min::MinimizingNode, util::certain_death};
 
-pub struct MaximizingNode<S: Ord + Display + Clone + Send + 'static> {
+pub struct MaximizingNode<'a, S: Ord + Display + Clone + Send + 'static> {
     game: Game,
     score: Option<(Direction, S)>,
-    children: Vec<MinimizingNode<S>>,
+    children: Vec<'a, &'a mut MinimizingNode<'a, S>>,
+    bump: &'a Bump,
 }
 
-impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
-    pub fn new(game: Game) -> Self {
-        Self {
+impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<'a, S> {
+    pub fn new(game: Game, bump: &'a Bump) -> &'a mut Self {
+        bump.alloc(Self {
             game,
             score: None,
-            children: vec![],
-        }
+            children: Vec::new_in(bump),
+            bump,
+        })
     }
 
     pub fn solve_fork<FScore>(
@@ -100,15 +104,14 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
 
     fn update_children(&mut self) {
         if self.children.len() == 0 {
-            self.children = ALL_DIRECTIONS
-                .iter()
-                .filter(|&my_dir| {
-                    let mut my_pos = self.game.you.head.neighbour(*my_dir);
-                    self.game.warp(&mut my_pos);
-                    !certain_death(&self.game, &self.game.you, &my_pos)
-                })
-                .map(|my_dir| MinimizingNode::new(*my_dir))
-                .collect();
+            for my_dir in ALL_DIRECTIONS {
+                let mut my_pos = self.game.you.head.neighbour(my_dir);
+                self.game.warp(&mut my_pos);
+                if certain_death(&self.game, &self.game.you, &my_pos) {
+                    continue;
+                }
+                self.children.push(MinimizingNode::new(my_dir, self.bump));
+            }
         } else {
             self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
         }
@@ -147,7 +150,7 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
     }
 
     pub fn format_tree(&self, depth: usize) -> String {
-        let mut strings = Vec::<String>::new();
+        let mut strings = std::vec::Vec::<String>::new();
         strings.push(format!(
             "{} MAX DEPTH {} ({} children):",
             "#".repeat(depth * 2 + 1),
@@ -162,7 +165,8 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
         };
         strings.push(format!("{}", self.game));
 
-        let mut children: Vec<&MinimizingNode<S>> = self.children.iter().collect();
+        let mut children: std::vec::Vec<&&mut MinimizingNode<'a, S>> =
+            self.children.iter().collect();
         children.sort_by(|c1, c2| c1.cmp_scores(c2));
         for c in children {
             strings.push(c.format_tree(depth));
@@ -181,7 +185,7 @@ impl<S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
     }
 }
 
-impl<S: Ord + Display + Clone + Send + 'static> std::fmt::Display for MaximizingNode<S> {
+impl<'a, S: Ord + Display + Clone + Send + 'static> std::fmt::Display for MaximizingNode<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.format_tree(0).as_str())
     }
