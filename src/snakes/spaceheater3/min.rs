@@ -1,7 +1,5 @@
 use std::{cmp, fmt::Display, time::Instant};
 
-use bumpalo::{collections::Vec, Bump};
-
 use crate::{
     logic::{Direction, Game},
     util::invert::invert,
@@ -9,21 +7,19 @@ use crate::{
 
 use super::{max::MaximizingNode, util::all_sensible_enemy_moves};
 
-pub struct MinimizingNode<'a, S: Ord + Display + Clone + Send + 'static> {
+pub struct MinimizingNode<S: Ord + Display + Clone + Send + 'static> {
     pub my_move: Direction,
     score: Option<S>,
-    children: Vec<'a, &'a mut MaximizingNode<'a, S>>,
-    bump: &'a Bump,
+    children: Vec<MaximizingNode<S>>,
 }
 
-impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
-    pub fn new(my_move: Direction, bump: &'a Bump) -> &'a mut Self {
-        bump.alloc(Self {
+impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
+    pub fn new(my_move: Direction) -> Self {
+        Self {
             my_move,
             score: None,
-            children: Vec::new_in(bump),
-            bump,
-        })
+            children: vec![],
+        }
     }
 
     pub fn solve<FScore>(
@@ -31,18 +27,18 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
         game: &Game,
         deadline: &Instant,
         max_depth: usize,
-        score_fn: &mut FScore,
+        score_fn: &FScore,
         alpha: Option<S>,
         beta: Option<S>,
-    ) -> Option<S>
+    ) -> (Option<S>, usize)
     where
-        FScore: FnMut(&Game) -> S,
+        FScore: Fn(&Game) -> S,
     {
         if self.children.len() == 0 {
             for combo in all_sensible_enemy_moves(game) {
                 let mut game = game.clone();
                 game.execute_moves(self.my_move, &combo);
-                self.children.push(MaximizingNode::new(game, self.bump));
+                self.children.push(MaximizingNode::new(game));
             }
         } else {
             self.sort_children()
@@ -50,19 +46,22 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
 
         let mut min_score = None;
         let mut beta = beta;
+        let mut total_node_count = 0;
         for max_node in &mut self.children {
-            let next_score = max_node
-                .solve(
-                    deadline,
-                    max_depth - 1,
-                    score_fn,
-                    alpha.clone(),
-                    beta.clone(),
-                )
-                .map(|r| r.1);
+            let (next_score, node_count) = max_node.solve(
+                deadline,
+                max_depth - 1,
+                score_fn,
+                alpha.clone(),
+                beta.clone(),
+            );
+
+            let next_score = next_score.map(|r| r.1);
+
+            total_node_count += node_count;
 
             if next_score == None {
-                return None; // Deadline exceeded
+                return (None, total_node_count); // Deadline exceeded
             }
 
             if min_score != None {
@@ -83,7 +82,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
         }
 
         self.score = min_score.clone();
-        min_score
+        (min_score, total_node_count)
     }
 
     fn sort_children(&mut self) {
@@ -116,7 +115,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<'a, S> {
             None => {}
         };
 
-        let mut children: std::vec::Vec<&&mut MaximizingNode<S>> = self.children.iter().collect();
+        let mut children: std::vec::Vec<&MaximizingNode<S>> = self.children.iter().collect();
         children.sort_by(|c1, c2| c1.cmp_scores(c2));
         for c in children {
             strings.push(c.format_tree(depth + 1));

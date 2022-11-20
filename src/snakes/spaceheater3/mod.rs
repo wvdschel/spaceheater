@@ -16,7 +16,7 @@ mod util;
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
-const LATENCY_MARGIN: Duration = Duration::from_millis(130);
+const LATENCY_MARGIN: Duration = Duration::from_millis(110);
 
 pub struct Spaceheater3<Fscore, S>
 where

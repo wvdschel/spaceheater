@@ -1,7 +1,5 @@
 use std::{cmp, fmt::Display, time::Instant};
 
-use bumpalo::Bump;
-
 use crate::{
     log,
     logic::{Direction, Game},
@@ -18,10 +16,9 @@ where
     FScore: Fn(&Game) -> S,
     S: Ord + Display + Clone + Send + 'static,
 {
-    let bump = Bump::new();
     let enemy_count = game.others.len();
     let turn = game.turn;
-    let root = MaximizingNode::new(game, &bump);
+    let mut root = MaximizingNode::new(game);
 
     let base_depth = match enemy_count {
         0 => 3,
@@ -40,37 +37,28 @@ where
     );
 
     let mut best_score = None;
+    let mut last_node_count = 0;
     for current_depth in base_depth..max_depth {
-        let mut score_count: usize = 0;
-        let mut score_fn = |game: &Game| {
-            score_count += 1;
-            score_fn(game)
-        };
         println!(
             "turn {}: {}ms: starting depth {}",
             turn,
             start.elapsed().as_millis(),
             current_depth,
         );
-        let res = root.solve_fork(deadline, current_depth, &mut score_fn, None, None);
+        let (res, node_count) = root.solve(deadline, current_depth, score_fn, None, None);
         match &res {
             Some((dir, score)) => {
                 best_score = res.clone();
                 println!(
-                    "turn {}: {}ms: completed depth {}, evaluated {} games: {} {}",
+                    "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
                     turn,
                     start.elapsed().as_millis(),
                     current_depth,
-                    score_count,
+                    node_count,
                     dir,
                     score,
                 );
-                //log!("complete tree for depth {}:\n{}", current_depth, root);
-                log!(
-                    "number of nodes in the tree for depth {}: {}",
-                    current_depth,
-                    root.len()
-                );
+                log!("complete tree for depth {}:\n{}", current_depth, root);
             }
             None => {
                 println!(
@@ -82,12 +70,24 @@ where
                 break;
             }
         }
+        if node_count == last_node_count {
+            println!(
+                "turn {}: {}ms: tree completed at depth {}",
+                turn,
+                start.elapsed().as_millis(),
+                current_depth - 1,
+            );
+            break;
+        }
+        last_node_count = node_count;
     }
 
+    let statm = procinfo::pid::statm_self().unwrap();
     println!(
-        "turn {}: {}ms: returning {}",
+        "turn {}: {}ms / {} MB: returning {}",
         turn,
         start.elapsed().as_millis(),
+        statm.size * 4096 / 1024 / 1024,
         best_score
             .clone()
             .map(|v| v.0.to_string())

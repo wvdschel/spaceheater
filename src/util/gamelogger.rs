@@ -1,6 +1,6 @@
 use std::cmp;
 use std::io::prelude::*;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
 use std::{collections::HashMap, fs::File, sync};
 
 use flate2::bufread::GzDecoder;
@@ -89,7 +89,15 @@ impl Game {
                 if let Some(millis) = time_per_turn {
                     req.game.timeout = millis as isize;
                 }
-                _ = snake.make_move(&req);
+                let start = Instant::now();
+                let res = snake.make_move(&req);
+                println!(
+                    "TURN {}: {} (took {}ms)",
+                    req.turn,
+                    res.map(|r| r.direction.to_string())
+                        .unwrap_or("no response".to_string()),
+                    start.elapsed().as_millis(),
+                )
             }
         }
         if let Some(end_request) = &self.end_request {
