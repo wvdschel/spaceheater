@@ -8,6 +8,7 @@ pub use workqueue::WorkQueue;
 pub mod gamelogger;
 pub mod invert;
 pub mod stackqueue;
+pub mod threadpool;
 
 #[macro_export]
 #[cfg(feature = "logging")]

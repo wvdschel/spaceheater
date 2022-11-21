@@ -35,7 +35,7 @@ fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
 ) -> (Direction, scoring::tournament::TournamentScore) {
-    let deadline = Instant::now() + Duration::from_millis(6000);
+    let deadline = Instant::now() + Duration::from_millis(60000);
     snakes::spaceheater3::solve::solve(
         game.clone(),
         &deadline,
