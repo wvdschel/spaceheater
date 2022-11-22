@@ -1,10 +1,12 @@
 use std::{
     collections::VecDeque,
+    future::Future,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{channel, Receiver, Sender},
         Arc, Condvar, Mutex,
     },
+    task::Poll,
     thread,
 };
 

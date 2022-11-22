@@ -20,7 +20,7 @@ const LATENCY_MARGIN: Duration = Duration::from_millis(120);
 
 pub struct Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S,
+    Fscore: Fn(&Game) -> S + Send + 'static,
     S: Ord + Display + Clone + Send + 'static,
 {
     score_fn: Fscore,
@@ -29,7 +29,7 @@ where
 
 impl<Fscore, S> Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S,
+    Fscore: Fn(&Game) -> S + Send + 'static,
     S: Ord + Display + Clone + Send + 'static,
 {
     pub fn new(score_fn: Fscore, customizations: Option<Customizations>) -> Self {
@@ -50,7 +50,7 @@ where
 
 impl<Fscore, S> Battlesnake for Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S,
+    Fscore: Fn(&Game) -> S + Send + 'static,
     S: Ord + Display + Clone + Send,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {

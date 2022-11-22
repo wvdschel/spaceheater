@@ -8,9 +8,9 @@ use crate::{
 use super::{min::MinimizingNode, util::certain_death};
 
 pub struct MaximizingNode<S: Ord + Display + Clone + Send + 'static> {
-    game: Game,
-    score: Option<(Direction, S)>,
-    children: Vec<MinimizingNode<S>>,
+    pub(super) game: Game,
+    pub(super) score: Option<(Direction, S)>,
+    pub(super) children: Vec<MinimizingNode<S>>,
 }
 
 impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
@@ -85,7 +85,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
         (self.score.clone(), total_node_count)
     }
 
-    fn update_children(&mut self) {
+    pub(super) fn update_children(&mut self) {
         if self.children.len() == 0 {
             for my_dir in ALL_DIRECTIONS {
                 let mut my_pos = self.game.you.head.neighbour(my_dir);
@@ -100,7 +100,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
         }
     }
 
-    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
+    pub(super) fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
     where
         FScore: Fn(&Game) -> S,
     {

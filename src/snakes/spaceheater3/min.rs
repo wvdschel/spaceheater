@@ -9,8 +9,8 @@ use super::{max::MaximizingNode, util::all_sensible_enemy_moves};
 
 pub struct MinimizingNode<S: Ord + Display + Clone + Send + 'static> {
     pub my_move: Direction,
-    score: Option<S>,
-    children: Vec<MaximizingNode<S>>,
+    pub(super) score: Option<S>,
+    pub(super) children: Vec<MaximizingNode<S>>,
 }
 
 impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
@@ -34,15 +34,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
     where
         FScore: Fn(&Game) -> S,
     {
-        if self.children.len() == 0 {
-            for combo in all_sensible_enemy_moves(game) {
-                let mut game = game.clone();
-                game.execute_moves(self.my_move, &combo);
-                self.children.push(MaximizingNode::new(game));
-            }
-        } else {
-            self.sort_children()
-        }
+        self.update_children(game);
 
         let mut min_score = None;
         let mut beta = beta;
@@ -85,10 +77,6 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
         (min_score, total_node_count)
     }
 
-    fn sort_children(&mut self) {
-        self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
-    }
-
     pub fn cmp_scores(&self, other: &Self) -> cmp::Ordering {
         if self.score == other.score {
             return cmp::Ordering::Equal;
@@ -99,6 +87,22 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
                 None => cmp::Ordering::Less,
             },
             None => cmp::Ordering::Greater,
+        }
+    }
+
+    fn sort_children(&mut self) {
+        self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+    }
+
+    pub(super) fn update_children(&mut self, game: &Game) {
+        if self.children.len() == 0 {
+            for combo in all_sensible_enemy_moves(game) {
+                let mut game = game.clone();
+                game.execute_moves(self.my_move, &combo);
+                self.children.push(MaximizingNode::new(game));
+            }
+        } else {
+            self.sort_children()
         }
     }
 
