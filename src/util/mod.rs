@@ -2,13 +2,9 @@ use std::io::Read;
 
 use rouille::{Request, Response, ResponseBody};
 
-mod workqueue;
-pub use workqueue::WorkQueue;
-
 pub mod gamelogger;
 pub mod invert;
 pub mod stackqueue;
-pub mod threadpool;
 
 #[macro_export]
 #[cfg(feature = "logging")]

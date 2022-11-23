@@ -16,22 +16,7 @@ fn load_replay() -> gamelogger::Game {
     gamelogger::Game::load(&mut stdin()).unwrap()
 }
 
-#[allow(unused)]
 fn solve_game(
-    game: &logic::Game,
-    max_depth: usize,
-) -> (Direction, scoring::tournament::TournamentScore) {
-    let mut solver = snakes::spaceheater::GameSolver::new(scoring::tournament_score);
-
-    solver.solve(
-        format!("solver for depth {}", max_depth).as_str(),
-        &game,
-        None,
-        max_depth,
-    )
-}
-
-fn solve_game2(
     game: &logic::Game,
     max_depth: usize,
 ) -> (Direction, scoring::tournament::TournamentScore) {
@@ -70,7 +55,7 @@ fn main() {
     let max_depth: usize = args.next().map(|f| f.parse().unwrap_or(5)).unwrap_or(5);
 
     let start = Instant::now();
-    let (dir, score) = solve_game2(&game, max_depth);
+    let (dir, score) = solve_game(&game, max_depth);
     let duration = start.elapsed();
     println!(
         "Solved for depth {} in {}ms: {} going {:?}",
