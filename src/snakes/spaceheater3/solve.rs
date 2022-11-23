@@ -3,7 +3,7 @@ use std::{cmp, fmt::Display, time::Instant};
 use crate::{
     log,
     logic::{Direction, Game},
-    snakes::spaceheater3::max::MaximizingNode,
+    snakes::spaceheater3::{max::MaximizingNode, parallel},
 };
 
 pub fn solve<FScore, S>(
@@ -13,8 +13,8 @@ pub fn solve<FScore, S>(
     score_fn: &FScore,
 ) -> Option<(Direction, S)>
 where
-    FScore: Fn(&Game) -> S,
-    S: Ord + Display + Clone + Send + 'static,
+    FScore: Fn(&Game) -> S + Sync,
+    S: Ord + Display + Clone + 'static + Send + Sync,
 {
     let enemy_count = game.others.len();
     let turn = game.turn;
@@ -45,7 +45,12 @@ where
             start.elapsed().as_millis(),
             current_depth,
         );
-        let (res, node_count) = root.solve(deadline, current_depth, score_fn, None, None);
+        let (res, node_count) = root.par_solve(
+            deadline,
+            current_depth,
+            score_fn,
+            &parallel::AlphaBeta::new(None, None),
+        );
         match &res {
             Some((dir, score)) => {
                 best_score = res.clone();

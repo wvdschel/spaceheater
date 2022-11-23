@@ -10,6 +10,7 @@ use std::{
 
 mod max;
 mod min;
+mod parallel;
 pub mod solve;
 mod util;
 
@@ -20,8 +21,8 @@ const LATENCY_MARGIN: Duration = Duration::from_millis(120);
 
 pub struct Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S + Send + 'static,
-    S: Ord + Display + Clone + Send + 'static,
+    Fscore: Fn(&Game) -> S + Sync + 'static,
+    S: Ord + Display + Clone + Sync + Send + 'static,
 {
     score_fn: Fscore,
     customizations: Customizations,
@@ -29,8 +30,8 @@ where
 
 impl<Fscore, S> Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S + Send + 'static,
-    S: Ord + Display + Clone + Send + 'static,
+    Fscore: Fn(&Game) -> S + Sync + 'static,
+    S: Ord + Display + Clone + Sync + Send + 'static,
 {
     pub fn new(score_fn: Fscore, customizations: Option<Customizations>) -> Self {
         Self {
@@ -50,8 +51,8 @@ where
 
 impl<Fscore, S> Battlesnake for Spaceheater3<Fscore, S>
 where
-    Fscore: Fn(&Game) -> S + Send + 'static,
-    S: Ord + Display + Clone + Send,
+    Fscore: Fn(&Game) -> S + Sync + 'static,
+    S: Ord + Display + Clone + Send + Sync,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {

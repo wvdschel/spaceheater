@@ -23,7 +23,7 @@ harness = false
 debug = 1
 
 [features]
-default = ["profiling"]
+default = []
 logging = []
 sequential = []
 profiling = ["dep:pprof"]
@@ -41,9 +41,10 @@ num_cpus = "1.13.1"
 itertools = "0.10.5"
 flate2 = "1.0.24"
 thread-priority = "0.10.0"
-pprof = { version = "0.10", features = ["flamegraph"], optional = true }
+pprof = { version = "0.11", features = ["flamegraph"], optional = true }
 procinfo = "0.4.2"
+rayon = "1.5"
 
 [dev-dependencies]
-criterion = { version = "0.3", features = ["html_reports"] }
-pprof = { version = "0.10", features = ["flamegraph", "criterion"] }
+criterion = { version = "0.4", features = ["html_reports"] }
+pprof = { version = "0.11", features = ["flamegraph", "criterion"] }

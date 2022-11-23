@@ -7,13 +7,13 @@ use crate::{
 
 use super::{min::MinimizingNode, util::certain_death};
 
-pub struct MaximizingNode<S: Ord + Display + Clone + Send + 'static> {
+pub struct MaximizingNode<S: Ord + Display + Clone + 'static> {
     pub(super) game: Game,
     pub(super) score: Option<(Direction, S)>,
     pub(super) children: Vec<MinimizingNode<S>>,
 }
 
-impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
+impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
     pub fn new(game: Game) -> Self {
         Self {
             game,
@@ -167,7 +167,7 @@ impl<'a, S: Ord + Display + Clone + Send + 'static> MaximizingNode<S> {
     }
 }
 
-impl<'a, S: Ord + Display + Clone + Send + 'static> std::fmt::Display for MaximizingNode<S> {
+impl<'a, S: Ord + Display + Clone + 'static> std::fmt::Display for MaximizingNode<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.format_tree(0).as_str())
     }

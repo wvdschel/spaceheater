@@ -7,13 +7,13 @@ use crate::{
 
 use super::{max::MaximizingNode, util::all_sensible_enemy_moves};
 
-pub struct MinimizingNode<S: Ord + Display + Clone + Send + 'static> {
+pub struct MinimizingNode<S: Ord + Display + Clone + 'static> {
     pub my_move: Direction,
     pub(super) score: Option<S>,
     pub(super) children: Vec<MaximizingNode<S>>,
 }
 
-impl<'a, S: Ord + Display + Clone + Send + 'static> MinimizingNode<S> {
+impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
     pub fn new(my_move: Direction) -> Self {
         Self {
             my_move,
