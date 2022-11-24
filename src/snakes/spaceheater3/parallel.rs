@@ -139,8 +139,24 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
         if max_leaf_nodes_max_node(self.game.others.len(), max_depth) < MIN_PARALLEL_LEAVES {
             let alpha = alpha_beta.max_alpha();
             let beta = alpha_beta.min_beta();
-            return self.solve(deadline, max_depth, score_fn, alpha, beta);
+            // println!(
+            //     "max_depth = {}, max_leaf_nodes={} -> going serial",
+            //     max_depth,
+            //     max_leaf_nodes_max_node(self.game.others.len(), max_depth)
+            // );
+            let res = self.solve(deadline, max_depth, score_fn, alpha, beta);
+            // println!(
+            //     "max_depth = {}, max_leaf_nodes={} -> finished serial",
+            //     max_depth,
+            //     max_leaf_nodes_max_node(self.game.others.len(), max_depth)
+            // );
+            return res;
         }
+        // println!(
+        //     "max_depth = {}, max_leaf_nodes={}",
+        //     max_depth,
+        //     max_leaf_nodes_max_node(self.game.others.len(), max_depth)
+        // );
 
         if Instant::now() > *deadline {
             return (None, 0);
@@ -168,6 +184,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
             if alpha_beta.should_be_pruned() {
                 return;
             }
+
             let (next_score, node_count) =
                 min_node.par_solve(game.clone(), deadline, max_depth, score_fn, &alpha_beta);
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
@@ -198,6 +215,11 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
         }
 
+        if Instant::now() > *deadline {
+            // deadline exceeded
+            return (None, total_node_count.load(Ordering::Relaxed));
+        }
+
         let (top_move, top_score) = top_score.read().unwrap().clone();
         return (
             top_score.map(|s| (top_move, s)),
@@ -225,7 +247,7 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         if self.children.len() == 1 {
             // No more enemies, don't perform any minimizing
             let (score, node_count) =
-                self.children[0].par_solve(deadline, max_depth, score_fn, alpha_beta);
+                self.children[0].par_solve(deadline, max_depth - 1, score_fn, alpha_beta);
 
             self.score = score.map(|s| s.1);
             return (self.score.clone(), node_count);
@@ -234,36 +256,40 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         let min_score: RwLock<Option<S>> = RwLock::new(None);
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
-        let _res: Vec<()> = self
-            .children
-            .par_iter_mut()
-            .map(|max_node| {
-                if alpha_beta.should_be_pruned() {
-                    return;
-                }
 
-                let (next_score, node_count) =
-                    max_node.par_solve(deadline, max_depth - 1, score_fn, &alpha_beta);
+        let solver = |max_node: &mut MaximizingNode<S>| {
+            if alpha_beta.should_be_pruned() {
+                return;
+            }
 
-                let next_score = if let Some(s) = next_score {
-                    s.1
-                } else {
-                    return; // Deadline exceeded
-                };
+            let (next_score, node_count) =
+                max_node.par_solve(deadline, max_depth - 1, score_fn, &alpha_beta);
 
-                total_node_count.fetch_add(node_count, Ordering::Relaxed);
+            let next_score = if let Some(s) = next_score {
+                s.1
+            } else {
+                return; // Deadline exceeded
+            };
 
-                let mut min_score_write = min_score.write().unwrap();
-                if *min_score_write != None {
-                    *min_score_write =
-                        Some(cmp::min(min_score_write.as_ref().unwrap(), &next_score).clone());
-                } else {
-                    *min_score_write = Some(next_score.clone());
-                }
+            total_node_count.fetch_add(node_count, Ordering::Relaxed);
 
-                alpha_beta.new_beta_score(next_score);
-            })
-            .collect();
+            let mut min_score_write = min_score.write().unwrap();
+            if *min_score_write != None {
+                *min_score_write =
+                    Some(cmp::min(min_score_write.as_ref().unwrap(), &next_score).clone());
+            } else {
+                *min_score_write = Some(next_score.clone());
+            }
+
+            alpha_beta.new_beta_score(next_score);
+        };
+
+        let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+
+        if Instant::now() > *deadline {
+            // deadline exceeded
+            return (None, total_node_count.load(Ordering::Relaxed));
+        }
 
         let min_score = min_score.read().unwrap().clone();
         self.score = min_score.clone();
@@ -303,7 +329,7 @@ fn leaf_table() {
     for depth in 1..20 {
         println!("Max nodes leaf count for depth {}:", depth);
         print!("snakes: ");
-        for enemy_count in 0..6 {
+        for enemy_count in 0..7 {
             print!("{:22}", enemy_count);
         }
         println!();
