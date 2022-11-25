@@ -96,7 +96,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
                 self.children.push(MinimizingNode::new(my_dir));
             }
         } else {
-            self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+            self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2))
         }
     }
 

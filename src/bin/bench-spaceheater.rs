@@ -10,12 +10,12 @@ fn load_replay() -> gamelogger::Game {
 }
 
 fn main() {
-    // #[cfg(feature = "profiling")]
-    // let guard = pprof::ProfilerGuardBuilder::default()
-    //     .frequency(2000)
-    //     .blocklist(&["libc", "libgcc", "vdso"])
-    //     .build()
-    //     .unwrap();
+    #[cfg(feature = "profiling")]
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(2000)
+        .blocklist(&["libc", "libgcc", "vdso"])
+        .build()
+        .unwrap();
 
     let replay = load_replay();
 
@@ -66,11 +66,11 @@ fn main() {
         println!("{}", "=".repeat(80));
     }
 
-    // #[cfg(feature = "profiling")]
-    // {
-    //     if let Ok(report) = guard.report().build() {
-    //         let file = File::create("flamegraph.svg").unwrap();
-    //         report.flamegraph(file).unwrap();
-    //     };
-    // }
+    #[cfg(feature = "profiling")]
+    {
+        if let Ok(report) = guard.report().build() {
+            let file = File::create("flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+        };
+    }
 }

@@ -91,7 +91,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
     }
 
     fn sort_children(&mut self) {
-        self.children.sort_by(|c1, c2| c1.cmp_scores(c2))
+        self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2))
     }
 
     pub(super) fn update_children(&mut self, game: &Game) {
