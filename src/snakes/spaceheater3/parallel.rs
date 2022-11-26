@@ -64,34 +64,6 @@ impl<'a, S: Ord + Clone> AlphaBeta<'a, S> {
         }
     }
 
-    fn max_alpha(&self) -> Option<S> {
-        let mut max_alpha = self.alpha.read().unwrap().clone();
-        let mut next = self;
-        while let Some(v) = next.parent {
-            let other_alpha = v.alpha.read().unwrap();
-            if *other_alpha > max_alpha {
-                max_alpha = other_alpha.clone();
-            }
-            next = v;
-        }
-        max_alpha
-    }
-
-    fn min_beta(&self) -> Option<S> {
-        let mut min_beta = self.beta.read().unwrap().clone();
-        let mut next = self;
-        while let Some(v) = next.parent {
-            let other_beta = v.beta.read().unwrap();
-            if min_beta.is_none() && other_beta.is_some() {
-                min_beta = other_beta.clone()
-            } else if other_beta.is_some() && *other_beta < min_beta {
-                min_beta = other_beta.clone();
-            }
-            next = v;
-        }
-        min_beta
-    }
-
     fn should_be_pruned(&self) -> bool {
         let mut max_alpha = self.alpha.read().unwrap().clone();
         let mut next = self;
