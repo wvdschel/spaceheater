@@ -3,6 +3,7 @@ use crate::{
     logic::Game,
     protocol::{self, Customizations, Direction},
     snakes::spaceheater3::max::MaximizingNode,
+    util::thread_count,
     Battlesnake,
 };
 use std::{
@@ -93,11 +94,12 @@ where
                 thread::spawn(move || {
                     let mut root = MaximizingNode::new(game);
                     let (res, node_count) = if parallel {
-                        root.par_solve(
+                        root.par_solve::<Fscore, 200_000>(
                             &deadline,
                             current_depth,
                             &score_fn,
                             &parallel::AlphaBeta::new(None, None),
+                            thread_count() as f32,
                         )
                     } else {
                         root.solve(&deadline, current_depth, &score_fn, None, None)

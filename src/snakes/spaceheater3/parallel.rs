@@ -12,9 +12,6 @@ use std::{
 use super::{max::MaximizingNode, min::MinimizingNode};
 use crate::logic::{Direction, Game};
 
-const MIN_PARALLEL_LEAVES: usize = 1024;
-const MAX_PARALLEL_LEAVES: usize = 8192;
-
 pub struct AlphaBeta<'a, S: Ord + Clone> {
     parent: Option<&'a AlphaBeta<'a, S>>,
     alpha: RwLock<Option<S>>,
@@ -126,12 +123,13 @@ impl<'a, S: Ord + Clone> AlphaBeta<'a, S> {
 }
 
 impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
-    pub fn par_solve<FScore>(
+    pub fn par_solve<FScore, const LEAVES_PER_THREAD: usize>(
         &mut self,
         deadline: &Instant,
         max_depth: usize,
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
+        threads: f32,
     ) -> (Option<(Direction, S)>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -151,13 +149,31 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
             return (self.score.clone(), 1);
         }
 
-        let max_leaf_count =
-            self.children.len() * max_leaf_nodes_min_node(self.game.others.len(), max_depth);
-        if max_leaf_count < MIN_PARALLEL_LEAVES {
-            let alpha = alpha_beta.max_alpha();
-            let beta = alpha_beta.min_beta();
-            let res = self.solve(deadline, max_depth, score_fn, alpha, beta);
-            return res;
+        if self.children.len() == 1 {
+            // Exactly one move does not lead to certain death, avoid the extra indirection in alpha-beta lookup
+            let (score, node_count) = self.children[0].par_solve::<FScore, LEAVES_PER_THREAD>(
+                Arc::new(&self.game),
+                deadline,
+                max_depth,
+                score_fn,
+                &alpha_beta,
+                threads,
+            );
+            return (score.map(|s| (self.children[0].my_move, s)), node_count);
+        }
+
+        let mut should_fork = false;
+        let mut threads_per_child = threads;
+        if threads > 1f32 {
+            let leaves_per_child = max_leaf_nodes_min_node(self.game.others.len(), max_depth);
+            let next_leaves_per_child =
+                max_leaf_nodes_min_node(self.game.others.len(), max_depth - 1);
+            let target_leaves = (LEAVES_PER_THREAD as f32 * threads).round() as usize;
+
+            if leaves_per_child >= target_leaves && next_leaves_per_child < target_leaves {
+                should_fork = true;
+                threads_per_child = threads / self.children.len() as f32;
+            }
         }
 
         let game = Arc::new(&self.game);
@@ -170,8 +186,14 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
                 return;
             }
 
-            let (next_score, node_count) =
-                min_node.par_solve(game.clone(), deadline, max_depth, score_fn, &alpha_beta);
+            let (next_score, node_count) = min_node.par_solve::<FScore, LEAVES_PER_THREAD>(
+                game.clone(),
+                deadline,
+                max_depth,
+                score_fn,
+                &alpha_beta,
+                threads_per_child,
+            );
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
 
             if next_score == None {
@@ -192,7 +214,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
             alpha_beta.new_alpha_score(next_score.unwrap());
         };
 
-        if max_leaf_count < MAX_PARALLEL_LEAVES {
+        if should_fork {
             let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
         } else {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
@@ -212,13 +234,14 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
 }
 
 impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
-    pub fn par_solve<FScore>(
+    pub fn par_solve<FScore, const LEAVES_PER_THREAD: usize>(
         &mut self,
         game: Arc<&Game>,
         deadline: &Instant,
         max_depth: usize,
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
+        threads: f32,
     ) -> (Option<S>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -229,8 +252,13 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
 
         if self.children.len() == 1 {
             // No more enemies, don't perform any minimizing
-            let (score, node_count) =
-                self.children[0].par_solve(deadline, max_depth - 1, score_fn, alpha_beta);
+            let (score, node_count) = self.children[0].par_solve::<FScore, LEAVES_PER_THREAD>(
+                deadline,
+                max_depth - 1,
+                score_fn,
+                alpha_beta,
+                threads,
+            );
 
             self.score = score.map(|s| s.1);
             return (self.score.clone(), node_count);
@@ -245,8 +273,13 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
                 return;
             }
 
-            let (next_score, node_count) =
-                max_node.par_solve(deadline, max_depth - 1, score_fn, &alpha_beta);
+            let (next_score, node_count) = max_node.par_solve::<FScore, LEAVES_PER_THREAD>(
+                deadline,
+                max_depth - 1,
+                score_fn,
+                &alpha_beta,
+                threads,
+            );
 
             let next_score = if let Some(s) = next_score {
                 s.1
@@ -267,7 +300,12 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
             alpha_beta.new_beta_score(next_score);
         };
 
-        let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        if threads > 1f32 && max_depth == 1 {
+            // Still got threads to spare, and no more opportunities to fork
+            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        } else {
+            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
+        }
 
         if Instant::now() > *deadline {
             // deadline exceeded
@@ -307,11 +345,11 @@ fn leaf_table() {
             print!("{:22}", max_leaf_nodes_max_node(enemy_count, depth));
         }
         println!();
-
         print!("min nodes: ");
         for enemy_count in 0..7 {
             print!("{:22}", max_leaf_nodes_min_node(enemy_count, depth));
         }
+        println!();
         println!();
 
         print!("snakes:    ");
@@ -328,6 +366,9 @@ fn leaf_table() {
         for enemy_count in 7..13 {
             print!("{:22}", max_leaf_nodes_min_node(enemy_count, depth));
         }
+        println!();
+        println!();
+        println!("{}", "=".repeat(100));
         println!();
     }
 }
