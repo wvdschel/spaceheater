@@ -18,6 +18,14 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             false,
         )),
     );
+    snakes.insert(
+        "spaceheater3_mc".to_string(),
+        Box::new(Spaceheater3::new(
+            logic::scoring::tournament_score,
+            None,
+            true,
+        )),
+    );
 
     snakes
 }
