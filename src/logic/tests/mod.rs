@@ -8,9 +8,6 @@ mod board;
 mod voronoi;
 
 #[test]
-fn head_to_head_collision() {}
-
-#[test]
 fn head_to_head_collision_equal_length() {
     let request: protocol::Request =
         serde_json::from_str(include_str!("data/head_to_head_equal_length.json")).unwrap();
@@ -21,12 +18,6 @@ fn head_to_head_collision_equal_length() {
     assert_eq!(game.others[0].health, 86);
     assert_eq!(game.dead_snakes, 2); // Our snake and 1 opponent have died
 }
-
-#[test]
-fn head_to_body_collision() {}
-
-#[test]
-fn starvation() {}
 
 #[test]
 fn food_pickup() {
@@ -62,10 +53,11 @@ fn food_pickup() {
 }
 
 #[test]
-fn food_pickup_after_head_to_head() {}
+fn self_collision_when_wrapping() {
+    let request: protocol::Request =
+        serde_json::from_str(include_str!("data/self_collision_wrapped.json")).unwrap();
+    let mut game = Game::from(&request);
 
-#[test]
-fn hazard_damage() {}
-
-#[test]
-fn stacked_hazard_damage() {}
+    game.execute_moves(Direction::Up, &vec![]);
+    assert_eq!(game.you.health, 0);
+}

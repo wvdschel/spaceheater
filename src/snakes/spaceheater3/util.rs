@@ -5,8 +5,22 @@ use crate::{
 
 pub fn certain_death(game: &Game, snake: &Snake, p: &Point) -> bool {
     match game.board.get(p) {
-        Tile::Hazard(x) | Tile::HazardWithSnake(x) | Tile::HazardWithHead(x) => {
+        Tile::Hazard(x) | Tile::HazardWithHead(x) => {
             game.rules.hazard_damage_per_turn * x as i8 > snake.health
+        }
+        Tile::HazardWithSnake(x) => {
+            let mut self_collision = false;
+            for i in (1..snake.length - 1).step_by(2) {
+                if *p == snake.body[i] {
+                    self_collision = true;
+                    break;
+                }
+            }
+            if self_collision {
+                true
+            } else {
+                game.rules.hazard_damage_per_turn * x as i8 > snake.health
+            }
         }
         Tile::Snake => {
             // check self collisions. you can only hit odd body parts.

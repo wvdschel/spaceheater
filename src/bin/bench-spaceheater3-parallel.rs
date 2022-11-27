@@ -72,7 +72,7 @@ macro_rules! generate_datafile {
 }
 
 const TIMEOUT: Duration = Duration::from_millis(500);
-const MAX_GAMES: usize = 1500;
+const MAX_GAMES: usize = 500;
 
 fn main() {
     let all_moves = load_all_moves_by_snake_count();

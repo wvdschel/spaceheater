@@ -81,8 +81,9 @@ impl Game {
     }
 
     fn death_by_collission(&self, snake: &Snake, board: &Board) -> bool {
-        if board.get(&snake.head) == Tile::Snake {
-            return true;
+        match board.get(&snake.head) {
+            Tile::HazardWithSnake(_) | Tile::Snake => return true,
+            _ => {}
         }
 
         for other in self.others.iter() {

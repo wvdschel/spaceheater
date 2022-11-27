@@ -1,7 +1,5 @@
 # Spaceheater
 # Weird choices to debug
-- 164350db-182a-4a73-9533-0528de14da3c -> turn 119 collide with self on the wrapping border
-- e1d33d5c-696c-40be-881d-10d3971a1cd9 -> turn 158 same problem
 - 24608440-0def-4078-a455-a97f47a7650d -> turn 444 why not left?
 - 25fd80a3-f806-4a49-a45e-d8769e0279dd -> turn 175 why up? Maybe mistake was made earlier?
 - 5dcd3011-8df8-413d-b94e-d47281a0ca87 -> turn 139 why not up?

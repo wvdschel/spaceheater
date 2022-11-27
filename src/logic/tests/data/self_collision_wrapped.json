@@ -1,0 +1,449 @@
+{
+  "game": {
+    "id": "164350db-182a-4a73-9533-0528de14da3c",
+    "ruleset": {
+      "name": "wrapped",
+      "version": "v1.2.0",
+      "settings": {
+        "foodSpawnChance": 15,
+        "minimumFood": 1,
+        "hazardDamagePerTurn": 14,
+        "royale": {
+          "shrinkEveryNTurns": 25
+        },
+        "squad": {
+          "allowBodyCollisions": false,
+          "sharedElimination": false,
+          "sharedHealth": false,
+          "sharedLength": false
+        }
+      }
+    },
+    "map": "royale",
+    "timeout": 500,
+    "source": "custom"
+  },
+  "turn": 119,
+  "board": {
+    "height": 11,
+    "width": 11,
+    "food": [
+      {
+        "x": 0,
+        "y": 2
+      },
+      {
+        "x": 0,
+        "y": 1
+      },
+      {
+        "x": 5,
+        "y": 7
+      }
+    ],
+    "hazards": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 1
+      },
+      {
+        "x": 0,
+        "y": 2
+      },
+      {
+        "x": 0,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 6
+      },
+      {
+        "x": 0,
+        "y": 7
+      },
+      {
+        "x": 0,
+        "y": 8
+      },
+      {
+        "x": 0,
+        "y": 9
+      },
+      {
+        "x": 0,
+        "y": 10
+      },
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 6,
+        "y": 0
+      },
+      {
+        "x": 7,
+        "y": 0
+      },
+      {
+        "x": 8,
+        "y": 0
+      },
+      {
+        "x": 9,
+        "y": 0
+      },
+      {
+        "x": 9,
+        "y": 1
+      },
+      {
+        "x": 9,
+        "y": 2
+      },
+      {
+        "x": 9,
+        "y": 3
+      },
+      {
+        "x": 9,
+        "y": 4
+      },
+      {
+        "x": 9,
+        "y": 5
+      },
+      {
+        "x": 9,
+        "y": 6
+      },
+      {
+        "x": 9,
+        "y": 7
+      },
+      {
+        "x": 9,
+        "y": 8
+      },
+      {
+        "x": 9,
+        "y": 9
+      },
+      {
+        "x": 9,
+        "y": 10
+      },
+      {
+        "x": 10,
+        "y": 0
+      },
+      {
+        "x": 10,
+        "y": 1
+      },
+      {
+        "x": 10,
+        "y": 2
+      },
+      {
+        "x": 10,
+        "y": 3
+      },
+      {
+        "x": 10,
+        "y": 4
+      },
+      {
+        "x": 10,
+        "y": 5
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 10,
+        "y": 7
+      },
+      {
+        "x": 10,
+        "y": 8
+      },
+      {
+        "x": 10,
+        "y": 9
+      },
+      {
+        "x": 10,
+        "y": 10
+      }
+    ],
+    "snakes": [
+      {
+        "id": "gs_jMRmdXgt7FbcdKxbK4qBvYmD",
+        "name": "Hovering Hobbs",
+        "health": 46,
+        "body": [
+          {
+            "x": 1,
+            "y": 7
+          },
+          {
+            "x": 1,
+            "y": 8
+          },
+          {
+            "x": 0,
+            "y": 8
+          },
+          {
+            "x": 0,
+            "y": 9
+          },
+          {
+            "x": 1,
+            "y": 9
+          },
+          {
+            "x": 1,
+            "y": 10
+          },
+          {
+            "x": 2,
+            "y": 10
+          }
+        ],
+        "latency": "455",
+        "head": {
+          "x": 1,
+          "y": 7
+        },
+        "length": 7,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#da8a1a",
+          "head": "beach-puffin-special",
+          "tail": "beach-puffin-special"
+        }
+      },
+      {
+        "id": "gs_XxVcV7tDXTJmxqmymDp8rmw4",
+        "name": "#!/bin/shnake",
+        "health": 43,
+        "body": [
+          {
+            "x": 4,
+            "y": 6
+          },
+          {
+            "x": 4,
+            "y": 5
+          },
+          {
+            "x": 5,
+            "y": 5
+          },
+          {
+            "x": 6,
+            "y": 5
+          },
+          {
+            "x": 7,
+            "y": 5
+          },
+          {
+            "x": 8,
+            "y": 5
+          },
+          {
+            "x": 9,
+            "y": 5
+          },
+          {
+            "x": 9,
+            "y": 4
+          },
+          {
+            "x": 9,
+            "y": 3
+          },
+          {
+            "x": 8,
+            "y": 3
+          },
+          {
+            "x": 8,
+            "y": 4
+          },
+          {
+            "x": 7,
+            "y": 4
+          }
+        ],
+        "latency": "277",
+        "head": {
+          "x": 4,
+          "y": 6
+        },
+        "length": 12,
+        "shout": "Somebody help me, yeah (ah, ah, ah)",
+        "squad": "",
+        "customizations": {
+          "color": "#2d3a3e",
+          "head": "sleepy",
+          "tail": "wave"
+        }
+      },
+      {
+        "id": "gs_3jwFfTYkXcW7YdBFBBCQgDQf",
+        "name": "Spaceheater 3: Thermal Throttling",
+        "health": 47,
+        "body": [
+          {
+            "x": 4,
+            "y": 10
+          },
+          {
+            "x": 4,
+            "y": 0
+          },
+          {
+            "x": 3,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 1
+          },
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 2,
+            "y": 3
+          },
+          {
+            "x": 2,
+            "y": 4
+          },
+          {
+            "x": 3,
+            "y": 4
+          },
+          {
+            "x": 3,
+            "y": 5
+          }
+        ],
+        "latency": "458",
+        "head": {
+          "x": 4,
+          "y": 10
+        },
+        "length": 10,
+        "shout": "alive=true, kills=0, tiles=20, turns=122",
+        "squad": "",
+        "customizations": {
+          "color": "#b54d47",
+          "head": "scarf",
+          "tail": "rocket"
+        }
+      }
+    ]
+  },
+  "you": {
+    "id": "gs_3jwFfTYkXcW7YdBFBBCQgDQf",
+    "name": "Spaceheater 3: Thermal Throttling",
+    "health": 47,
+    "body": [
+      {
+        "x": 4,
+        "y": 10
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 1
+      },
+      {
+        "x": 2,
+        "y": 2
+      },
+      {
+        "x": 2,
+        "y": 3
+      },
+      {
+        "x": 2,
+        "y": 4
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 3,
+        "y": 5
+      }
+    ],
+    "latency": "458",
+    "head": {
+      "x": 4,
+      "y": 10
+    },
+    "length": 10,
+    "shout": "alive=true, kills=0, tiles=20, turns=122",
+    "squad": "",
+    "customizations": {
+      "color": "#b54d47",
+      "head": "scarf",
+      "tail": "rocket"
+    }
+  }
+}
