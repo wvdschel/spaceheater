@@ -26,6 +26,7 @@ pub enum GameMode {
     Constrictor,
     Wrapped,
     Royale,
+    Solo,
 }
 
 impl Game {
@@ -252,6 +253,7 @@ impl From<&protocol::Ruleset> for Rules {
                 "standard" => GameMode::Standard,
                 "royale" => GameMode::Royale,
                 "wrapped" => GameMode::Wrapped,
+                "solo" => GameMode::Solo,
                 _ => {
                     println!("unknown game mode: {}", r.name);
                     GameMode::Standard

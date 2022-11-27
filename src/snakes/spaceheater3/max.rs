@@ -90,10 +90,9 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
             for my_dir in ALL_DIRECTIONS {
                 let mut my_pos = self.game.you.head.neighbour(my_dir);
                 self.game.warp(&mut my_pos);
-                if certain_death(&self.game, &self.game.you, &my_pos) {
-                    continue;
+                if !certain_death(&self.game, &self.game.you, &my_pos) {
+                    self.children.push(MinimizingNode::new(my_dir));
                 }
-                self.children.push(MinimizingNode::new(my_dir));
             }
         } else {
             self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2))

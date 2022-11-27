@@ -13,6 +13,9 @@ name = "topsnek-server"
 name = "bench-spaceheater"
 
 [[bin]]
+name = "bench-spaceheater3-parallel"
+
+[[bin]]
 name = "replay"
 
 [[bench]]

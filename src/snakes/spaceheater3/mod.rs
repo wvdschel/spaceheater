@@ -14,9 +14,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-mod max;
-mod min;
-mod parallel;
+pub mod max;
+pub mod min;
+pub mod parallel;
 mod util;
 
 pub const DEFAULT_COLOR: &str = "#b54d47";
@@ -61,7 +61,7 @@ where
         let turn = game.turn;
 
         let base_depth = match enemy_count {
-            0 => 3,
+            0 => 5,
             1 => 3,
             2 => 2,
             3 => 2,
@@ -77,7 +77,7 @@ where
         );
 
         let mut best_score = None;
-        let mut last_node_count = 0;
+        let mut last_score = None;
         for current_depth in base_depth..max_depth {
             println!(
                 "turn {}: {}ms: starting depth {}",
@@ -132,7 +132,7 @@ where
                     break;
                 }
             }
-            if node_count == last_node_count {
+            if last_score >= best_score.as_ref().map(|s| s.1.clone()) {
                 println!(
                     "turn {}: {}ms: tree completed at depth {}",
                     turn,
@@ -141,7 +141,7 @@ where
                 );
                 break;
             }
-            last_node_count = node_count;
+            last_score = best_score.as_ref().map(|s| s.1.clone())
         }
 
         let statm = procinfo::pid::statm_self().unwrap();

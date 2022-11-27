@@ -142,7 +142,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
                 max_leaf_nodes_min_node(self.game.others.len(), max_depth - 1);
             let target_leaves = (LEAVES_PER_THREAD as f32 * threads).round() as usize;
 
-            if leaves_per_child >= target_leaves && next_leaves_per_child < target_leaves {
+            if leaves_per_child > target_leaves && next_leaves_per_child <= target_leaves {
                 should_fork = true;
                 threads_per_child = threads / self.children.len() as f32;
             }

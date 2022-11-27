@@ -41,7 +41,7 @@ impl Game {
         }
     }
 
-    pub fn load(source: &mut dyn std::io::Read) -> std::result::Result<Game, String> {
+    pub fn load<I: std::io::Read>(source: &mut I) -> std::result::Result<Game, String> {
         let mut buf = Vec::<u8>::new();
         into_result(source.read_to_end(&mut buf))?;
 
