@@ -36,7 +36,7 @@ fn load_all_moves_by_snake_count() -> HashMap<usize, Vec<Game>> {
 
 macro_rules! generate_datafile {
     // `()` indicates that the macro takes no argument.
-    ($games:expr, $enemies:expr, $base_depth:expr, $leaves:literal) => {
+    ($games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal) => {
         let mut file = File::create(format!("measurements/{:02}_enemies_{}.dat", $enemies, $leaves)).unwrap();
         print!("{:10}: ", $leaves);
         for (idx, g) in $games.iter().enumerate() {
@@ -53,7 +53,8 @@ macro_rules! generate_datafile {
                 );
                 let curr_score = res.as_ref().map(|s| s.1);
                 if curr_score == None || best_score >= curr_score {
-                    file.write_all(format!("{} {}\n", idx, max_depth).as_bytes())
+                    let depth_diff = max_depth as isize - $base_depths[idx];
+                    file.write_all(format!("{} {}\n", idx, depth_diff).as_bytes())
                         .unwrap();
                     break;
                 }
@@ -65,14 +66,14 @@ macro_rules! generate_datafile {
         println!();
 
     };
-    ($games:expr, $enemies:expr, $base_depth:expr, $leaves:literal, $($other_leaves:literal),+) => {
-        generate_datafile!($games, $enemies, $base_depth, $leaves);
-        generate_datafile!($games, $enemies, $base_depth, $($other_leaves),+);
+    ($games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal, $($other_leaves:literal),+) => {
+        generate_datafile!($games, $enemies, $base_depth, $base_depths, $leaves);
+        generate_datafile!($games, $enemies, $base_depth, $base_depths, $($other_leaves),+);
     };
 }
 
-const TIMEOUT: Duration = Duration::from_millis(500);
-const MAX_GAMES: usize = 500;
+const TIMEOUT: Duration = Duration::from_millis(400);
+const MAX_GAMES: usize = 1000;
 
 fn main() {
     let all_moves = load_all_moves_by_snake_count();
@@ -104,10 +105,9 @@ fn main() {
             games.clone()
         };
 
-        let mut file =
-            File::create(format!("measurements/{:02}_enemies_base.dat", snake_count)).unwrap();
+        let mut base_depths = vec![];
         print!("{:10}: ", "base");
-        for (idx, g) in games.iter().enumerate() {
+        for g in &games {
             let mut root = MaximizingNode::<scoring::tournament::TournamentScore>::new(g.clone());
 
             let mut best_score = None;
@@ -121,8 +121,7 @@ fn main() {
                 );
                 let curr_score = res.as_ref().map(|s| s.1);
                 if curr_score == None || best_score == curr_score {
-                    file.write_all(format!("{} {}\n", idx, max_depth).as_bytes())
-                        .unwrap();
+                    base_depths.push(max_depth as isize);
                     break;
                 }
                 best_score = curr_score;
@@ -136,12 +135,12 @@ fn main() {
             games,
             snake_count,
             base_depth,
-            8_000,
+            base_depths,
+            5_000,
+            10_000,
             20_000,
             50_000,
-            100_000,
-            200_000,
-            500_000
+            100_000
         );
 
         let mut plot_file =
@@ -155,16 +154,12 @@ fn main() {
                 .as_bytes(),
             )
             .unwrap();
-        plot_file
-            .write_all(
-                format!("plot '{:02}_enemies_base.dat' title 'base'", snake_count).as_bytes(),
-            )
-            .unwrap();
-        for leaves in [8_000, 20_000, 50_000, 100_000, 200_000, 500_000] {
+        plot_file.write_all("plot".as_bytes()).unwrap();
+        for leaves in [5_000, 10_000, 20_000, 50_000, 100_000] {
             plot_file
                 .write_all(
                     format!(
-                        ", '{:02}_enemies_{}.dat' title 'leaves={}'",
+                        " '{:02}_enemies_{}.dat' title 'leaves={}',",
                         snake_count, leaves, leaves,
                     )
                     .as_bytes(),

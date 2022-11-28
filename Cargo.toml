@@ -18,6 +18,9 @@ name = "bench-spaceheater3-parallel"
 [[bin]]
 name = "replay"
 
+[[bin]]
+name = "fork"
+
 [[bench]]
 name = "scoring"
 harness = false
