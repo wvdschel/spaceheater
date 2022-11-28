@@ -1,3 +1,0 @@
-set terminal png size 1920,1080
-set output '06_enemies.png'
-plot '06_enemies_base.dat' title 'base', '06_enemies_2000.dat' title 'leaves=2000', '06_enemies_8000.dat' title 'leaves=8000', '06_enemies_20000.dat' title 'leaves=20000', '06_enemies_50000.dat' title 'leaves=50000', '06_enemies_100000.dat' title 'leaves=100000', '06_enemies_200000.dat' title 'leaves=200000', '06_enemies_500000.dat' title 'leaves=500000'
