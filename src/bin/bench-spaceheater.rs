@@ -35,7 +35,7 @@ fn main() {
         .unwrap_or(replay.moves.len())
         .min(replay.moves.len());
 
-    for (idx, snake) in [seq_snake, par_snake].iter().enumerate() {
+    for (idx, snake) in [par_snake, seq_snake].iter().enumerate() {
         let start_request = &replay.start_request;
         println!(
             "Snake {}: running game {}: {}, {} snakes, {}x{}, turn {} up to {}",

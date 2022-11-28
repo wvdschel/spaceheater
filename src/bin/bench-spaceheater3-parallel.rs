@@ -44,7 +44,7 @@ macro_rules! generate_datafile {
 
             let mut best_score = None;
             for max_depth in ($base_depth + 1)..usize::MAX {
-                let (res, _) = root.par_solve::<_, 100>(
+                let (res, _) = root.par_solve::<_, $leaves, 1024>(
                     &(Instant::now() + TIMEOUT),
                     max_depth,
                     &scoring::tournament::tournament,
@@ -77,7 +77,11 @@ const MAX_GAMES: usize = 500;
 fn main() {
     let all_moves = load_all_moves_by_snake_count();
 
-    for (snake_count, games) in all_moves.iter() {
+    let mut keys = Vec::from_iter(all_moves.keys());
+    keys.sort();
+
+    for snake_count in keys {
+        let games = all_moves.get(snake_count).unwrap();
         println!("turns with {} other snakes: {}", snake_count, games.len());
 
         let base_depth = match snake_count {
@@ -116,7 +120,7 @@ fn main() {
                     None,
                 );
                 let curr_score = res.as_ref().map(|s| s.1);
-                if curr_score == None || best_score >= curr_score {
+                if curr_score == None || best_score == curr_score {
                     file.write_all(format!("{} {}\n", idx, max_depth).as_bytes())
                         .unwrap();
                     break;
@@ -132,7 +136,6 @@ fn main() {
             games,
             snake_count,
             base_depth,
-            2_000,
             8_000,
             20_000,
             50_000,
@@ -157,7 +160,7 @@ fn main() {
                 format!("plot '{:02}_enemies_base.dat' title 'base'", snake_count).as_bytes(),
             )
             .unwrap();
-        for leaves in [2_000, 8_000, 20_000, 50_000, 100_000, 200_000, 500_000] {
+        for leaves in [8_000, 20_000, 50_000, 100_000, 200_000, 500_000] {
             plot_file
                 .write_all(
                     format!(

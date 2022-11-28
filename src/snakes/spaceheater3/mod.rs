@@ -22,7 +22,7 @@ mod util;
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
-const LATENCY_MARGIN: Duration = Duration::from_millis(75);
+const LATENCY_MARGIN: Duration = Duration::from_millis(100);
 
 pub struct Spaceheater3<Fscore, S>
 where
@@ -94,7 +94,7 @@ where
                 thread::spawn(move || {
                     let mut root = MaximizingNode::new(game);
                     let (res, node_count) = if parallel {
-                        root.par_solve::<Fscore, 200_000>(
+                        root.par_solve::<Fscore, 200_000, 8192>(
                             &deadline,
                             current_depth,
                             &score_fn,
@@ -132,7 +132,7 @@ where
                     break;
                 }
             }
-            if last_score >= best_score.as_ref().map(|s| s.1.clone()) {
+            if last_score == best_score.as_ref().map(|s| s.1.clone()) {
                 println!(
                     "turn {}: {}ms: tree completed at depth {}",
                     turn,
