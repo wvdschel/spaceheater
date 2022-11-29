@@ -19,8 +19,7 @@ fn main() {
 
     let replay = load_replay();
 
-    //let par_snake = snakes::Spaceheater3::new(scoring::tournament_score, None, true);
-    let seq_snake = snakes::Spaceheater3::new(scoring::tournament_score, None, false);
+    let snake = snakes::Spaceheater3::new(scoring::tournament_score, None);
 
     let mut args = std::env::args();
     args.next();
@@ -35,36 +34,32 @@ fn main() {
         .unwrap_or(replay.moves.len())
         .min(replay.moves.len());
 
-    for (idx, snake) in [/*par_snake,*/ seq_snake].iter().enumerate() {
-        let start_request = &replay.start_request;
+    let start_request = &replay.start_request;
+    println!(
+        "running game {}: {}, {} snakes, {}x{}, turn {} up to {}",
+        start_request.game.id,
+        start_request.game.map,
+        start_request.board.snakes.len(),
+        start_request.board.width,
+        start_request.board.height,
+        first_turn,
+        last_turn
+    );
+    for (req, _) in &replay.moves[first_turn..last_turn] {
+        let start = Instant::now();
+        let res = snake.make_move(req);
+        let duration = start.elapsed();
         println!(
-            "Snake {}: running game {}: {}, {} snakes, {}x{}, turn {} up to {}",
-            idx,
-            start_request.game.id,
-            start_request.game.map,
-            start_request.board.snakes.len(),
-            start_request.board.width,
-            start_request.board.height,
-            first_turn,
-            last_turn
+            "solved turn {} in {} ms: {}",
+            req.turn,
+            duration.as_millis(),
+            res.map_or("error".to_string(), |r| format!(
+                "{} {}",
+                r.direction, r.shout
+            )),
         );
-        for (req, _) in &replay.moves[first_turn..last_turn] {
-            let start = Instant::now();
-            let res = snake.make_move(req);
-            let duration = start.elapsed();
-            println!(
-                "Snake {}: solved turn {} in {} ms: {}",
-                idx,
-                req.turn,
-                duration.as_millis(),
-                res.map_or("error".to_string(), |r| format!(
-                    "{} {}",
-                    r.direction, r.shout
-                )),
-            );
-        }
-        println!("{}", "=".repeat(80));
     }
+    println!("{}", "=".repeat(80));
 
     #[cfg(feature = "profiling")]
     {

@@ -1,11 +1,21 @@
-use std::{cmp, fmt::Display, time::Instant};
+use rayon::prelude::*;
+
+use std::{
+    cmp,
+    fmt::Display,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, RwLock,
+    },
+    time::Instant,
+};
 
 use crate::{
     logic::{Direction, Game},
     util::invert::invert,
 };
 
-use super::{max::MaximizingNode, util::all_sensible_enemy_moves};
+use super::{alphabeta::AlphaBeta, max::MaximizingNode, util::all_sensible_enemy_moves};
 
 pub struct MinimizingNode<S: Ord + Display + Clone + 'static> {
     pub my_move: Direction,
@@ -20,61 +30,6 @@ impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
             score: None,
             children: vec![],
         }
-    }
-
-    pub fn solve<FScore>(
-        &mut self,
-        game: &Game,
-        deadline: &Instant,
-        max_depth: usize,
-        score_fn: &FScore,
-        alpha: Option<S>,
-        beta: Option<S>,
-    ) -> (Option<S>, usize)
-    where
-        FScore: Fn(&Game) -> S,
-    {
-        self.update_children(game);
-
-        let mut min_score = None;
-        let mut beta = beta;
-        let mut total_node_count = 0;
-        for max_node in &mut self.children {
-            let (next_score, node_count) = max_node.solve(
-                deadline,
-                max_depth - 1,
-                score_fn,
-                alpha.clone(),
-                beta.clone(),
-            );
-
-            let next_score = next_score.map(|r| r.1);
-
-            total_node_count += node_count;
-
-            if next_score == None {
-                return (None, total_node_count); // Deadline exceeded
-            }
-
-            if min_score != None {
-                min_score = cmp::min(min_score, next_score.clone());
-            } else {
-                min_score = next_score.clone();
-            }
-            if beta != None {
-                beta = cmp::min(beta, next_score);
-            } else {
-                beta = next_score;
-            }
-            if beta != None {
-                if alpha > beta {
-                    break;
-                }
-            }
-        }
-
-        self.score = min_score.clone();
-        (min_score, total_node_count)
     }
 
     pub fn cmp_scores(&self, other: &Self) -> cmp::Ordering {
@@ -134,5 +89,75 @@ impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
             len += c.len()
         }
         len
+    }
+}
+
+impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MinimizingNode<S> {
+    pub fn solve<FScore>(
+        &mut self,
+        game: Arc<&Game>,
+        deadline: &Instant,
+        max_depth: usize,
+        score_fn: &FScore,
+        alpha_beta: &AlphaBeta<'_, S>,
+        threads: f32,
+    ) -> (Option<S>, usize)
+    where
+        FScore: Fn(&Game) -> S + Sync,
+    {
+        let game = *game.as_ref();
+
+        self.update_children(game);
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
+
+        let min_score: RwLock<Option<S>> = RwLock::new(None);
+        let alpha_beta = alpha_beta.new_child();
+        let total_node_count = AtomicUsize::new(0);
+
+        let solver = |max_node: &mut MaximizingNode<S>| {
+            if alpha_beta.should_be_pruned() {
+                return;
+            }
+
+            let (next_score, node_count) =
+                max_node.solve(deadline, max_depth - 1, score_fn, &alpha_beta, threads);
+
+            let next_score = if let Some(s) = next_score {
+                s.1
+            } else {
+                return; // Deadline exceeded
+            };
+
+            total_node_count.fetch_add(node_count, Ordering::Relaxed);
+
+            let mut min_score_write = min_score.write().unwrap();
+            if *min_score_write != None {
+                *min_score_write =
+                    Some(cmp::min(min_score_write.as_ref().unwrap(), &next_score).clone());
+            } else {
+                *min_score_write = Some(next_score.clone());
+            }
+
+            alpha_beta.new_beta_score(next_score);
+        };
+
+        if parallel {
+            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        } else {
+            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
+        }
+
+        if Instant::now() > *deadline {
+            // deadline exceeded
+            return (None, total_node_count.load(Ordering::Relaxed));
+        }
+
+        let min_score = min_score.read().unwrap().clone();
+        self.score = min_score.clone();
+        (min_score, total_node_count.load(Ordering::Relaxed))
     }
 }

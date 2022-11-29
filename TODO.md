@@ -1,6 +1,5 @@
 # Spaceheater
 # Weird choices to debug
-- b9fda03d-aea8-4527-a429-48de38d55428 -> turn 107 why not right?
 - 24608440-0def-4078-a455-a97f47a7650d -> turn 444 why not left?
 - 25fd80a3-f806-4a49-a45e-d8769e0279dd -> turn 175 why up? Maybe mistake was made earlier?
 - 5dcd3011-8df8-413d-b94e-d47281a0ca87 -> turn 139 why not up?
@@ -19,7 +18,7 @@ Create flamegraph.svg:
 - Must eat more
 
 # Bugs
-- "All paths are certain death, just score this board and return" -> Is this valid? This might lead to the min-max algorithm considering this as an "alive" branch.
+- "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
 
 # Performance
 - stop evaluating when the algorithm reaches game over in all branches

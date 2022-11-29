@@ -14,9 +14,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub mod alphabeta;
 pub mod max;
 pub mod min;
-pub mod parallel;
 mod util;
 
 pub const DEFAULT_COLOR: &str = "#b54d47";
@@ -31,7 +31,6 @@ where
 {
     score_fn: Fscore,
     customizations: Customizations,
-    parallel: bool,
 }
 
 impl<Fscore, S> Spaceheater3<Fscore, S>
@@ -39,7 +38,7 @@ where
     Fscore: Fn(&Game) -> S + Sync + Send + Clone + 'static,
     S: Ord + Display + Clone + Sync + Send + 'static,
 {
-    pub fn new(score_fn: Fscore, customizations: Option<Customizations>, parallel: bool) -> Self {
+    pub fn new(score_fn: Fscore, customizations: Option<Customizations>) -> Self {
         Self {
             score_fn,
             customizations: customizations.unwrap_or(Customizations {
@@ -47,7 +46,6 @@ where
                 head: DEFAULT_HEAD.into(),
                 tail: DEFAULT_TAIL.into(),
             }),
-            parallel,
         }
     }
 
@@ -88,22 +86,17 @@ where
             let (tx, rx) = channel();
             {
                 let score_fn = self.score_fn.clone();
-                let parallel = self.parallel;
                 let deadline = deadline.clone();
                 let game = game.clone();
                 thread::spawn(move || {
                     let mut root = MaximizingNode::new(game);
-                    let (res, node_count) = if parallel {
-                        root.par_solve(
-                            &deadline,
-                            current_depth,
-                            &score_fn,
-                            &parallel::AlphaBeta::new(None, None),
-                            thread_count() as f32,
-                        )
-                    } else {
-                        root.solve(&deadline, current_depth, &score_fn, None, None)
-                    };
+                    let (res, node_count) = root.solve(
+                        &deadline,
+                        current_depth,
+                        &score_fn,
+                        &alphabeta::AlphaBeta::new(None, None),
+                        thread_count() as f32,
+                    );
                     let _ = tx.send((res, node_count));
                     log!("complete tree for depth {}:\n{}", current_depth, root);
                 });

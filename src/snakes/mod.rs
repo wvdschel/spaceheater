@@ -19,19 +19,6 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
                 head: "smile".to_string(),
                 tail: "nr-booster".to_string(),
             }),
-            false,
-        )),
-    );
-    snakes.insert(
-        "spaceheater3_mc".to_string(),
-        Box::new(Spaceheater3::new(
-            logic::scoring::tournament_score,
-            Some(Customizations {
-                color: "#FF2400".to_string(),
-                head: "workout".to_string(),
-                tail: "rocket".to_string(),
-            }),
-            true,
         )),
     );
 

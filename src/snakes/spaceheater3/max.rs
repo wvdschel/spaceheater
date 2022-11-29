@@ -1,11 +1,21 @@
-use std::{cmp, fmt::Display, time::Instant};
+use rayon::prelude::*;
+
+use std::{
+    cmp,
+    fmt::Display,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, RwLock,
+    },
+    time::Instant,
+};
 
 use crate::{
     logic::{Direction, Game},
     protocol::ALL_DIRECTIONS,
 };
 
-use super::{min::MinimizingNode, util::certain_death};
+use super::{alphabeta::AlphaBeta, min::MinimizingNode, util::certain_death};
 
 pub struct MaximizingNode<S: Ord + Display + Clone + 'static> {
     pub(super) game: Game,
@@ -22,71 +32,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
         }
     }
 
-    pub fn solve<FScore>(
-        &mut self,
-        deadline: &Instant,
-        max_depth: usize,
-        score_fn: &FScore,
-        alpha: Option<S>,
-        beta: Option<S>,
-    ) -> (Option<(Direction, S)>, usize)
-    where
-        FScore: Fn(&Game) -> S,
-    {
-        if Instant::now() > *deadline {
-            return (None, 0);
-        }
-
-        if self.check_bounds(max_depth, score_fn) {
-            return (self.score.clone(), 1);
-        }
-
-        self.update_children();
-
-        if self.children.len() == 0 {
-            // All paths are certain death, just score this board and return
-            self.game.execute_moves(Direction::Up, &vec![]);
-            let score = score_fn(&self.game);
-            self.score = Some((Direction::Up, score));
-            return (self.score.clone(), 1);
-        }
-
-        let mut best_dir = Direction::Up;
-        let mut max_score = None;
-        let mut alpha = alpha;
-        let mut total_node_count = 0;
-        for min_node in &mut self.children {
-            let (next_score, node_count) = min_node.solve(
-                &mut self.game,
-                deadline,
-                max_depth,
-                score_fn,
-                alpha.clone(),
-                beta.clone(),
-            );
-            total_node_count += node_count;
-
-            if next_score == None {
-                return (None, total_node_count); // Deadline exceeded
-            }
-
-            if max_score < next_score {
-                best_dir = min_node.my_move;
-                max_score = next_score.clone()
-            }
-            alpha = cmp::max(alpha, next_score);
-            if beta != None {
-                if alpha > beta {
-                    break;
-                }
-            }
-        }
-
-        self.score = max_score.map(|s| (best_dir, s));
-        (self.score.clone(), total_node_count)
-    }
-
-    pub(super) fn update_children(&mut self) {
+    fn update_children(&mut self) {
         if self.children.len() == 0 {
             for my_dir in ALL_DIRECTIONS {
                 let mut my_pos = self.game.you.head.neighbour(my_dir);
@@ -100,7 +46,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
         }
     }
 
-    pub(super) fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
+    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
     where
         FScore: Fn(&Game) -> S,
     {
@@ -164,6 +110,96 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
             len += c.len()
         }
         len
+    }
+}
+
+impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
+    pub fn solve<FScore>(
+        &mut self,
+        deadline: &Instant,
+        max_depth: usize,
+        score_fn: &FScore,
+        alpha_beta: &AlphaBeta<'_, S>,
+        threads: f32,
+    ) -> (Option<(Direction, S)>, usize)
+    where
+        FScore: Fn(&Game) -> S + Sync,
+    {
+        if Instant::now() > *deadline {
+            return (None, 0);
+        }
+        if self.check_bounds(max_depth, score_fn) {
+            return (self.score.clone(), 1);
+        }
+        self.update_children();
+
+        if self.children.len() == 0 {
+            // All paths are certain death, just score this board and return
+            self.game.execute_moves(Direction::Up, &vec![]);
+            let score = score_fn(&self.game);
+            self.score = Some((Direction::Up, score));
+            return (self.score.clone(), 1);
+        }
+
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
+
+        let game = Arc::new(&self.game);
+        let top_score = RwLock::new((Direction::Up, None));
+        let alpha_beta = alpha_beta.new_child();
+        let total_node_count = AtomicUsize::new(0);
+
+        let solver = |min_node: &mut MinimizingNode<S>| {
+            if alpha_beta.should_be_pruned() {
+                return;
+            }
+
+            let (next_score, node_count) = min_node.solve(
+                game.clone(),
+                deadline,
+                max_depth,
+                score_fn,
+                &alpha_beta,
+                threads,
+            );
+            total_node_count.fetch_add(node_count, Ordering::Relaxed);
+
+            if next_score == None {
+                return; // Deadline exceeded
+            }
+
+            let top_score_read = top_score.read().unwrap();
+            let new_max_score = top_score_read.1 < next_score;
+            drop(top_score_read);
+
+            if new_max_score {
+                let mut top_score_write = top_score.write().unwrap();
+                if top_score_write.1 < next_score {
+                    *top_score_write = (min_node.my_move, next_score.clone());
+                }
+            }
+
+            alpha_beta.new_alpha_score(next_score.unwrap());
+        };
+        if parallel {
+            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        } else {
+            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
+        }
+
+        if Instant::now() > *deadline {
+            // deadline exceeded
+            return (None, total_node_count.load(Ordering::Relaxed));
+        }
+
+        let (top_move, top_score) = top_score.read().unwrap().clone();
+        return (
+            top_score.map(|s| (top_move, s)),
+            total_node_count.load(Ordering::Relaxed),
+        );
     }
 }
 
