@@ -7,8 +7,8 @@ use std::{
 
 use topsnek::{
     logic::{scoring, Game},
-    snakes::spaceheater3::{max::MaximizingNode, parallel::AlphaBeta},
-    util::{gamelogger, thread_count},
+    snakes::spaceheater3::max::MaximizingNode,
+    util::gamelogger,
 };
 
 fn load_all_moves_by_snake_count() -> HashMap<usize, Vec<Game>> {
@@ -32,44 +32,6 @@ fn load_all_moves_by_snake_count() -> HashMap<usize, Vec<Game>> {
     }
 
     res
-}
-
-macro_rules! generate_datafile {
-    // `()` indicates that the macro takes no argument.
-    ($max_seq:literal, $offset:expr, $games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal) => {
-        let mut file = File::create(format!("measurements/{:02}_enemies_{}_{}.dat", $enemies, $leaves, $max_seq)).unwrap();
-        print!("{:10}: ", $leaves);
-        for (idx, g) in $games.iter().enumerate() {
-            let mut root = MaximizingNode::<scoring::tournament::TournamentScore>::new(g.clone());
-
-            let mut best_score = None;
-            for max_depth in ($base_depth + 1)..usize::MAX {
-                let (res, _) = root.par_solve::<_, $leaves, $max_seq>(
-                    &(Instant::now() + TIMEOUT),
-                    max_depth,
-                    &scoring::tournament::tournament,
-                    &AlphaBeta::new(None, None),
-                    thread_count() as f32,
-                );
-                let curr_score = res.as_ref().map(|s| s.1);
-                if curr_score == None || best_score >= curr_score {
-                    let depth_diff = max_depth as isize - $base_depths[idx];
-                    file.write_all(format!("{} {}\n", idx*10 + $offset, depth_diff).as_bytes())
-                        .unwrap();
-                    break;
-                }
-                best_score = curr_score;
-            }
-            print!(".");
-            io::stdout().flush().unwrap();
-        }
-        println!();
-
-    };
-    ($max_seq:literal, $offset:expr, $games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal, $($other_leaves:literal),+) => {
-        generate_datafile!($max_seq, $offset, $games, $enemies, $base_depth, $base_depths, $leaves);
-        generate_datafile!($max_seq, $offset + 1, $games, $enemies, $base_depth, $base_depths, $($other_leaves),+);
-    };
 }
 
 const TIMEOUT: Duration = Duration::from_millis(400);
@@ -130,51 +92,6 @@ fn main() {
             io::stdout().flush().unwrap();
         }
         println!();
-
-        generate_datafile!(
-            2048,
-            0,
-            games,
-            snake_count,
-            base_depth,
-            base_depths,
-            10_000,
-            20_000,
-            50_000,
-            100_000,
-            200_000,
-            500_000
-        );
-
-        generate_datafile!(
-            10000,
-            0,
-            games,
-            snake_count,
-            base_depth,
-            base_depths,
-            10_000,
-            20_000,
-            50_000,
-            100_000,
-            200_000,
-            500_000
-        );
-
-        generate_datafile!(
-            20000,
-            0,
-            games,
-            snake_count,
-            base_depth,
-            base_depths,
-            10_000,
-            20_000,
-            50_000,
-            100_000,
-            200_000,
-            500_000
-        );
 
         for max_seq in [2048, 10000, 20000] {
             let mut plot_file = File::create(format!(
