@@ -28,3 +28,23 @@ pub fn tournament(game: &Game) -> TournamentScore {
         turns: turns_survived(game),
     }
 }
+
+#[test]
+fn test_weird_choice() {
+    // best move is Right with score alive=true, kills=0, tiles=1, turns=109
+    // best move is Left with score alive=false, kills=1, tiles=0, turns=108
+    let s1 = TournamentScore {
+        alive: true,
+        kills: 0,
+        tiles: 1,
+        turns: 109,
+    };
+    let s2 = TournamentScore {
+        alive: false,
+        kills: 1,
+        tiles: 0,
+        turns: 108,
+    };
+
+    assert_eq!(s1 > s2, true);
+}

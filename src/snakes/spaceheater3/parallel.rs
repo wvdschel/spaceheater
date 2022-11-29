@@ -116,6 +116,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
 
         if self.children.len() == 0 {
             // All paths are certain death, just score this board and return
+            self.game.execute_moves(Direction::Up, &vec![]);
             let score = score_fn(&self.game);
             self.score = Some((Direction::Up, score));
             return (self.score.clone(), 1);

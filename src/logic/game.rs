@@ -134,22 +134,24 @@ impl Game {
     }
 
     fn eliminate_dead_snakes(&mut self, new_board: &mut Board) {
+        let mut dead_snakes = 0;
         let mut crash_sites = vec![];
         if self.you.dead() {
             self.you.remove_from_board(new_board);
             crash_sites.push(self.you.head.clone());
-            self.dead_snakes += 1;
+            dead_snakes += 1;
         }
         self.others.retain(|snake| {
             if snake.dead() {
                 snake.remove_from_board(new_board);
                 crash_sites.push(snake.head.clone());
-                self.dead_snakes += 1;
+                dead_snakes += 1;
                 false
             } else {
                 true
             }
         });
+        self.dead_snakes = dead_snakes;
         self.repair_crash_sites(&crash_sites, new_board);
     }
 
