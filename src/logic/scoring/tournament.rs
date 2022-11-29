@@ -20,9 +20,10 @@ impl std::fmt::Display for TournamentScore {
 }
 
 pub fn tournament(game: &Game) -> TournamentScore {
+    let dead = game.you.dead();
     TournamentScore {
-        alive: !game.you.dead(),
-        tiles: voronoi::me(game),
+        alive: !dead,
+        tiles: if !dead { voronoi::me(game) } else { 0 },
         kills: kills(game),
         turns: turns_survived(game),
     }

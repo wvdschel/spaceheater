@@ -22,7 +22,6 @@ Create flamegraph.svg:
 - multi core computation: tune algorithm for map size / enemy count
 - multi core: calculate leaf node count after generating/updating child nodes?
 - const usize type paramter for board sizes?
-- if mode is not solo, score and return on minimzing nodes with no live enemies
 
 # Game logic
 ## Unsupported game features
