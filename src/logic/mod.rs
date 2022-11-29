@@ -9,7 +9,7 @@ pub mod voronoi;
 mod board;
 pub use board::Board;
 
-mod game;
+pub mod game;
 pub use game::Game;
 
 mod point;

@@ -100,7 +100,6 @@ where
                             &score_fn,
                             &parallel::AlphaBeta::new(None, None),
                             thread_count() as f32,
-                            0,
                         )
                     } else {
                         root.solve(&deadline, current_depth, &score_fn, None, None)

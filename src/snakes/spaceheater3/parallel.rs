@@ -102,7 +102,6 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
         threads: f32,
-        last_fork_depth: usize,
     ) -> (Option<(Direction, S)>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -145,7 +144,6 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
                 score_fn,
                 &alpha_beta,
                 threads,
-                last_fork_depth,
             );
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
 
@@ -194,7 +192,6 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
         threads: f32,
-        last_fork_depth: usize,
     ) -> (Option<S>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -202,6 +199,11 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         let game = *game.as_ref();
 
         self.update_children(game);
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
 
         let min_score: RwLock<Option<S>> = RwLock::new(None);
         let alpha_beta = alpha_beta.new_child();
@@ -212,14 +214,8 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
                 return;
             }
 
-            let (next_score, node_count) = max_node.par_solve(
-                deadline,
-                max_depth - 1,
-                score_fn,
-                &alpha_beta,
-                threads,
-                last_fork_depth,
-            );
+            let (next_score, node_count) =
+                max_node.par_solve(deadline, max_depth - 1, score_fn, &alpha_beta, threads);
 
             let next_score = if let Some(s) = next_score {
                 s.1
@@ -240,8 +236,7 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
             alpha_beta.new_beta_score(next_score);
         };
 
-        if threads > 1f32 && max_depth == 1 && self.children.len() > 1024 {
-            // Last chance to spread work across cores, lots of work left to spread
+        if parallel {
             let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
         } else {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();

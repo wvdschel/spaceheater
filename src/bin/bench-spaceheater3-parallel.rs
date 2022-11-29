@@ -36,15 +36,15 @@ fn load_all_moves_by_snake_count() -> HashMap<usize, Vec<Game>> {
 
 macro_rules! generate_datafile {
     // `()` indicates that the macro takes no argument.
-    ($games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal) => {
-        let mut file = File::create(format!("measurements/{:02}_enemies_{}.dat", $enemies, $leaves)).unwrap();
+    ($max_seq:literal, $offset:expr, $games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal) => {
+        let mut file = File::create(format!("measurements/{:02}_enemies_{}_{}.dat", $enemies, $leaves, $max_seq)).unwrap();
         print!("{:10}: ", $leaves);
         for (idx, g) in $games.iter().enumerate() {
             let mut root = MaximizingNode::<scoring::tournament::TournamentScore>::new(g.clone());
 
             let mut best_score = None;
             for max_depth in ($base_depth + 1)..usize::MAX {
-                let (res, _) = root.par_solve::<_, $leaves, 1024>(
+                let (res, _) = root.par_solve::<_, $leaves, $max_seq>(
                     &(Instant::now() + TIMEOUT),
                     max_depth,
                     &scoring::tournament::tournament,
@@ -54,7 +54,7 @@ macro_rules! generate_datafile {
                 let curr_score = res.as_ref().map(|s| s.1);
                 if curr_score == None || best_score >= curr_score {
                     let depth_diff = max_depth as isize - $base_depths[idx];
-                    file.write_all(format!("{} {}\n", idx, depth_diff).as_bytes())
+                    file.write_all(format!("{} {}\n", idx*10 + $offset, depth_diff).as_bytes())
                         .unwrap();
                     break;
                 }
@@ -66,14 +66,14 @@ macro_rules! generate_datafile {
         println!();
 
     };
-    ($games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal, $($other_leaves:literal),+) => {
-        generate_datafile!($games, $enemies, $base_depth, $base_depths, $leaves);
-        generate_datafile!($games, $enemies, $base_depth, $base_depths, $($other_leaves),+);
+    ($max_seq:literal, $offset:expr, $games:expr, $enemies:expr, $base_depth:expr, $base_depths:expr, $leaves:literal, $($other_leaves:literal),+) => {
+        generate_datafile!($max_seq, $offset, $games, $enemies, $base_depth, $base_depths, $leaves);
+        generate_datafile!($max_seq, $offset + 1, $games, $enemies, $base_depth, $base_depths, $($other_leaves),+);
     };
 }
 
 const TIMEOUT: Duration = Duration::from_millis(400);
-const MAX_GAMES: usize = 1000;
+const MAX_GAMES: usize = 2000;
 
 fn main() {
     let all_moves = load_all_moves_by_snake_count();
@@ -132,39 +132,77 @@ fn main() {
         println!();
 
         generate_datafile!(
+            2048,
+            0,
             games,
             snake_count,
             base_depth,
             base_depths,
-            5_000,
             10_000,
             20_000,
             50_000,
-            100_000
+            100_000,
+            200_000,
+            500_000
         );
 
-        let mut plot_file =
-            File::create(format!("measurements/{:02}_enemies.gp", snake_count)).unwrap();
-        plot_file
-            .write_all(
-                format!(
-                    "set terminal png size 1920,1080\nset output '{:02}_enemies.png'\n",
-                    snake_count
-                )
-                .as_bytes(),
-            )
+        generate_datafile!(
+            10000,
+            0,
+            games,
+            snake_count,
+            base_depth,
+            base_depths,
+            10_000,
+            20_000,
+            50_000,
+            100_000,
+            200_000,
+            500_000
+        );
+
+        generate_datafile!(
+            20000,
+            0,
+            games,
+            snake_count,
+            base_depth,
+            base_depths,
+            10_000,
+            20_000,
+            50_000,
+            100_000,
+            200_000,
+            500_000
+        );
+
+        for max_seq in [2048, 10000, 20000] {
+            let mut plot_file = File::create(format!(
+                "measurements/{:02}_enemies_{}.gp",
+                snake_count, max_seq
+            ))
             .unwrap();
-        plot_file.write_all("plot".as_bytes()).unwrap();
-        for leaves in [5_000, 10_000, 20_000, 50_000, 100_000] {
             plot_file
                 .write_all(
                     format!(
-                        " '{:02}_enemies_{}.dat' title 'leaves={}',",
-                        snake_count, leaves, leaves,
+                        "set terminal pdfcairo\nset output '{:02}_enemies_{}.pdf'\n",
+                        snake_count, max_seq
                     )
                     .as_bytes(),
                 )
                 .unwrap();
+            plot_file.write_all("plot".as_bytes()).unwrap();
+            for leaves in [10_000, 20_000, 50_000, 100_000, 200_000, 500_000] {
+                plot_file
+                    .write_all(
+                        format!(
+                            " '{:02}_enemies_{}_{}.dat' title 'leaves={}' pointtype 2,",
+                            snake_count, leaves, max_seq, leaves,
+                        )
+                        .as_bytes(),
+                    )
+                    .unwrap();
+            }
         }
     }
 }

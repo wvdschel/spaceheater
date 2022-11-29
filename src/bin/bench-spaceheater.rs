@@ -20,7 +20,7 @@ fn main() {
     let replay = load_replay();
 
     let par_snake = snakes::Spaceheater3::new(scoring::tournament_score, None, true);
-    let seq_snake = snakes::Spaceheater3::new(scoring::tournament_score, None, false);
+    // let seq_snake = snakes::Spaceheater3::new(scoring::tournament_score, None, false);
 
     let mut args = std::env::args();
     args.next();
@@ -35,7 +35,7 @@ fn main() {
         .unwrap_or(replay.moves.len())
         .min(replay.moves.len());
 
-    for (idx, snake) in [par_snake, seq_snake].iter().enumerate() {
+    for (idx, snake) in [par_snake /*, seq_snake*/].iter().enumerate() {
         let start_request = &replay.start_request;
         println!(
             "Snake {}: running game {}: {}, {} snakes, {}x{}, turn {} up to {}",
