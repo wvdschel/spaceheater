@@ -94,12 +94,13 @@ where
                 thread::spawn(move || {
                     let mut root = MaximizingNode::new(game);
                     let (res, node_count) = if parallel {
-                        root.par_solve::<Fscore, 200_000, 2048>(
+                        root.par_solve(
                             &deadline,
                             current_depth,
                             &score_fn,
                             &parallel::AlphaBeta::new(None, None),
                             thread_count() as f32,
+                            0,
                         )
                     } else {
                         root.solve(&deadline, current_depth, &score_fn, None, None)

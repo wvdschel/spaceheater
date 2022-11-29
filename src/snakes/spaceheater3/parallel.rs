@@ -64,34 +64,6 @@ impl<'a, S: Ord + Clone> AlphaBeta<'a, S> {
         }
     }
 
-    fn max_alpha(&self) -> Option<S> {
-        let mut max_alpha = self.alpha.read().unwrap().clone();
-        let mut next = self;
-        while let Some(v) = next.parent {
-            let other_alpha = v.alpha.read().unwrap();
-            if *other_alpha > max_alpha {
-                max_alpha = other_alpha.clone();
-            }
-            next = v;
-        }
-        max_alpha
-    }
-
-    fn min_beta(&self) -> Option<S> {
-        let mut min_beta = self.beta.read().unwrap().clone();
-        let mut next = self;
-        while let Some(v) = next.parent {
-            let other_beta = v.beta.read().unwrap();
-            if min_beta.is_none() && other_beta.is_some() {
-                min_beta = other_beta.clone()
-            } else if other_beta.is_some() && *other_beta < min_beta {
-                min_beta = other_beta.clone();
-            }
-            next = v;
-        }
-        min_beta
-    }
-
     fn should_be_pruned(&self) -> bool {
         let mut max_alpha = self.alpha.read().unwrap().clone();
         let mut next = self;
@@ -123,13 +95,14 @@ impl<'a, S: Ord + Clone> AlphaBeta<'a, S> {
 }
 
 impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
-    pub fn par_solve<FScore, const LEAVES_PER_THREAD: usize, const MAX_LEAVES_SERIALIZE: usize>(
+    pub fn par_solve<FScore>(
         &mut self,
         deadline: &Instant,
         max_depth: usize,
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
         threads: f32,
+        last_fork_depth: usize,
     ) -> (Option<(Direction, S)>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -149,45 +122,11 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
             return (self.score.clone(), 1);
         }
 
-        if self.children.len() == 1 {
-            // Exactly one move does not lead to certain death, avoid the extra indirection in alpha-beta lookup
-            let (score, node_count) = self.children[0]
-                .par_solve::<FScore, LEAVES_PER_THREAD, MAX_LEAVES_SERIALIZE>(
-                    Arc::new(&self.game),
-                    deadline,
-                    max_depth,
-                    score_fn,
-                    &alpha_beta,
-                    threads,
-                );
-            return (score.map(|s| (self.children[0].my_move, s)), node_count);
-        }
-
-        let mut should_fork = false;
-        let mut threads_per_child = threads;
-        let leaves_per_child = max_leaf_nodes_min_node(self.game.others.len(), max_depth);
-        let total_leaves = self.children.len() * leaves_per_child;
-
-        if total_leaves <= MAX_LEAVES_SERIALIZE {
-            return self.solve(
-                deadline,
-                max_depth,
-                score_fn,
-                alpha_beta.max_alpha(),
-                alpha_beta.min_beta(),
-            );
-        }
-
-        if threads > 1f32 {
-            let next_leaves_per_child =
-                max_leaf_nodes_min_node(self.game.others.len(), max_depth - 1);
-            let target_leaves = (LEAVES_PER_THREAD as f32 / threads).round() as usize;
-
-            if leaves_per_child > target_leaves && next_leaves_per_child <= target_leaves {
-                should_fork = true;
-                threads_per_child = threads / self.children.len() as f32;
-            }
-        }
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
 
         let game = Arc::new(&self.game);
         let top_score = RwLock::new((Direction::Up, None));
@@ -199,15 +138,15 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
                 return;
             }
 
-            let (next_score, node_count) = min_node
-                .par_solve::<FScore, LEAVES_PER_THREAD, MAX_LEAVES_SERIALIZE>(
-                    game.clone(),
-                    deadline,
-                    max_depth,
-                    score_fn,
-                    &alpha_beta,
-                    threads_per_child,
-                );
+            let (next_score, node_count) = min_node.par_solve(
+                game.clone(),
+                deadline,
+                max_depth,
+                score_fn,
+                &alpha_beta,
+                threads,
+                last_fork_depth,
+            );
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
 
             if next_score == None {
@@ -227,8 +166,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
 
             alpha_beta.new_alpha_score(next_score.unwrap());
         };
-
-        if should_fork {
+        if parallel {
             let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
         } else {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
@@ -248,7 +186,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
 }
 
 impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
-    pub fn par_solve<FScore, const LEAVES_PER_THREAD: usize, const MAX_LEAVES_SERIALIZE: usize>(
+    pub fn par_solve<FScore>(
         &mut self,
         game: Arc<&Game>,
         deadline: &Instant,
@@ -256,6 +194,7 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         score_fn: &FScore,
         alpha_beta: &AlphaBeta<'_, S>,
         threads: f32,
+        last_fork_depth: usize,
     ) -> (Option<S>, usize)
     where
         FScore: Fn(&Game) -> S + Sync,
@@ -263,21 +202,6 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         let game = *game.as_ref();
 
         self.update_children(game);
-
-        if self.children.len() == 1 {
-            // No more enemies, don't perform any minimizing
-            let (score, node_count) = self.children[0]
-                .par_solve::<FScore, LEAVES_PER_THREAD, MAX_LEAVES_SERIALIZE>(
-                    deadline,
-                    max_depth - 1,
-                    score_fn,
-                    alpha_beta,
-                    threads,
-                );
-
-            self.score = score.map(|s| s.1);
-            return (self.score.clone(), node_count);
-        }
 
         let min_score: RwLock<Option<S>> = RwLock::new(None);
         let alpha_beta = alpha_beta.new_child();
@@ -288,14 +212,14 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
                 return;
             }
 
-            let (next_score, node_count) = max_node
-                .par_solve::<FScore, LEAVES_PER_THREAD, MAX_LEAVES_SERIALIZE>(
-                    deadline,
-                    max_depth - 1,
-                    score_fn,
-                    &alpha_beta,
-                    threads,
-                );
+            let (next_score, node_count) = max_node.par_solve(
+                deadline,
+                max_depth - 1,
+                score_fn,
+                &alpha_beta,
+                threads,
+                last_fork_depth,
+            );
 
             let next_score = if let Some(s) = next_score {
                 s.1
@@ -316,8 +240,8 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
             alpha_beta.new_beta_score(next_score);
         };
 
-        if threads > 1f32 && max_depth == 1 {
-            // Still got threads to spare, and no more opportunities to fork
+        if threads > 1f32 && max_depth == 1 && self.children.len() > 1024 {
+            // Last chance to spread work across cores, lots of work left to spread
             let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
         } else {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
@@ -331,46 +255,5 @@ impl<'a, S: Ord + Display + Clone + Sync + Send + 'static> MinimizingNode<S> {
         let min_score = min_score.read().unwrap().clone();
         self.score = min_score.clone();
         (min_score, total_node_count.load(Ordering::Relaxed))
-    }
-}
-
-fn max_leaf_nodes_max_node(other_snake_count: usize, depth: usize) -> usize {
-    let v = (3 as usize).checked_pow(other_snake_count as u32 + 1);
-    if v.is_none() {
-        return usize::MAX;
-    }
-    let v = v.unwrap().checked_pow(depth as u32);
-    v.unwrap_or(usize::MAX)
-}
-
-fn max_leaf_nodes_min_node(other_snake_count: usize, depth: usize) -> usize {
-    max_leaf_nodes_max_node(other_snake_count, depth) / 3
-}
-
-#[test]
-fn leaf_table() {
-    for enemy_count in 0..13 {
-        println!("max leaf count for {} snakes:", enemy_count);
-        for i in [0, 5, 10, 15] {
-            print!("depth:     ");
-            for depth in i..i + 5 {
-                print!("{:22}", depth);
-            }
-            println!();
-            print!("max nodes: ");
-            for depth in i..i + 5 {
-                print!("{:22}", max_leaf_nodes_max_node(enemy_count, depth));
-            }
-            println!();
-            print!("min nodes: ");
-            for depth in i..i + 5 {
-                print!("{:22}", max_leaf_nodes_min_node(enemy_count, depth));
-            }
-            println!();
-            println!();
-        }
-        println!();
-        println!("{}", "=".repeat(100));
-        println!();
     }
 }
