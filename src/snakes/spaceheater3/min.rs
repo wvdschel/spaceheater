@@ -1,7 +1,7 @@
 use std::{cmp, fmt::Display, time::Instant};
 
 use crate::{
-    logic::{game::GameMode, Direction, Game},
+    logic::{Direction, Game},
     util::invert::invert,
 };
 
