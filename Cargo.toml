@@ -10,9 +10,6 @@ name = "topsnek"
 name = "topsnek-server"
 
 [[bin]]
-name = "bench-spaceheater"
-
-[[bin]]
 name = "replay"
 
 [[bin]]

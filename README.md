@@ -1,13 +1,10 @@
 # Spaceheater
 # Weird choices to debug
-- 24608440-0def-4078-a455-a97f47a7650d -> turn 444 why not left?
-- 25fd80a3-f806-4a49-a45e-d8769e0279dd -> turn 175 why up? Maybe mistake was made earlier?
-- 5dcd3011-8df8-413d-b94e-d47281a0ca87 -> turn 139 why not up?
-- c1fe70cb-5e8c-442f-b722-b556bcf6b2c0 -> why up?
+- None! :D
 
 # Profiling
 Create flamegraph.svg:
-  RUSTFLAGS='-C force-frame-pointers=y' cargo run --release --features=profiling --bin bench-spaceheater < logs/Spaceheater_f603f0b7-10ca-4bcd-b087-4e9902b052a4.json.gz
+  RUSTFLAGS='-C force-frame-pointers=y' cargo run --release --features=profiling --bin replay spaceheater3 < logs/*{game_id}*.json.gz
 
 # Scoring
 - Scoring limit max distance for fill, maybe using a const template function parameter?
