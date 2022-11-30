@@ -3,8 +3,8 @@ use super::Game;
 mod voronoi;
 pub use voronoi::*;
 
-pub mod pruning;
 pub mod tournament;
+pub mod winter;
 pub use tournament::tournament as tournament_score;
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
