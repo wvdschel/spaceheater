@@ -2,7 +2,6 @@ use rayon::prelude::*;
 
 use std::{
     cmp,
-    fmt::Display,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -17,13 +16,13 @@ use crate::{
 
 use super::{alphabeta::AlphaBeta, min::MinimizingNode, util::certain_death};
 
-pub struct MaximizingNode<S: Ord + Display + Clone + 'static> {
+pub struct MaximizingNode {
     pub(super) game: Game,
-    pub(super) score: Option<(Direction, S)>,
-    pub(super) children: Vec<MinimizingNode<S>>,
+    pub(super) score: Option<(Direction, i64)>,
+    pub(super) children: Vec<MinimizingNode>,
 }
 
-impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
+impl MaximizingNode {
     pub fn new(game: Game) -> Self {
         Self {
             game,
@@ -48,7 +47,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
 
     fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
     where
-        FScore: Fn(&Game) -> S,
+        FScore: Fn(&Game) -> i64,
     {
         if self.game.you.dead() {
             if self.score == None {
@@ -94,7 +93,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
         };
         strings.push(format!("{}", self.game));
 
-        let mut children: std::vec::Vec<&MinimizingNode<S>> = self.children.iter().collect();
+        let mut children: std::vec::Vec<&MinimizingNode> = self.children.iter().collect();
         children.sort_by(|c1, c2| c1.cmp_scores(c2));
         for c in children {
             strings.push(c.format_tree(depth));
@@ -113,17 +112,17 @@ impl<'a, S: Ord + Display + Clone + 'static> MaximizingNode<S> {
     }
 }
 
-impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
+impl MaximizingNode {
     pub fn solve<FScore>(
         &mut self,
         deadline: &Instant,
         max_depth: usize,
         score_fn: &FScore,
-        alpha_beta: &AlphaBeta<'_, S>,
+        alpha_beta: &AlphaBeta<'_>,
         threads: f32,
-    ) -> (Option<(Direction, S)>, usize)
+    ) -> (Option<(Direction, i64)>, usize)
     where
-        FScore: Fn(&Game) -> S + Sync,
+        FScore: Fn(&Game) -> i64 + Sync,
     {
         if Instant::now() > *deadline {
             return (None, 0);
@@ -152,7 +151,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
 
-        let solver = |min_node: &mut MinimizingNode<S>| {
+        let solver = |min_node: &mut MinimizingNode| {
             if alpha_beta.should_be_pruned() {
                 return;
             }
@@ -180,9 +179,8 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
                 if top_score_write.1 < next_score {
                     *top_score_write = (min_node.my_move, next_score.clone());
                 }
+                alpha_beta.new_alpha_score(next_score.unwrap());
             }
-
-            alpha_beta.new_alpha_score(next_score.unwrap());
         };
         if parallel {
             let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
@@ -203,7 +201,7 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MaximizingNode<S> {
     }
 }
 
-impl<'a, S: Ord + Display + Clone + 'static> std::fmt::Display for MaximizingNode<S> {
+impl std::fmt::Display for MaximizingNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.format_tree(0).as_str())
     }

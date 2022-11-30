@@ -1,81 +1,55 @@
-use std::sync::RwLock;
+use std::sync::atomic::{AtomicI64, Ordering};
 
-pub struct AlphaBeta<'a, S: Ord + Clone> {
-    parent: Option<&'a AlphaBeta<'a, S>>,
-    alpha: RwLock<Option<S>>,
-    beta: RwLock<Option<S>>,
+pub struct AlphaBeta<'a> {
+    parent: Option<&'a AlphaBeta<'a>>,
+    alpha: AtomicI64,
+    beta: AtomicI64,
 }
 
-impl<'a, S: Ord + Clone> AlphaBeta<'a, S> {
-    pub fn new(a: Option<S>, b: Option<S>) -> Self {
+impl<'a> AlphaBeta<'a> {
+    pub fn new(a: i64, b: i64) -> Self {
         Self {
             parent: None,
-            alpha: RwLock::new(a),
-            beta: RwLock::new(b),
+            alpha: AtomicI64::new(a),
+            beta: AtomicI64::new(b),
         }
     }
 
     pub fn new_child(&'a self) -> Self {
         Self {
             parent: Some(self),
-            alpha: RwLock::new(self.alpha.read().unwrap().clone()),
-            beta: RwLock::new(self.beta.read().unwrap().clone()),
+            alpha: AtomicI64::new(self.alpha.load(Ordering::Relaxed)),
+            beta: AtomicI64::new(self.beta.load(Ordering::Relaxed)),
         }
     }
 
-    pub fn new_alpha_score(&self, a: S) {
-        let next_score = Some(a);
-        let new_alpha = *self.alpha.read().unwrap() < next_score;
-
-        if new_alpha {
-            let mut alpha_write = self.alpha.write().unwrap();
-            if *alpha_write < next_score {
-                *alpha_write = next_score;
-            }
-        }
+    #[inline(always)]
+    pub fn new_alpha_score(&self, a: i64) -> i64 {
+        self.alpha.fetch_max(a, Ordering::Relaxed)
     }
 
-    pub fn new_beta_score(&self, b: S) {
-        let new_beta = self
-            .beta
-            .read()
-            .unwrap()
-            .as_ref()
-            .map_or(true, |old_b| *old_b > b);
-
-        if new_beta {
-            let mut beta_write = self.beta.write().unwrap();
-            let next_score = Some(b);
-            if *beta_write == None || *beta_write > next_score {
-                *beta_write = next_score;
-            }
-        }
+    #[inline(always)]
+    pub fn new_beta_score(&self, b: i64) -> i64 {
+        self.beta.fetch_min(b, Ordering::Relaxed)
     }
 
     pub fn should_be_pruned(&self) -> bool {
-        let mut max_alpha = self.alpha.read().unwrap().clone();
+        let mut max_alpha = self.alpha.load(Ordering::Relaxed);
+        let mut min_beta = self.beta.load(Ordering::Relaxed);
         let mut next = self;
         while let Some(v) = next.parent {
-            let other_alpha = v.alpha.read().unwrap();
-            if *other_alpha > max_alpha {
-                max_alpha = other_alpha.clone();
+            let next_alpha = v.alpha.load(Ordering::Relaxed);
+            let next_beta = v.beta.load(Ordering::Relaxed);
+            if next_alpha > max_alpha {
+                max_alpha = next_alpha
+            }
+            if next_beta < min_beta {
+                min_beta = next_beta
+            }
+            if max_alpha >= min_beta {
+                return true;
             }
             next = v;
-        }
-
-        let mut next = self;
-        loop {
-            let beta = next.beta.read().unwrap();
-            if *beta != None {
-                if max_alpha > *beta {
-                    return true;
-                }
-            }
-            if let Some(p) = next.parent {
-                next = p;
-            } else {
-                break;
-            }
         }
 
         false

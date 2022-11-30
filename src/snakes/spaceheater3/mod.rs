@@ -8,7 +8,6 @@ use crate::{
 };
 use std::{
     cmp,
-    fmt::Display,
     sync::mpsc::channel,
     thread,
     time::{Duration, Instant},
@@ -24,19 +23,17 @@ pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
 const LATENCY_MARGIN: Duration = Duration::from_millis(100);
 
-pub struct Spaceheater3<Fscore, S>
+pub struct Spaceheater3<Fscore>
 where
-    Fscore: Fn(&Game) -> S + Sync + Clone + 'static,
-    S: Ord + Display + Clone + Sync + Send + 'static,
+    Fscore: Fn(&Game) -> i64 + Sync + Clone + 'static,
 {
     score_fn: Fscore,
     customizations: Customizations,
 }
 
-impl<Fscore, S> Spaceheater3<Fscore, S>
+impl<Fscore> Spaceheater3<Fscore>
 where
-    Fscore: Fn(&Game) -> S + Sync + Send + Clone + 'static,
-    S: Ord + Display + Clone + Sync + Send + 'static,
+    Fscore: Fn(&Game) -> i64 + Sync + Send + Clone + 'static,
 {
     pub fn new(score_fn: Fscore, customizations: Option<Customizations>) -> Self {
         Self {
@@ -54,7 +51,7 @@ where
         game: Game,
         deadline: &Instant,
         max_depth: usize,
-    ) -> Option<(Direction, S)> {
+    ) -> Option<(Direction, i64)> {
         let enemy_count = game.others.len();
         let turn = game.turn;
 
@@ -94,7 +91,7 @@ where
                         &deadline,
                         current_depth,
                         &score_fn,
-                        &alphabeta::AlphaBeta::new(None, None),
+                        &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
                         thread_count() as f32,
                     );
                     let _ = tx.send((res, node_count));
@@ -153,10 +150,9 @@ where
     }
 }
 
-impl<Fscore, S> Battlesnake for Spaceheater3<Fscore, S>
+impl<Fscore> Battlesnake for Spaceheater3<Fscore>
 where
-    Fscore: Fn(&Game) -> S + Sync + Send + Clone + 'static,
-    S: Ord + Display + Clone + Send + Sync,
+    Fscore: Fn(&Game) -> i64 + Sync + Send + Clone + 'static,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {

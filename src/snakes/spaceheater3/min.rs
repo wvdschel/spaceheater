@@ -2,10 +2,9 @@ use rayon::prelude::*;
 
 use std::{
     cmp,
-    fmt::Display,
     sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, RwLock,
+        atomic::{AtomicI64, AtomicUsize, Ordering},
+        Arc,
     },
     time::Instant,
 };
@@ -17,13 +16,13 @@ use crate::{
 
 use super::{alphabeta::AlphaBeta, max::MaximizingNode, util::all_sensible_enemy_moves};
 
-pub struct MinimizingNode<S: Ord + Display + Clone + 'static> {
+pub struct MinimizingNode {
     pub my_move: Direction,
-    pub(super) score: Option<S>,
-    pub(super) children: Vec<MaximizingNode<S>>,
+    pub(super) score: Option<i64>,
+    pub(super) children: Vec<MaximizingNode>,
 }
 
-impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
+impl MinimizingNode {
     pub fn new(my_move: Direction) -> Self {
         Self {
             my_move,
@@ -74,7 +73,7 @@ impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
             None => {}
         };
 
-        let mut children: std::vec::Vec<&MaximizingNode<S>> = self.children.iter().collect();
+        let mut children: std::vec::Vec<&MaximizingNode> = self.children.iter().collect();
         children.sort_by(|c1, c2| c1.cmp_scores(c2));
         for c in children {
             strings.push(c.format_tree(depth + 1));
@@ -92,18 +91,18 @@ impl<'a, S: Ord + Display + Clone + 'static> MinimizingNode<S> {
     }
 }
 
-impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MinimizingNode<S> {
+impl MinimizingNode {
     pub fn solve<FScore>(
         &mut self,
         game: Arc<&Game>,
         deadline: &Instant,
         max_depth: usize,
         score_fn: &FScore,
-        alpha_beta: &AlphaBeta<'_, S>,
+        alpha_beta: &AlphaBeta<'_>,
         threads: f32,
-    ) -> (Option<S>, usize)
+    ) -> (Option<i64>, usize)
     where
-        FScore: Fn(&Game) -> S + Sync,
+        FScore: Fn(&Game) -> i64 + Sync,
     {
         let game = *game.as_ref();
 
@@ -114,11 +113,11 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MinimizingNode<S> {
             (false, threads)
         };
 
-        let min_score: RwLock<Option<S>> = RwLock::new(None);
+        let min_score: AtomicI64 = AtomicI64::new(i64::MAX);
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
 
-        let solver = |max_node: &mut MaximizingNode<S>| {
+        let solver = |max_node: &mut MaximizingNode| {
             if alpha_beta.should_be_pruned() {
                 return;
             }
@@ -133,16 +132,9 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MinimizingNode<S> {
             };
 
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
-
-            let mut min_score_write = min_score.write().unwrap();
-            if *min_score_write != None {
-                *min_score_write =
-                    Some(cmp::min(min_score_write.as_ref().unwrap(), &next_score).clone());
-            } else {
-                *min_score_write = Some(next_score.clone());
+            if min_score.fetch_min(next_score, Ordering::Relaxed) > next_score {
+                alpha_beta.new_beta_score(next_score);
             }
-
-            alpha_beta.new_beta_score(next_score);
         };
 
         if parallel {
@@ -156,8 +148,12 @@ impl<'a, S: Ord + Display + Clone + Send + Sync + 'static> MinimizingNode<S> {
             return (None, total_node_count.load(Ordering::Relaxed));
         }
 
-        let min_score = min_score.read().unwrap().clone();
-        self.score = min_score.clone();
+        let min_score = min_score.load(Ordering::Relaxed);
+        let min_score = if min_score == i64::MAX {
+            None
+        } else {
+            Some(min_score)
+        };
         (min_score, total_node_count.load(Ordering::Relaxed))
     }
 }
