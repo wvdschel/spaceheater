@@ -13,6 +13,7 @@ Create flamegraph.svg:
 - Flood fill: mark snake bodies with number of turns they remain present so we can only count collisions which will actually happen?
 - Include rank in size in score, control over food in score?
 - Must eat more
+- Penalize being on the edge of the board
 
 # Bugs
 - "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
@@ -20,6 +21,7 @@ Create flamegraph.svg:
 # Performance
 - stop evaluating when the algorithm reaches game over in all branches
 - const usize type parameter for board sizes?
+- Convert scoring functions to use i64, not S: Ord + ...
 
 # Game logic
 ## Unsupported game features
