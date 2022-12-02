@@ -95,7 +95,7 @@ where
                         current_depth,
                         &score_fn,
                         &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
-                        thread_count() as f32,
+                        thread_count() as f32 * 2f32,
                     );
                     let _ = tx.send((res, node_count));
                     log!("complete tree for depth {}:\n{}", current_depth, root);
