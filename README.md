@@ -13,7 +13,10 @@ Create flamegraph.svg:
 - Flood fill: mark snake bodies with number of turns they remain present so we can only count collisions which will actually happen?
 - Include rank in size in score, control over food in score?
 - Must eat more
-- Penalize being on the edge of the board
+- Penalize being on the edge of the board (on non-wrapped maps)
+- When hungry, promote getting closer to food
+- Increasingly penalize score for declining health
+- Promote getting closer to smaller snakes
 
 # Bugs
 - "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
