@@ -19,6 +19,10 @@ name = "fork"
 name = "scoring"
 harness = false
 
+[[bench]]
+name = "spaceheater_forking"
+harness = false
+
 [profile.release]
 debug = 1
 
