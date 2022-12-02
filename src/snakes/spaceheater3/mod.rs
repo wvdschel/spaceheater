@@ -51,7 +51,6 @@ where
         game: Game,
         deadline: &Instant,
         max_depth: usize,
-        thread_multiplier: f32,
     ) -> Option<(Direction, i64)> {
         let enemy_count = game.others.len();
         let turn = game.turn;
@@ -67,7 +66,7 @@ where
         let start = Instant::now();
         let max_depth = cmp::max(base_depth + 1, max_depth);
 
-        log!(
+        println!(
             "turn {}: start: calculating depths {} through {} using {} threads",
             turn,
             base_depth,
@@ -78,7 +77,7 @@ where
         let mut best_score = None;
         let mut last_score = None;
         for current_depth in base_depth..max_depth {
-            log!(
+            println!(
                 "turn {}: {}ms: starting depth {}",
                 turn,
                 start.elapsed().as_millis(),
@@ -96,7 +95,7 @@ where
                         current_depth,
                         &score_fn,
                         &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
-                        thread_count() as f32 * thread_multiplier,
+                        thread_count() as f32,
                     );
                     let _ = tx.send((res, node_count));
                     log!("complete tree for depth {}:\n{}", current_depth, root);
@@ -106,7 +105,7 @@ where
             match &res {
                 Some((dir, score)) => {
                     best_score = res.clone();
-                    log!(
+                    println!(
                         "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
                         turn,
                         start.elapsed().as_millis(),
@@ -117,7 +116,7 @@ where
                     );
                 }
                 None => {
-                    log!(
+                    println!(
                         "turn {}: {}ms: aborted depth {}",
                         turn,
                         start.elapsed().as_millis(),
@@ -127,7 +126,7 @@ where
                 }
             }
             if last_score == best_score.as_ref().map(|s| s.1.clone()) {
-                log!(
+                println!(
                     "turn {}: {}ms: tree completed at depth {}",
                     turn,
                     start.elapsed().as_millis(),
@@ -139,7 +138,7 @@ where
         }
 
         let statm = procinfo::pid::statm_self().unwrap();
-        log!(
+        println!(
             "turn {}: {}ms / {} MB: returning {}",
             turn,
             start.elapsed().as_millis(),
@@ -183,7 +182,7 @@ where
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let res = self.solve(game, &deadline, usize::MAX, 1.0);
+        let res = self.solve(game, &deadline, usize::MAX);
 
         let (best_dir, top_score) = res
             .map(|(dir, score)| (dir, format!("{}", score)))
