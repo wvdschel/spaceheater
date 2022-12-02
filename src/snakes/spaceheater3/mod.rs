@@ -67,8 +67,11 @@ where
         let max_depth = cmp::max(base_depth + 1, max_depth);
 
         println!(
-            "turn {}: start: calculating depths {} through {}",
-            turn, base_depth, max_depth
+            "turn {}: start: calculating depths {} through {} using {} threads",
+            turn,
+            base_depth,
+            max_depth,
+            thread_count(),
         );
 
         let mut best_score = None;
