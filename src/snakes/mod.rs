@@ -21,6 +21,23 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
+    snakes.insert(
+        "spaceheater_turbo".to_string(),
+        Box::new(Spaceheater3::new(
+            |g| {
+                if g.you.health > 0 {
+                    g.turn as i64
+                } else {
+                    g.turn as i64 - 1
+                }
+            },
+            Some(Customizations {
+                color: "#FF2400".to_string(),
+                head: "workout".to_string(),
+                tail: "rocket".to_string(),
+            }),
+        )),
+    );
 
     snakes
 }
