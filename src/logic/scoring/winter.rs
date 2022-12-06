@@ -62,8 +62,10 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
         distance_to_collision: [NumType::MAX; MAX_SNAKES],
     }; MAX_SNAKES];
 
-    for x in 0..MAX_WIDTH {
-        for y in 0..MAX_HEIGHT {
+    let (w, h) = (game.board.width() as usize, game.board.height() as usize);
+
+    for x in 0..w {
+        for y in 0..h {
             let hazards = game.board.hazard_count(&Point {
                 x: x as i8,
                 y: y as i8,
@@ -183,7 +185,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
             // Enqueue neighbouring tiles
             for (_dir, mut next_p) in work.p.neighbours() {
                 if warp {
-                    next_p.warp(MAX_WIDTH as isize, MAX_HEIGHT as isize);
+                    next_p.warp(w as isize, h as isize);
                 }
 
                 let (x, y) = (next_p.x as usize, next_p.y as usize);
@@ -207,7 +209,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
                     0
                 };
 
-                if next_p.out_of_bounds(MAX_WIDTH as isize, MAX_HEIGHT as isize) // snake moves off the board
+                if next_p.out_of_bounds(w as isize, h as isize) // snake moves off the board
                     // snake starves or is killed by hazard
                     || damage >= next_work.health
                     // colission
