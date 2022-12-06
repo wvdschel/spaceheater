@@ -7,6 +7,16 @@ pub mod tournament;
 pub mod winter;
 pub use tournament::tournament as tournament_score;
 
+pub trait Scorer {
+    fn score(&self, game: &Game) -> i64;
+}
+
+impl<F> Scorer for F where F: Fn(&Game) -> i64 {
+    fn score(&self, game: &Game) -> i64 {
+        self(game)
+    }
+}
+
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct SurvivalKillsLengthScore {
     turns_survived: usize,

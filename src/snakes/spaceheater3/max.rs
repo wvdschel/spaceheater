@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    logic::{Direction, Game},
+    logic::{self, Direction, Game},
     protocol::ALL_DIRECTIONS,
 };
 
@@ -45,18 +45,18 @@ impl MaximizingNode {
         }
     }
 
-    fn check_bounds<FScore>(&mut self, max_depth: usize, score_fn: &FScore) -> bool
+    fn check_bounds<S>(&mut self, max_depth: usize, scorer: &S) -> bool
     where
-        FScore: Fn(&Game) -> i64,
+        S: logic::scoring::Scorer,
     {
         if self.game.you.dead() {
             if self.score == None {
-                self.score = Some((Direction::Up, score_fn(&self.game)));
+                self.score = Some((Direction::Up, scorer.score(&self.game)));
             }
             return true;
         }
         if max_depth == 0 {
-            let score = score_fn(&self.game);
+            let score = scorer.score(&self.game);
             self.score = Some((Direction::Up, score));
             return true;
         }
@@ -113,21 +113,21 @@ impl MaximizingNode {
 }
 
 impl MaximizingNode {
-    pub fn solve<FScore>(
+    pub fn solve<S>(
         &mut self,
         deadline: &Instant,
         max_depth: usize,
-        score_fn: &FScore,
+        scorer: &S,
         alpha_beta: &AlphaBeta<'_>,
         threads: f32,
     ) -> (Option<(Direction, i64)>, usize)
     where
-        FScore: Fn(&Game) -> i64 + Sync,
+        S: logic::scoring::Scorer + Sync + Clone + 'static,
     {
         if Instant::now() > *deadline {
             return (None, 0);
         }
-        if self.check_bounds(max_depth, score_fn) {
+        if self.check_bounds(max_depth, scorer) {
             return (self.score.clone(), 1);
         }
         self.update_children();
@@ -135,7 +135,7 @@ impl MaximizingNode {
         if self.children.len() == 0 {
             // All paths are certain death, just score this board and return
             self.game.execute_moves(Direction::Up, &vec![]);
-            let score = score_fn(&self.game);
+            let score = scorer.score(&self.game);
             self.score = Some((Direction::Up, score));
             return (self.score.clone(), 1);
         }
@@ -160,7 +160,7 @@ impl MaximizingNode {
                 game.clone(),
                 deadline,
                 max_depth,
-                score_fn,
+                scorer,
                 &alpha_beta,
                 threads,
             );

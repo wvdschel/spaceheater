@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    logic::{Direction, Game},
+    logic::{self, Direction, Game},
     util::invert::invert,
 };
 
@@ -92,17 +92,17 @@ impl MinimizingNode {
 }
 
 impl MinimizingNode {
-    pub fn solve<FScore>(
+    pub fn solve<S>(
         &mut self,
         game: Arc<&Game>,
         deadline: &Instant,
         max_depth: usize,
-        score_fn: &FScore,
+        scorer: &S,
         alpha_beta: &AlphaBeta<'_>,
         threads: f32,
     ) -> (Option<i64>, usize)
     where
-        FScore: Fn(&Game) -> i64 + Sync,
+        S: logic::scoring::Scorer + Sync + Clone + 'static,
     {
         let game = *game.as_ref();
 
@@ -123,7 +123,7 @@ impl MinimizingNode {
             }
 
             let (next_score, node_count) =
-                max_node.solve(deadline, max_depth - 1, score_fn, &alpha_beta, threads);
+                max_node.solve(deadline, max_depth - 1, scorer, &alpha_beta, threads);
 
             let next_score = if let Some(s) = next_score {
                 s.1

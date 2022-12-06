@@ -1,17 +1,11 @@
-// - Flood fill limit by health
-// - Flood fill: make food count for more than 1 point? make tails count for more than 1 point
-// - Flood fill: mark snake bodies with number of turns they remain present so we can only count collisions which will actually happen
-// - Include rank in size in score, control over food in score
-// - Must eat more
-// - Penalize being on the edge of the board on non-wrapped boards?
-// - Take health into account, not just alive / dead
-
 use std::cmp;
 
 use crate::{
     logic::{game::GameMode, Game, Point},
     util::stackqueue::StackDequeue,
 };
+
+use super::Scorer;
 
 type NumType = u16;
 pub const NO_SNAKE: u8 = u8::MAX;
@@ -43,14 +37,13 @@ struct Work {
     health: i8,
 }
 
-pub fn winter_floodfill<
-    const WIDTH: usize,
-    const HEIGHT: usize,
-    const SNAKE_COUNT: usize,
-    const MAX_DISTANCE: NumType,
->(
+const MAX_WIDTH: usize = 25;
+const MAX_HEIGHT: usize = 25;
+const MAX_SNAKES: usize = 12;
+
+pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
     game: &Game,
-) -> [SnakeScore<SNAKE_COUNT>; SNAKE_COUNT] {
+) -> [SnakeScore<MAX_SNAKES>; MAX_SNAKES] {
     let warp = game.rules.game_mode == GameMode::Wrapped;
 
     let mut queue: StackDequeue<Work, 256> = StackDequeue::new();
@@ -60,17 +53,17 @@ pub fn winter_floodfill<
         inaccessible_turns: 0,
         damage_amount: 0,
         snake: NO_SNAKE,
-    }; HEIGHT]; WIDTH];
+    }; MAX_HEIGHT]; MAX_WIDTH];
     let mut scores = [SnakeScore {
         food_count: 0,
         tile_count: 0,
         food_distance: NumType::MAX,
         food_at_min_distance: 0,
-        distance_to_collision: [NumType::MAX; SNAKE_COUNT],
-    }; SNAKE_COUNT];
+        distance_to_collision: [NumType::MAX; MAX_SNAKES],
+    }; MAX_SNAKES];
 
-    for x in 0..WIDTH {
-        for y in 0..HEIGHT {
+    for x in 0..MAX_WIDTH {
+        for y in 0..MAX_HEIGHT {
             let hazards = game.board.hazard_count(&Point {
                 x: x as i8,
                 y: y as i8,
@@ -190,7 +183,7 @@ pub fn winter_floodfill<
             // Enqueue neighbouring tiles
             for (_dir, mut next_p) in work.p.neighbours() {
                 if warp {
-                    next_p.warp(WIDTH as isize, HEIGHT as isize);
+                    next_p.warp(MAX_WIDTH as isize, MAX_HEIGHT as isize);
                 }
 
                 let (x, y) = (next_p.x as usize, next_p.y as usize);
@@ -214,7 +207,7 @@ pub fn winter_floodfill<
                     0
                 };
 
-                if next_p.out_of_bounds(WIDTH as isize, HEIGHT as isize) // snake moves off the board
+                if next_p.out_of_bounds(MAX_WIDTH as isize, MAX_HEIGHT as isize) // snake moves off the board
                     // snake starves or is killed by hazard
                     || damage >= next_work.health
                     // colission
@@ -246,7 +239,8 @@ pub fn winter_floodfill<
     scores
 }
 
-pub struct Config {
+#[derive(Clone)]
+pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_food: i64,
     pub points_per_tile: i64,
     pub points_per_length_rank: i64,
@@ -262,29 +256,22 @@ pub struct Config {
     pub hungry_mode_food_multiplier: f64,
 }
 
-pub fn winter_score<
-    const WIDTH: usize,
-    const HEIGHT: usize,
-    const SNAKE_COUNT: usize,
-    const MAX_DISTANCE: NumType,
->(
-    config: Config,
-) -> Box<dyn Fn(&Game) -> i64> {
-    Box::new(move |game: &Game| {
+impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
+    fn score(&self, game: &Game) -> i64 {
         let mut score: i64 = 0;
-        score += config.points_per_kill * game.dead_snakes as i64;
-        score += config.points_per_turn_survived * game.turn as i64;
+        score += self.points_per_kill * game.dead_snakes as i64;
+        score += self.points_per_turn_survived * game.turn as i64;
 
         if game.you.dead() {
-            score -= config.points_per_turn_survived + config.points_per_kill;
-            score += config.points_when_dead;
+            score -= self.points_per_turn_survived + self.points_per_kill;
+            score += self.points_when_dead;
             return score;
         }
 
-        let flood_info = winter_floodfill::<WIDTH, HEIGHT, SNAKE_COUNT, MAX_DISTANCE>(game);
+        let flood_info = winter_floodfill::<MAX_DISTANCE>(game);
 
-        score += config.points_per_health * game.you.health as i64;
-        score += config.points_per_tile * flood_info[0].tile_count as i64;
+        score += self.points_per_health * game.you.health as i64;
+        score += self.points_per_tile * flood_info[0].tile_count as i64;
 
         let mut length_rank = 0;
         for (i, snake) in game.others.iter().enumerate() {
@@ -292,19 +279,19 @@ pub fn winter_score<
                 length_rank += 1;
             }
             if snake.length < game.you.length {
-                score += config.points_per_distance_to_smaller_enemies
+                score += self.points_per_distance_to_smaller_enemies
                     * flood_info[0].distance_to_collision[i + 1] as i64;
             }
         }
-        score += config.points_per_length_rank * length_rank;
+        score += self.points_per_length_rank * length_rank;
 
-        let mut food_score = config.points_per_food * flood_info[0].food_count as i64;
-        food_score += config.points_per_distance_to_food * flood_info[0].food_distance as i64;
-        if game.you.health < config.hungry_mode_max_health {
-            food_score = f64::round(config.hungry_mode_food_multiplier * food_score as f64) as i64;
+        let mut food_score = self.points_per_food * flood_info[0].food_count as i64;
+        food_score += self.points_per_distance_to_food * flood_info[0].food_distance as i64;
+        if game.you.health < self.hungry_mode_max_health {
+            food_score = f64::round(self.hungry_mode_food_multiplier * food_score as f64) as i64;
         }
         score += food_score;
 
         score
-    })
+    }
 }

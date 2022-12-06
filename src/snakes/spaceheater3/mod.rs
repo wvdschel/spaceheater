@@ -1,6 +1,6 @@
 use crate::{
     log,
-    logic::Game,
+    logic::{self, Game},
     protocol::{self, Customizations, Direction},
     snakes::spaceheater3::max::MaximizingNode,
     util::thread_count,
@@ -23,21 +23,21 @@ pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
 const LATENCY_MARGIN: Duration = Duration::from_millis(100);
 
-pub struct Spaceheater3<Fscore>
+pub struct Spaceheater3<S>
 where
-    Fscore: Fn(&Game) -> i64 + Sync + Clone + 'static,
+    S: logic::scoring::Scorer + Sync + Clone,
 {
-    score_fn: Fscore,
+    scorer: S,
     customizations: Customizations,
 }
 
-impl<Fscore> Spaceheater3<Fscore>
+impl<S> Spaceheater3<S>
 where
-    Fscore: Fn(&Game) -> i64 + Sync + Send + Clone + 'static,
+    S: logic::scoring::Scorer + Send + Sync + Clone + 'static,
 {
-    pub fn new(score_fn: Fscore, customizations: Option<Customizations>) -> Self {
+    pub fn new(scorer: S, customizations: Option<Customizations>) -> Self {
         Self {
-            score_fn,
+            scorer,
             customizations: customizations.unwrap_or(Customizations {
                 color: DEFAULT_COLOR.into(),
                 head: DEFAULT_HEAD.into(),
@@ -85,7 +85,7 @@ where
             );
             let (tx, rx) = channel();
             {
-                let score_fn = self.score_fn.clone();
+                let scorer = self.scorer.clone();
                 let deadline = deadline.clone();
                 let game = game.clone();
                 thread::spawn(move || {
@@ -93,7 +93,7 @@ where
                     let (res, node_count) = root.solve(
                         &deadline,
                         current_depth,
-                        &score_fn,
+                        &scorer,
                         &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
                         thread_count() as f32,
                     );
@@ -153,9 +153,9 @@ where
     }
 }
 
-impl<Fscore> Battlesnake for Spaceheater3<Fscore>
+impl<S> Battlesnake for Spaceheater3<S>
 where
-    Fscore: Fn(&Game) -> i64 + Sync + Send + Clone + 'static,
+    S: logic::scoring::Scorer + Send + Sync + Clone + 'static,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {

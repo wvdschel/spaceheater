@@ -5,7 +5,7 @@ pub use simple::SimpleSnake;
 pub use spaceheater3::Spaceheater3;
 use std::collections::HashMap;
 
-use crate::{logic, protocol::Customizations, Battlesnake};
+use crate::{logic::scoring, protocol::Customizations, Battlesnake};
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
@@ -13,7 +13,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert(
         "spaceheater3".to_string(),
         Box::new(Spaceheater3::new(
-            logic::scoring::tournament_score,
+            scoring::tournament_score,
             Some(Customizations {
                 color: "#FF2400".to_string(),
                 head: "workout".to_string(),
@@ -22,14 +22,20 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         )),
     );
     snakes.insert(
-        "spaceheater_turbo".to_string(),
+        "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
-            |g| {
-                if g.you.health > 0 {
-                    g.turn as i64
-                } else {
-                    g.turn as i64 - 1
-                }
+            scoring::winter::Config::<{ u16::MAX }> {
+                points_per_food: 30,
+                points_per_tile: 10,
+                points_per_length_rank: -20,
+                points_per_health: 1,
+                points_per_distance_to_food: -1,
+                points_per_kill: 100,
+                points_per_turn_survived: 300,
+                points_per_distance_to_smaller_enemies: -1,
+                points_when_dead: -1000000,
+                hungry_mode_max_health: 35,
+                hungry_mode_food_multiplier: 6.0,
             },
             Some(Customizations {
                 color: "#FF2400".to_string(),
