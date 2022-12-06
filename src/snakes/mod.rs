@@ -38,9 +38,9 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
                 hungry_mode_food_multiplier: 6.0,
             },
             Some(Customizations {
-                color: "#FF2400".to_string(),
-                head: "workout".to_string(),
-                tail: "rocket".to_string(),
+                color: "#0024FF".to_string(),
+                head: "scarf".to_string(),
+                tail: "coffee".to_string(),
             }),
         )),
     );
