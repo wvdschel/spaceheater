@@ -188,6 +188,11 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
                     next_p.warp(w as isize, h as isize);
                 }
 
+                if next_p.out_of_bounds(w as isize, h as isize) {
+                    // snake moves off the board
+                    continue;
+                }
+
                 let (x, y) = (next_p.x as usize, next_p.y as usize);
                 let next_tile = game.board.get(&next_p);
                 let next_has_food = next_tile.has_food();
@@ -209,13 +214,10 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
                     0
                 };
 
-                if next_p.out_of_bounds(w as isize, h as isize) // snake moves off the board
-                    // snake starves or is killed by hazard
-                    || damage >= next_work.health
-                    // colission
-                    || board[x][y].inaccessible_turns >= next_work.snake_distance
-                    // reached max traveling distance
+                if damage >= next_work.health // snake starves or is killed by hazard
+                    || board[x][y].inaccessible_turns >= next_work.snake_distance // colission
                     || next_work.snake_distance >= MAX_DISTANCE
+                // reached max traveling distance
                 {
                     continue;
                 }
