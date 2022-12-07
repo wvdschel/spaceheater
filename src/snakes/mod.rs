@@ -3,9 +3,11 @@ pub mod spaceheater3;
 
 pub use simple::SimpleSnake;
 pub use spaceheater3::Spaceheater3;
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use crate::{logic::scoring, protocol::Customizations, Battlesnake};
+
+const CONFIG_DIR: &str = "./cfg";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
@@ -46,6 +48,20 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
+
+    fs::create_dir_all(CONFIG_DIR).unwrap();
+    let paths = fs::read_dir(CONFIG_DIR).unwrap();
+    for path in paths {
+        let path = path.unwrap().path();
+        let snake_name = String::from(path.file_name().unwrap().to_str().unwrap());
+        if let Ok(winter_cfg) =
+            scoring::winter::Config::<{ u16::MAX }>::try_from(snake_name.as_str())
+        {
+            snakes.insert(snake_name, Box::new(Spaceheater3::new(winter_cfg, None)));
+        }
+    }
+
+    println!("serving {} snakes", snakes.len());
 
     snakes
 }

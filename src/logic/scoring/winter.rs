@@ -352,14 +352,22 @@ impl<const MAX_DISTANCE: NumType> ToString for Config<MAX_DISTANCE> {
     }
 }
 
-impl<const MAX_DISTANCE: NumType> From<&str> for Config<MAX_DISTANCE> {
-    fn from(v: &str) -> Self {
-        let bytes: Vec<u8> = (0..v.len())
-            .step_by(2)
-            .map(|i| u8::from_str_radix(&v[i..i + 2], 16).unwrap())
-            .collect();
-        let decoded: Self = bincode::deserialize(bytes.as_slice()).unwrap();
-        decoded
+impl<const MAX_DISTANCE: NumType> TryFrom<&str> for Config<MAX_DISTANCE> {
+    type Error = ();
+
+    fn try_from(v: &str) -> Result<Self, Self::Error> {
+        let mut bytes = Vec::<u8>::with_capacity(v.len() / 2);
+        for i in (0..v.len()).step_by(2) {
+            if let Ok(b) = u8::from_str_radix(&v[i..i + 2], 16) {
+                bytes.push(b);
+            } else {
+                return Err(());
+            }
+        }
+        match bincode::deserialize::<Self>(bytes.as_slice()) {
+            Ok(v) => Ok(v),
+            Err(_) => Err(()),
+        }
     }
 }
 
@@ -370,7 +378,7 @@ fn hex_encoded_config() {
 
     println!("as string: {}", cfg_str);
 
-    let cfg_parsed = Config::<{ u16::MAX }>::from(cfg_str.as_str());
+    let cfg_parsed = Config::<{ u16::MAX }>::try_from(cfg_str.as_str()).unwrap();
 
     assert_eq!(cfg, cfg_parsed);
 }
