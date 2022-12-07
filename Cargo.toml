@@ -12,6 +12,9 @@ name = "topsnek-server"
 [[bin]]
 name = "replay"
 
+[[bin]]
+name = "winter-generation"
+
 [[bench]]
 name = "scoring"
 harness = false
@@ -39,6 +42,7 @@ flate2 = "1.0.24"
 pprof = { version = "0.11", features = ["flamegraph"], optional = true }
 procinfo = "0.4.2"
 rayon = "1.5"
+bincode = "1.3.3"
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }

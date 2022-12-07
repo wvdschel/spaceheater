@@ -1,4 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::{cmp, mem::MaybeUninit};
+
+use rand::Rng;
 
 use crate::{
     log,
@@ -274,7 +277,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
     scores
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_food: i64,
     pub points_per_tile: i64,
@@ -291,6 +294,85 @@ pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_when_dead: i64,
     pub hungry_mode_max_health: i8,
     pub hungry_mode_food_multiplier: f64,
+}
+
+impl<const MAX_DISTANCE: NumType> Config<MAX_DISTANCE> {
+    pub fn random() -> Self {
+        let mut rng = rand::thread_rng();
+        Self {
+            points_per_food: rng.gen_range(0..30),
+            points_per_tile: rng.gen_range(0..30),
+            points_per_length_rank: rng.gen_range(-80..10),
+            points_per_health: rng.gen_range(0..30),
+            points_per_distance_to_food: rng.gen_range(-30..5),
+            points_per_kill: rng.gen_range(0..1000),
+            points_per_turn_survived: rng.gen_range(0..1000),
+            points_per_distance_to_smaller_enemies: rng.gen_range(-30..5),
+            points_when_dead: -10000000,
+            hungry_mode_max_health: rng.gen_range(15..70),
+            hungry_mode_food_multiplier: rng.gen_range((1.0)..(15.0)),
+            food_distance_cap: rng.gen_range(3..50),
+            enemy_distance_cap: rng.gen_range(3..50),
+        }
+    }
+
+    pub fn evolve(&self) -> Self {
+        let mut rng = rand::thread_rng();
+
+        let mut res = self.clone();
+        let mul = rng.gen_range::<i64, _>(-3..3).pow(2);
+        match rng.gen_range(0..12) {
+            0 => res.points_per_food += mul,
+            1 => res.points_per_tile += mul,
+            2 => res.points_per_length_rank += 2 * mul,
+            3 => res.points_per_health += mul,
+            4 => res.points_per_distance_to_food += mul,
+            5 => res.points_per_kill += 5 * mul,
+            6 => res.points_per_turn_survived += 5 * mul,
+            7 => res.points_per_distance_to_smaller_enemies += mul,
+            8 => {
+                res.hungry_mode_max_health =
+                    cmp::min(100, cmp::max(0, res.hungry_mode_max_health + mul as i8))
+            }
+            9 => res.hungry_mode_food_multiplier += 0.05 * mul as f64,
+            10 => res.food_distance_cap = cmp::max(1, res.food_distance_cap + mul as NumType),
+            11 => res.enemy_distance_cap = cmp::max(1, res.enemy_distance_cap + mul as NumType),
+            _ => unreachable!(),
+        }
+
+        res
+    }
+}
+
+impl<const MAX_DISTANCE: NumType> ToString for Config<MAX_DISTANCE> {
+    fn to_string(&self) -> String {
+        let encoded: Vec<u8> = bincode::serialize(self).unwrap();
+        let stringified: Vec<String> = encoded.iter().map(|b| format!("{:02x}", b)).collect();
+        stringified.join("")
+    }
+}
+
+impl<const MAX_DISTANCE: NumType> From<&str> for Config<MAX_DISTANCE> {
+    fn from(v: &str) -> Self {
+        let bytes: Vec<u8> = (0..v.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&v[i..i + 2], 16).unwrap())
+            .collect();
+        let decoded: Self = bincode::deserialize(bytes.as_slice()).unwrap();
+        decoded
+    }
+}
+
+#[test]
+fn hex_encoded_config() {
+    let cfg = Config::<{ u16::MAX }>::random();
+    let cfg_str = cfg.to_string();
+
+    println!("as string: {}", cfg_str);
+
+    let cfg_parsed = Config::<{ u16::MAX }>::from(cfg_str.as_str());
+
+    assert_eq!(cfg, cfg_parsed);
 }
 
 impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
