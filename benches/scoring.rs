@@ -60,6 +60,8 @@ fn criterion_benchmark(c: &mut Criterion) {
                     points_when_dead: -1000000,
                     hungry_mode_max_health: 35,
                     hungry_mode_food_multiplier: 6.0,
+                    food_distance_cap: 20,
+                    enemy_distance_cap: 20,
                 }
                 .score(&games[turn])
             })

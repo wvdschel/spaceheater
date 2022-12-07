@@ -281,11 +281,13 @@ pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_length_rank: i64,
     pub points_per_health: i64,
     pub points_per_distance_to_food: i64,
+    pub food_distance_cap: NumType,
     pub points_per_kill: i64,
     pub points_per_turn_survived: i64,
     // should be balanced with points_per_length_rank: being longer should outweigh
     // the penalties of being far away from a smaller snake
     pub points_per_distance_to_smaller_enemies: i64,
+    pub enemy_distance_cap: NumType,
     pub points_when_dead: i64,
     pub hungry_mode_max_health: i8,
     pub hungry_mode_food_multiplier: f64,
@@ -325,7 +327,10 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
                 length_rank += 1;
             } else {
                 score += self.points_per_distance_to_smaller_enemies
-                    * flood_info[0].distance_to_collision[i + 1] as i64;
+                    * cmp::min(
+                        flood_info[0].distance_to_collision[i + 1],
+                        self.enemy_distance_cap,
+                    ) as i64;
                 log!("points including distance to snake {}: {}", i, score);
             }
         }
@@ -338,7 +343,8 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
             flood_info[0].food_count,
             score + food_score
         );
-        food_score += self.points_per_distance_to_food * flood_info[0].food_distance as i64;
+        food_score += self.points_per_distance_to_food
+            * cmp::min(flood_info[0].food_distance, self.food_distance_cap) as i64;
         log!(
             "points including food distance ({}): {}",
             flood_info[0].food_distance,

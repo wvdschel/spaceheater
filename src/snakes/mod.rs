@@ -36,6 +36,8 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
                 points_when_dead: -1000000,
                 hungry_mode_max_health: 35,
                 hungry_mode_food_multiplier: 6.0,
+                food_distance_cap: 20,
+                enemy_distance_cap: 20,
             },
             Some(Customizations {
                 color: "#03befc".to_string(),
