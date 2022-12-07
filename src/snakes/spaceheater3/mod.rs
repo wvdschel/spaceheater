@@ -1,5 +1,4 @@
 use crate::{
-    log,
     logic::{self, Game},
     protocol::{self, Customizations, Direction},
     snakes::spaceheater3::max::MaximizingNode,
@@ -98,7 +97,7 @@ where
                         thread_count() as f32,
                     );
                     let _ = tx.send((res, node_count));
-                    log!("complete tree for depth {}:\n{}", current_depth, root);
+                    //log!("complete tree for depth {}:\n{}", current_depth, root);
                 });
             }
             let (res, node_count) = rx.recv().unwrap();

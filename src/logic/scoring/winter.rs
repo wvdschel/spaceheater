@@ -1,6 +1,7 @@
-use std::cmp;
+use std::{cmp, mem::MaybeUninit};
 
 use crate::{
+    log,
     logic::{game::GameMode, Game, Point},
     util::stackqueue::StackDequeue,
 };
@@ -10,13 +11,13 @@ use super::Scorer;
 type NumType = u16;
 pub const NO_SNAKE: u8 = u8::MAX;
 
-#[derive(Clone, Copy)]
-pub struct SnakeScore<const SNAKE_COUNT: usize> {
-    food_count: NumType,
-    tile_count: NumType,
-    food_distance: NumType,
-    food_at_min_distance: NumType,
-    distance_to_collision: [NumType; SNAKE_COUNT],
+#[derive(Clone, Debug)]
+pub struct SnakeScore {
+    pub food_count: NumType,
+    pub tile_count: NumType,
+    pub food_distance: NumType,
+    pub food_at_min_distance: NumType,
+    pub distance_to_collision: [NumType; MAX_SNAKES],
 }
 
 #[derive(Copy, Clone)]
@@ -41,9 +42,7 @@ const MAX_WIDTH: usize = 25;
 const MAX_HEIGHT: usize = 25;
 const MAX_SNAKES: usize = 12;
 
-pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
-    game: &Game,
-) -> [SnakeScore<MAX_SNAKES>; MAX_SNAKES] {
+pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_SNAKES] {
     let warp = game.rules.game_mode == GameMode::Wrapped;
 
     let mut queue: StackDequeue<Work, 256> = StackDequeue::new();
@@ -54,13 +53,27 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
         damage_amount: 0,
         snake: NO_SNAKE,
     }; MAX_HEIGHT]; MAX_WIDTH];
-    let mut scores = [SnakeScore {
-        food_count: 0,
-        tile_count: 0,
-        food_distance: NumType::MAX,
-        food_at_min_distance: 0,
-        distance_to_collision: [NumType::MAX; MAX_SNAKES],
-    }; MAX_SNAKES];
+
+    let mut scores = {
+        // Create an array of uninitialized values.
+        let mut array: [MaybeUninit<SnakeScore>; MAX_SNAKES] =
+            unsafe { MaybeUninit::uninit().assume_init() };
+
+        for element in array.iter_mut() {
+            *element = MaybeUninit::new(SnakeScore {
+                food_count: 0,
+                tile_count: 0,
+                food_distance: NumType::MAX,
+                food_at_min_distance: 0,
+                distance_to_collision: [NumType::MAX; MAX_SNAKES],
+            });
+        }
+
+        unsafe { std::mem::transmute::<_, [SnakeScore; MAX_SNAKES]>(array) }
+    };
+    for i in 0..scores.len() {
+        scores[i].distance_to_collision[i] = 0;
+    }
 
     let (w, h) = (game.board.width() as usize, game.board.height() as usize);
 
@@ -104,7 +117,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
             snake_length: cmp::min(snake.length, NumType::MAX as usize) as NumType,
             snake_distance: 0,
             p: snake.head,
-            snake: i as u8,
+            snake: 1 + i as u8,
             health: snake.health,
         });
     }
@@ -240,10 +253,28 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(
         }
     }
 
+    #[cfg(test)]
+    {
+        println!("{}", game);
+        for y in 0..h {
+            for x in 0..w {
+                let tile = game.board.get(&Point {
+                    x: x as i8,
+                    y: y as i8,
+                });
+                match tile {
+                    crate::logic::Tile::Head => print!("<{:03}>", board[x][y].snake),
+                    _ => print!(" {:03} ", board[x][y].snake),
+                }
+            }
+            println!();
+        }
+    }
+
     scores
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_food: i64,
     pub points_per_tile: i64,
@@ -262,6 +293,8 @@ pub struct Config<const MAX_DISTANCE: NumType> {
 
 impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
     fn score(&self, game: &Game) -> i64 {
+        log!("scoring {}", game);
+        log!("using config {:?}", self);
         let mut score: i64 = 0;
         score += self.points_per_kill * game.dead_snakes as i64;
         score += self.points_per_turn_survived * game.turn as i64;
@@ -272,30 +305,57 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
             return score;
         }
 
+        log!("points including surviving and killing: {}", score);
+
         let flood_info = winter_floodfill::<MAX_DISTANCE>(game);
+        log!("flood fill: {:?}", flood_info);
 
         score += self.points_per_health * game.you.health as i64;
+        log!("points including health: {}", score);
         score += self.points_per_tile * flood_info[0].tile_count as i64;
+        log!(
+            "points including tiles ({}): {}",
+            flood_info[0].tile_count,
+            score
+        );
 
         let mut length_rank = 0;
         for (i, snake) in game.others.iter().enumerate() {
-            if snake.length > game.you.length {
+            if snake.length >= game.you.length {
                 length_rank += 1;
-            }
-            if snake.length < game.you.length {
+            } else {
                 score += self.points_per_distance_to_smaller_enemies
                     * flood_info[0].distance_to_collision[i + 1] as i64;
+                log!("points including distance to snake {}: {}", i, score);
             }
         }
         score += self.points_per_length_rank * length_rank;
+        log!("points including length rank ({}): {}", length_rank, score);
 
         let mut food_score = self.points_per_food * flood_info[0].food_count as i64;
+        log!(
+            "points including food tiles ({}): {}",
+            flood_info[0].food_count,
+            score + food_score
+        );
         food_score += self.points_per_distance_to_food * flood_info[0].food_distance as i64;
+        log!(
+            "points including food distance ({}): {}",
+            flood_info[0].food_distance,
+            score + food_score
+        );
         if game.you.health < self.hungry_mode_max_health {
             food_score = f64::round(self.hungry_mode_food_multiplier * food_score as f64) as i64;
+            log!(
+                "points including humgry multiplier ({}): {}",
+                flood_info[0].food_distance,
+                score + food_score
+            );
         }
+
         score += food_score;
 
+        log!("final score: {}", score);
         score
     }
 }

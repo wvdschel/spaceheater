@@ -5,7 +5,7 @@ use crate::protocol::{self};
 use super::{Direction, Game};
 
 mod board;
-mod voronoi;
+mod floodfill;
 
 #[test]
 fn head_to_head_collision_equal_length() {
