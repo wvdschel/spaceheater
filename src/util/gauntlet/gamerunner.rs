@@ -13,8 +13,6 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
         cmd_args.push(format!("http://{}/{}/", base_url, snake_name));
     }
 
-    println!("Running: battlesnake {}", args.join(" "));
-
     match Command::new("battlesnake")
         .args(cmd_args.as_slice())
         .output()
@@ -25,7 +23,7 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
                 println!("{}", String::from_utf8_lossy(&res.stderr));
                 panic!(
                     "command failed: battlesnake {}: exit code {}",
-                    args.join(" "),
+                    cmd_args.join(" "),
                     res.status
                 );
             }
@@ -55,6 +53,10 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
             deaths.reverse();
             return deaths;
         }
-        Err(error) => panic!("command failed: battlesnake {}: {}", args.join(" "), error),
+        Err(error) => panic!(
+            "command failed: battlesnake {}: {}",
+            cmd_args.join(" "),
+            error
+        ),
     }
 }
