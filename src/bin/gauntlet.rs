@@ -4,7 +4,14 @@ use topsnek::{
 };
 
 fn main() {
-    let mut g = Gauntlet::new(&[]); // TODO add cli args
+    let mut g = Gauntlet::new(&[
+        "--shrinkEveryNTurns",
+        "20",
+        "-g",
+        "wrapped",
+        "--map",
+        "royale",
+    ]);
     g.add_contestant(
         "default wintersnake",
         scoring::winter::Config::<{ u16::MAX }> {
@@ -23,6 +30,6 @@ fn main() {
             enemy_distance_cap: 20,
         },
     );
-    g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
-    g.new_round(4);
+    //g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
+    g.new_round(1);
 }

@@ -1,4 +1,5 @@
 use crate::{
+    log,
     logic::{self, search, Board, Direction, Point, Tile},
     protocol, Battlesnake,
 };
@@ -26,7 +27,7 @@ fn look_ahead(board: &mut Board, head: &Point, turns: usize) -> (Direction, usiz
             board.set(&p, Tile::Wall);
             let (_, turns) = look_ahead(board, &p, turns - 1);
             match board.get(&head) {
-                Tile::Head => println!("survival time for {:?}: {}", dir, turns + 1),
+                Tile::Head => log!("survival time for {:?}: {}", dir, turns + 1),
                 _ => (),
             }
             if turns > max_turns || (turns == max_turns && rand::random()) {
@@ -94,7 +95,7 @@ fn wipeout(
                     if s.head == h {
                         die = die || s.length >= you.length;
                         kill = kill || s.length <= you.length;
-                        println!("head-to-head with {}: die={} kill={}", s.name, die, kill);
+                        log!("head-to-head with {}: die={} kill={}", s.name, die, kill);
                     }
                 }
             }
@@ -111,7 +112,7 @@ fn search_for_food(
     head: &Point,
     hp: usize,
 ) -> Option<Direction> {
-    println!("searching for food, head is at {}", head);
+    log!("searching for food, head is at {}", head);
     let distances = search::calculate_distances(
         board,
         head,
@@ -124,18 +125,20 @@ fn search_for_food(
 
     for f in food {
         if let Some(distance) = distances[f.x as usize][f.y as usize] {
-            println!("distance to food at {} is {}", f, distance);
+            log!("distance to food at {} is {}", f, distance);
             if (distance + board.width()) < hp as isize && (distance > board.width()) {
-                println!(
+                log!(
                     "not hungry yet (distance to food is {}, hp is {})",
-                    distance, hp
+                    distance,
+                    hp
                 );
                 return None;
             }
             if distance > hp as isize {
-                println!(
+                log!(
                     "distance to closest food ({}) exceeds health ({}), ignoring food",
-                    distance, hp
+                    distance,
+                    hp
                 );
                 return None;
             }
@@ -144,10 +147,10 @@ fn search_for_food(
             for d in path.iter() {
                 print!("{} ", d);
             }
-            println!();
+            log!();
             match path.first() {
                 Some(v) => return Some(*v),
-                None => println!("can't find route to food, fall back to basic survival"),
+                None => log!("can't find route to food, fall back to basic survival"),
             };
         }
     }
@@ -179,8 +182,8 @@ impl Battlesnake for SimpleSnake {
         let food = Vec::from(req.board.food.as_slice());
         let snakes = req.board.snakes.clone();
         let mut board: logic::Board = (&req.board).into();
-        println!("at {} -> {:?}", req.you.head, board.get(&req.you.head));
-        println!("{}", board.to_string());
+        log!("at {} -> {:?}", req.you.head, board.get(&req.you.head));
+        log!("{}", board.to_string());
 
         for (direction, die, kill) in wipeout(&board, snakes, &req.you, &req.you.head) {
             let p = req.you.head.neighbour(direction);

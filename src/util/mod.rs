@@ -10,15 +10,15 @@ pub mod stackqueue;
 #[macro_export]
 #[cfg(feature = "logging")]
 macro_rules! log {
-    ( $( $x:tt )* ) => {
+    ( $( $x:tt )* ) => {{
         println!($( $x )*)
-    }
+    }}
 }
 
 #[macro_export]
 #[cfg(not(feature = "logging"))]
 macro_rules! log {
-    ( $( $x:tt )* ) => {};
+    ( $( $x:tt )* ) => {{}};
 }
 
 #[cfg(not(feature = "sequential"))]
