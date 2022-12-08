@@ -36,9 +36,9 @@ pub fn next_generation(
         .filter(|(rank, score)| {
             if maybe_kill_snake(*rank, scores.len()) {
                 println!("killing snake {} (ranked #{})", score.snake_name, rank);
-                true
-            } else {
                 false
+            } else {
+                true
             }
         })
         .map(|(_, score)| {
