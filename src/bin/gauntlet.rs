@@ -31,5 +31,7 @@ fn main() {
         },
     );
     g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
-    g.new_round(4);
+    loop {
+        g.new_round(4);
+    }
 }
