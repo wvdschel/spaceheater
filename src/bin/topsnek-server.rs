@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rouille;
 
-use std::{sync::Mutex, time::Instant};
+use std::sync::Mutex;
 
 use topsnek::{util::gamelogger, *};
 

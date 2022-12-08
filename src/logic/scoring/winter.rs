@@ -356,6 +356,10 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
     fn load(&mut self, cfg: &str) {
         *self = Self::try_from(cfg).unwrap();
     }
+
+    fn boxed_clone(&self) -> Box<dyn GeneticConfig> {
+        Box::new(self.clone())
+    }
 }
 
 impl<const MAX_DISTANCE: NumType> ToString for Config<MAX_DISTANCE> {

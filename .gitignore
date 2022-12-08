@@ -7,3 +7,4 @@
 callgrind.*
 flamegraph*.svg
 /measurements
+generation_*.txt

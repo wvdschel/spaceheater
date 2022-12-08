@@ -4,11 +4,7 @@ use std::{
     time::SystemTime,
 };
 
-pub struct Score {
-    pub snake_name: String,
-    pub snake_config: String,
-    pub points: isize,
-}
+use super::Score;
 
 pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
     let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
@@ -22,7 +18,13 @@ pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
         file.write(
             format!(
                 "#{}: {} with {} points ({})\n",
-                rank, score.snake_name, score.points, score.snake_config
+                rank,
+                score.snake_name,
+                score.points,
+                score
+                    .snake_config
+                    .map(|c| c.to_string())
+                    .unwrap_or("reference snake".to_string())
             )
             .as_bytes(),
         )?;

@@ -1,60 +1,109 @@
-use rand::{seq::SliceRandom, thread_rng};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 
-fn unique(v1: &(String, String), v2: &(String, String)) -> bool {
-    v1.0 != v2.0 && v1.0 != v2.1 && v1.1 != v2.0 && v1.1 != v2.1
+use rand::{thread_rng, Rng};
+
+trait MutFirst<I> {
+    fn first(&mut self) -> Option<I>;
 }
 
-pub fn generate_pairings(all_snake_names: &Vec<String>) -> Vec<Vec<String>> {
-    // generate snake pairings so that each snake will fight every other snake exactly once
-    let mut combinations: Vec<(String, String)> = vec![];
-    for (i, snake_1) in all_snake_names.iter().enumerate() {
-        if i < all_snake_names.len() - 1 {
-            for snake_2 in &all_snake_names[i + 1..all_snake_names.len()] {
-                combinations.push((snake_1.clone(), snake_2.clone()));
-            }
-        }
+trait First<I> {
+    fn first(&self) -> Option<I>;
+}
+
+impl<T: Iterator<Item = I>, D: Clone, I: Deref<Target = D>> MutFirst<D> for T {
+    fn first(&mut self) -> Option<D> {
+        self.next().map(|v| (*v).clone())
     }
-    if combinations.len() % 2 != 0 {
-        // We need an even number of pairings for 4 player games, add an extra pair of snakes.
-        let mut extra_snakes = all_snake_names.clone();
-        extra_snakes.shuffle(&mut thread_rng());
-        let (s1, s2) = (extra_snakes.pop().unwrap(), extra_snakes.pop().unwrap());
-        combinations.push((s1, s2));
+}
+
+impl<I: Clone> First<I> for HashSet<I> {
+    fn first(&self) -> Option<I> {
+        self.iter().next().map(|v| v.clone())
+    }
+}
+
+#[test]
+fn test_first() {}
+
+pub fn generate_pairings(
+    all_snake_names: &Vec<String>,
+    snakes_per_game: usize,
+) -> Vec<Vec<String>> {
+    if snakes_per_game == 1 {
+        return Vec::from_iter(all_snake_names.iter().map(|s| vec![s.clone()]));
     }
 
-    combinations.shuffle(&mut thread_rng());
-    let mut pairings: Vec<Vec<String>> = vec![];
-    while !combinations.is_empty() {
-        let mut tmp = vec![];
-        let first = combinations.pop().unwrap();
-        let mut second = combinations.pop().unwrap();
-        while !combinations.is_empty() && !unique(&first, &second) {
-            // Can't have two of the same snakes in the same game, so grab another pair
-            tmp.push(second);
-            second = combinations.pop().unwrap();
+    if snakes_per_game > all_snake_names.len() {
+        println!("warning: asked to generate tournament roster with {} snake games, but only {} snakes in total", snakes_per_game, all_snake_names.len());
+        return vec![all_snake_names.clone()];
+    }
+
+    // generate snake pairings so that each snake will fight every other snake at least once
+    let mut combinations = HashMap::new();
+    let mut work_left_for = HashSet::new();
+    for snake_1 in all_snake_names {
+        let mut set = HashSet::new();
+        work_left_for.insert(snake_1.clone());
+        for snake_2 in all_snake_names {
+            set.insert(snake_2.clone());
         }
-        if !unique(&first, &second) {
-            // Tried all remaining pairs from the bag of contestants, and still didn't find
-            // a suitable match. So now we look through the games we already generated,
-            // and look for one where we can make a swap without having a duplicate snake in
-            // either game.
-            for game in &mut pairings {
-                if !game.contains(&second.0) && !game.contains(&second.1) {
-                    let new_second = (game[0].clone(), game[1].clone());
-                    (game[0], game[1]) = second;
-                    second = new_second;
+        combinations.insert(snake_1.clone(), set);
+    }
+    let mut rng = thread_rng();
+
+    let mut pairings: Vec<Vec<String>> = vec![];
+
+    while !work_left_for.is_empty() {
+        let mut snakes = vec![work_left_for.first().unwrap()];
+
+        while snakes.len() < snakes_per_game {
+            let mut next_snake = "".to_string();
+            let mut pair_count = 0;
+            for s in &work_left_for {
+                if snakes.contains(s) {
+                    continue;
+                }
+                let combinations_left_for_s = combinations.get(s).unwrap();
+                let count_for_s = snakes
+                    .iter()
+                    .filter(|s| combinations_left_for_s.contains(*s))
+                    .count();
+                if count_for_s > pair_count {
+                    pair_count = count_for_s;
+                    next_snake = s.clone();
                 }
             }
+            if pair_count == 0 {
+                println!(
+                    "couldn't find a snake to fit with {}, picking a random snake from the list",
+                    snakes.join(" & "),
+                );
+                loop {
+                    let i = rng.gen_range(0..all_snake_names.len());
+                    next_snake = all_snake_names[i].clone();
+                    if !snakes.contains(&next_snake) {
+                        break;
+                    }
+                }
+            }
+            if next_snake == "" {
+                panic!("no snake found to match with {}", snakes.join(" & "));
+            }
+            snakes.push(next_snake);
         }
-        if !unique(&first, &second) {
-            // TODO: instead of panicing, maybe we can just reshuffle and retry
-            panic!("failed to generate game pairings");
+
+        for s1 in &snakes {
+            for s2 in &snakes {
+                combinations.get_mut(s1).unwrap().remove(s2);
+            }
+            if combinations.get(s1).unwrap().len() == 0 {
+                work_left_for.remove(s1);
+            }
         }
-        for v in tmp {
-            // Add back rejected candidates
-            combinations.push(v);
-        }
-        pairings.push(vec![first.0, first.1, second.0, second.1])
+        pairings.push(snakes);
     }
 
     pairings
@@ -67,7 +116,7 @@ fn test_new_round() {
         snakes.push(format!("snake_{}", i));
     }
 
-    let games = generate_pairings(&snakes);
+    let games = generate_pairings(&snakes, 4);
     for g in &games {
         for s in g {
             print!("{} ", s);

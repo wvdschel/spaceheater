@@ -3,11 +3,9 @@ pub mod spaceheater3;
 
 pub use simple::SimpleSnake;
 pub use spaceheater3::Spaceheater3;
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
 use crate::{logic::scoring, protocol::Customizations, Battlesnake};
-
-const CONFIG_DIR: &str = "./cfg";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
