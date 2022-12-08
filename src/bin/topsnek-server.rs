@@ -12,9 +12,7 @@ fn main() {
     let host = args.get(1).map_or(DEFAULT_HOST, |v| v.as_str());
     let address = format!("{}:5110", host);
     let gamelogger = Mutex::new(gamelogger::GameLogger::new());
-    let start = Instant::now();
-    let _snakes = snakes::snakes();
-    println!("loading snakes took {}ms", start.elapsed().as_millis());
+    let snakes = snakes::snakes();
 
     println!("starting server on {}", address);
     rouille::start_server(address, move |request| {
@@ -22,7 +20,6 @@ fn main() {
         let resp = router!(request,
             (GET) (/) => {
                 // List all registered snake bots
-                let snakes = snakes::snakes();
                 let mut list = vec!["<html><head><title>Battle snakes</title></head><body><ul>".to_string()];
                 for (name, _) in snakes.iter() {
                     list.push(
@@ -38,7 +35,6 @@ fn main() {
             },
 
             (GET) (/{id: String}/) => {
-                let snakes = snakes::snakes();
                 println!("request for snake info: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => rouille::Response::json(&snake.snake_info()),
@@ -47,7 +43,6 @@ fn main() {
             },
 
             (POST) (/{id: String}/start) => {
-                let snakes = snakes::snakes();
                 println!("starting new game for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
@@ -73,7 +68,6 @@ fn main() {
             },
 
             (POST) (/{id: String}/end) => {
-                let snakes = snakes::snakes();
                 println!("game over for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
@@ -99,7 +93,6 @@ fn main() {
             },
 
             (POST) (/{id: String}/move) => {
-                let snakes = snakes::snakes();
                 println!("new move for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {

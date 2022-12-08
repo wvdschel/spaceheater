@@ -13,7 +13,7 @@ name = "topsnek-server"
 name = "replay"
 
 [[bin]]
-name = "winter-generation"
+name = "gauntlet"
 
 [[bench]]
 name = "scoring"

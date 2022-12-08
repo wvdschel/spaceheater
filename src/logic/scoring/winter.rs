@@ -6,7 +6,11 @@ use rand::Rng;
 use crate::{
     log,
     logic::{game::GameMode, Game, Point},
-    util::stackqueue::StackDequeue,
+    snakes::Spaceheater3,
+    util::{
+        gauntlet::{GeneticConfig, RandomConfig},
+        stackqueue::StackDequeue,
+    },
 };
 
 use super::Scorer;
@@ -296,8 +300,8 @@ pub struct Config<const MAX_DISTANCE: NumType> {
     pub hungry_mode_food_multiplier: f64,
 }
 
-impl<const MAX_DISTANCE: NumType> Config<MAX_DISTANCE> {
-    pub fn random() -> Self {
+impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
+    fn random() -> Self {
         let mut rng = rand::thread_rng();
         Self {
             points_per_food: rng.gen_range(0..30),
@@ -315,8 +319,10 @@ impl<const MAX_DISTANCE: NumType> Config<MAX_DISTANCE> {
             enemy_distance_cap: rng.gen_range(3..50),
         }
     }
+}
 
-    pub fn evolve(&self) -> Self {
+impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
+    fn evolve(&self) -> Box<dyn GeneticConfig> {
         let mut rng = rand::thread_rng();
 
         let mut res = self.clone();
@@ -340,7 +346,15 @@ impl<const MAX_DISTANCE: NumType> Config<MAX_DISTANCE> {
             _ => unreachable!(),
         }
 
-        res
+        Box::new(res)
+    }
+
+    fn battlesnake(&self) -> Box<dyn crate::Battlesnake + Sync + Send> {
+        Box::new(Spaceheater3::new(self.clone(), None))
+    }
+
+    fn load(&mut self, cfg: &str) {
+        *self = Self::try_from(cfg).unwrap();
     }
 }
 

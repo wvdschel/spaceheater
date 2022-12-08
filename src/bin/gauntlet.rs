@@ -4,11 +4,7 @@ use std::{
 };
 
 use rand::Rng;
-use topsnek::logic::scoring::winter;
-
-const REFERENCE_SNAKES: [&str; 3] = ["spaceheater", "spaceheater_winter", "simple"];
-const SNAKE_COUNT: usize = 180;
-const CONFIG_DIR: &str = "./cfg";
+use topsnek::{logic::scoring::winter, util::gauntlet::GeneticConfig};
 
 fn create_new_snake(snake_name: &str) -> bool {
     let filename = format!("{}/{}", CONFIG_DIR, snake_name.to_string());
@@ -18,7 +14,6 @@ fn create_new_snake(snake_name: &str) -> bool {
         return false;
     }
 
-    println!("creating new snake: {}", snake_name);
     reset_score(snake_name);
 
     true
@@ -32,9 +27,14 @@ fn reset_score(snake_name: &str) {
     file.write_all(b"0").unwrap();
 }
 
-fn survival_chance(rank: usize) -> f64 {
+fn breeding_chance(rank: usize) -> f64 {
     let exp = (rank + 1) * 100 / SNAKE_COUNT;
     0.98f64.powf(exp as f64)
+}
+
+fn survival_chance(rank: usize) -> f64 {
+    let exp = (rank + 1) * 100 / SNAKE_COUNT;
+    0.99f64.powf(exp as f64)
 }
 
 fn maybe_kill_snake(snake: &str, rank: usize) -> bool {
@@ -46,7 +46,7 @@ fn maybe_kill_snake(snake: &str, rank: usize) -> bool {
 
     let mut rng = rand::thread_rng();
     if rng.gen_range(0f64..1f64) > survival_chance(rank) {
-        println!("killing off snake: {} (rank: {})", snake, rank);
+        print!("{} ", rank);
         fs::remove_file(format!("{}/{}", CONFIG_DIR, snake)).unwrap();
         true
     } else {
@@ -62,11 +62,11 @@ fn maybe_breed_snake(snake: &str, rank: usize) -> Option<String> {
     }
 
     let mut rng = rand::thread_rng();
-    if rng.gen_range(0f64..1f64) < survival_chance(rank) {
+    if rng.gen_range(0f64..1f64) < breeding_chance(rank) {
         if let Ok(cfg) = winter::Config::<{ u16::MAX }>::try_from(snake) {
             let new_snake = cfg.evolve().to_string();
+            print!("{} ", rank);
             if create_new_snake(&new_snake) {
-                println!("creating offspring for snake: {} (rank {})", snake, rank);
                 return Some(new_snake);
             }
         }
@@ -113,18 +113,28 @@ fn main() {
     scores.sort_by(|v1, v2| v2.1.cmp(&v1.1));
 
     for (rank, (snake, score)) in scores.iter().enumerate() {
-        println!("#{}: score {}, snake {}", rank, score, snake);
+        let mut is_ref = false;
+        for ref_snake in REFERENCE_SNAKES {
+            if snake == ref_snake {
+                is_ref = true;
+            }
+        }
+        if is_ref || rank < 10 {
+            println!("#{}: score {}, snake {}", rank, score, snake);
+        }
     }
 
+    print!("killing snakes ranked: ");
     let mut snakes: Vec<String> = scores
         .iter()
         .enumerate()
         .filter(|(rank, (snake, _))| !maybe_kill_snake(&snake, *rank))
         .map(|(_, (v, _))| v.clone())
         .collect();
-
+    println!();
     println!("snakes left after deaths: {}", snakes.len());
 
+    print!("breeding snakes ranked: ");
     while snakes.len() != SNAKE_COUNT {
         for i in 0..snakes.len() {
             if let Some(new_snake) = maybe_breed_snake(&snakes[i], i) {
@@ -135,6 +145,7 @@ fn main() {
             }
         }
     }
+    println!();
 
     for snake in snakes {
         reset_score(&snake);

@@ -2,6 +2,9 @@
 # Weird choices to debug
 - None! :D
 
+# The Gauntlet
+- Support games with something other than 4 snakes per game (needs changes to `fn new_round()`)
+
 # Profiling
 Create flamegraph.svg:
   RUSTFLAGS='-C force-frame-pointers=y' cargo run --release --features=profiling --bin replay spaceheater3 < logs/*{game_id}*.json.gz

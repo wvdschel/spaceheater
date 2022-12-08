@@ -3,6 +3,7 @@ use std::io::Read;
 use rouille::{Request, Response, ResponseBody};
 
 pub mod gamelogger;
+pub mod gauntlet;
 pub mod invert;
 pub mod stackqueue;
 
