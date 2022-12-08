@@ -46,10 +46,7 @@ fn handle(
             let mut copy = Vec::new();
             match req_body.read_to_end(&mut copy) {
                 Ok(_) => Some(copy),
-                Err(e) => {
-                    println!("failed to read request body: {:?}", e);
-                    None
-                }
+                Err(_) => None,
             }
         }
         None => None,
@@ -57,7 +54,6 @@ fn handle(
     let body = body.unwrap_or_default();
     router!(request,
         (GET) (/{id: String}/) => {
-            println!("request for snake info: '{}'", id);
             match snakes.get(&id) {
                 Some(snake) => rouille::Response::json(&snake.snake_info()),
                 None => rouille::Response::empty_404(),
@@ -65,7 +61,6 @@ fn handle(
         },
 
         (POST) (/{id: String}/start) => {
-            println!("starting new game for: '{}'", id);
             match snakes.get(&id) {
                 Some(snake) => {
                     match serde_json::from_slice(&body) {
@@ -76,7 +71,6 @@ fn handle(
                             }
                         },
                         Err(e) => {
-                            println!("{:?}", e);
                             rouille::Response::text(format!("{}", e)).with_status_code(400)
                         },
                     }
@@ -86,7 +80,6 @@ fn handle(
         },
 
         (POST) (/{id: String}/end) => {
-            println!("game over for: '{}'", id);
             match snakes.get(&id) {
                 Some(snake) => {
                     match serde_json::from_slice(&body) {
@@ -97,7 +90,6 @@ fn handle(
                             }
                         },
                         Err(e) => {
-                            println!("{:?}", e);
                             rouille::Response::text(format!("{}", e)).with_status_code(400)
                         },
                     }
@@ -107,7 +99,6 @@ fn handle(
         },
 
         (POST) (/{id: String}/move) => {
-            println!("new move for: '{}'", id);
             match snakes.get(&id) {
                 Some(snake) => {
                     match serde_json::from_slice(&body) {
@@ -122,7 +113,6 @@ fn handle(
                             }
                         },
                         Err(e) => {
-                            println!("{:?}", e);
                             rouille::Response::text(format!("{}", e)).with_status_code(400)
                         },
                     }

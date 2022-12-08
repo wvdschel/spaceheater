@@ -144,10 +144,6 @@ fn search_for_food(
             }
 
             let path = search::find_path(&distances, head, f);
-            for d in path.iter() {
-                print!("{} ", d);
-            }
-            log!();
             match path.first() {
                 Some(v) => return Some(*v),
                 None => log!("can't find route to food, fall back to basic survival"),

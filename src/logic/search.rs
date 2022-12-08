@@ -5,7 +5,10 @@ use std::{
 
 use priority_queue::PriorityQueue;
 
-use crate::protocol::{Direction, Point};
+use crate::{
+    log,
+    protocol::{Direction, Point},
+};
 
 use super::{Board, Tile};
 
@@ -97,18 +100,18 @@ where
 
         if past_places.get(&p) != Tile::Empty {
             // We've been walking in a circle - pop the path until we get back to the same place
-            println!("cycle detected - back at {}", p);
+            log!("cycle detected - back at {}", p);
             loop {
                 if let Some(dir) = path.pop_front() {
                     let op = p.neighbour(dir);
                     if op == p {
                         // Succesfully unwound the cycle, continue
-                        println!("reached {} again, succesfully unwound cycle", p);
+                        log!("reached {} again, succesfully unwound cycle", p);
                         break;
                     }
-                    println!("walking back to {}", op);
+                    log!("walking back to {}", op);
                 } else {
-                    println!("could not find path between {} and {}: trying to unwind cycle at {} but path is empty", start, target, p);
+                    log!("could not find path between {} and {}: trying to unwind cycle at {} but path is empty", start, target, p);
                     return Vec::new();
                 }
             }

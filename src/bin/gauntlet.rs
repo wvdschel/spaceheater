@@ -30,6 +30,6 @@ fn main() {
             enemy_distance_cap: 20,
         },
     );
-    //g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
-    g.new_round(1);
+    g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
+    g.new_round(4);
 }

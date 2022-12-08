@@ -1,4 +1,5 @@
 use crate::{
+    log,
     logic::{self, Game},
     protocol::{self, Customizations, Direction},
     snakes::spaceheater3::max::MaximizingNode,
@@ -52,7 +53,7 @@ where
         max_depth: usize,
     ) -> Option<(Direction, i64)> {
         let enemy_count = game.others.len();
-        let turn = game.turn;
+        let _turn = game.turn;
 
         let base_depth = match enemy_count {
             0 => 5,
@@ -62,12 +63,12 @@ where
             4 => 2,
             _ => 1,
         };
-        let start = Instant::now();
+        let _start = Instant::now();
         let max_depth = cmp::max(base_depth + 1, max_depth);
 
-        println!(
+        log!(
             "turn {}: start: calculating depths {} through {} using {} threads",
-            turn,
+            _turn,
             base_depth,
             max_depth,
             thread_count(),
@@ -76,10 +77,10 @@ where
         let mut best_score = None;
         let mut last_score = None;
         for current_depth in base_depth..max_depth {
-            println!(
+            log!(
                 "turn {}: {}ms: starting depth {}",
-                turn,
-                start.elapsed().as_millis(),
+                _turn,
+                _start.elapsed().as_millis(),
                 current_depth,
             );
             let (tx, rx) = channel();
@@ -100,14 +101,14 @@ where
                     //log!("complete tree for depth {}:\n{}", current_depth, root);
                 });
             }
-            let (res, node_count) = rx.recv().unwrap();
+            let (res, _node_count) = rx.recv().unwrap();
             match &res {
-                Some((dir, score)) => {
+                Some((_dir, _score)) => {
                     best_score = res.clone();
-                    println!(
+                    log!(
                         "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
-                        turn,
-                        start.elapsed().as_millis(),
+                        _turn,
+                        _start.elapsed().as_millis(),
                         current_depth,
                         node_count,
                         dir,
@@ -115,20 +116,20 @@ where
                     );
                 }
                 None => {
-                    println!(
+                    log!(
                         "turn {}: {}ms: aborted depth {}",
-                        turn,
-                        start.elapsed().as_millis(),
+                        _turn,
+                        _start.elapsed().as_millis(),
                         current_depth
                     );
                     break;
                 }
             }
             if last_score == best_score.as_ref().map(|s| s.1.clone()) {
-                println!(
+                log!(
                     "turn {}: {}ms: tree completed at depth {}",
-                    turn,
-                    start.elapsed().as_millis(),
+                    _turn,
+                    _start.elapsed().as_millis(),
                     current_depth - 1,
                 );
                 break;
@@ -136,12 +137,12 @@ where
             last_score = best_score.as_ref().map(|s| s.1.clone())
         }
 
-        let statm = procinfo::pid::statm_self().unwrap();
-        println!(
+        let _statm = procinfo::pid::statm_self().unwrap();
+        log!(
             "turn {}: {}ms / {} MB: returning {}",
-            turn,
-            start.elapsed().as_millis(),
-            statm.size * 4096 / 1024 / 1024,
+            _turn,
+            _start.elapsed().as_millis(),
+            _statm.size * 4096 / 1024 / 1024,
             best_score
                 .clone()
                 .map(|v| v.0.to_string())

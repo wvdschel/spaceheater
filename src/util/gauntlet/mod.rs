@@ -105,6 +105,10 @@ impl Gauntlet {
         }
         let server = Webserver::new(snakes);
 
+        println!(
+            "Starting generation {}, running {} games",
+            self.generation, game_count
+        );
         let games = Arc::new(Mutex::new(games));
         let mut threads = vec![];
         for t in 0..concurrent_games {

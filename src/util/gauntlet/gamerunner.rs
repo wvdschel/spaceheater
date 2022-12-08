@@ -47,6 +47,10 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
                     }
                 }
             }
+            for snake in alive {
+                println!("{} has won", snake);
+                deaths.push(snake);
+            }
 
             deaths.reverse();
             return deaths;
