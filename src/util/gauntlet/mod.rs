@@ -34,6 +34,7 @@ pub struct Gauntlet {
     battlesnake_cli_args: Vec<String>,
 }
 
+#[derive(Clone)]
 pub struct Score<'a> {
     pub snake_name: String,
     pub snake_config: Option<&'a Box<dyn GeneticConfig>>,

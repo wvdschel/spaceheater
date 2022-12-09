@@ -29,7 +29,7 @@ pub fn next_generation(
     scores: &Vec<Score>,
     target_count: usize,
 ) -> HashMap<String, Box<dyn GeneticConfig>> {
-    let mut next_gen: HashMap<String, Box<dyn GeneticConfig>> = scores
+    let scores: Vec<Score> = scores
         .iter()
         .filter(|s| s.snake_config.is_some())
         .enumerate()
@@ -44,42 +44,39 @@ pub fn next_generation(
                 true
             }
         })
-        .map(|(_, score)| {
-            (
-                score.snake_name.clone(),
-                score.snake_config.unwrap().boxed_clone(),
-            )
-        })
+        .map(|(_, score)| score.clone())
         .collect();
     println!();
-    println!("snakes left after deaths: {}", next_gen.len());
+    println!("snakes left after deaths: {}", scores.len());
 
     let mut snakes_spawned = 0;
-    while next_gen.len() != target_count {
-        let mut tmp: HashMap<String, Box<dyn GeneticConfig>> = HashMap::new();
-        for (rank, (snake_name, cfg)) in next_gen.iter().enumerate() {
+    let mut next_gen: HashMap<String, Box<dyn GeneticConfig>> = HashMap::new();
+    while scores.len() + next_gen.len() != target_count {
+        for (rank, score) in scores.iter().enumerate() {
             if maybe_breed_snake(rank, scores.len()) {
                 let new_name = format!("gen{}_snake{}", generation, snakes_spawned);
-                let new_config = cfg.evolve();
+                let new_config = score.snake_config.unwrap().evolve().evolve();
                 println!(
-                    "{} (rank #{}) spawned a new child {} with config {}",
-                    snake_name,
+                    "{} (rank #{}, {} points) spawned a new child {} with config {}",
+                    score.snake_name,
                     rank,
+                    score.points,
                     new_name,
                     new_config.to_string()
                 );
                 snakes_spawned += 1;
-                tmp.insert(new_name, new_config);
-                if next_gen.len() + tmp.len() == target_count {
+                next_gen.insert(new_name, new_config);
+                if scores.len() + next_gen.len() == target_count {
                     break;
                 }
             }
         }
-        for (n, c) in tmp.into_iter() {
-            next_gen.insert(n, c);
-        }
     }
     println!();
+
+    for s in scores {
+        next_gen.insert(s.snake_name, s.snake_config.unwrap().boxed_clone());
+    }
 
     next_gen
 }
