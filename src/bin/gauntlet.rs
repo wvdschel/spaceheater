@@ -11,6 +11,8 @@ fn main() {
         "wrapped",
         "--map",
         "royale",
+        "-t",
+        "800",
     ]);
     g.add_contestant(
         "default wintersnake",
@@ -32,6 +34,6 @@ fn main() {
     );
     g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
     loop {
-        g.new_round(4);
+        g.new_round(1);
     }
 }
