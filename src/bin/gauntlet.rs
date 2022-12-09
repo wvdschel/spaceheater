@@ -12,7 +12,7 @@ fn main() {
         "--map",
         "royale",
         "-t",
-        "800",
+        "1000",
     ]);
     g.add_contestant(
         "default wintersnake",
