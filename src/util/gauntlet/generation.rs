@@ -35,7 +35,10 @@ pub fn next_generation(
         .enumerate()
         .filter(|(rank, score)| {
             if maybe_kill_snake(*rank, scores.len()) {
-                println!("killing snake {} (ranked #{})", score.snake_name, rank);
+                println!(
+                    "killing snake {} (ranked #{}, {} points)",
+                    score.snake_name, score.points, rank
+                );
                 false
             } else {
                 true
