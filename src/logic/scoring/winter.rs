@@ -22,6 +22,7 @@ pub const NO_SNAKE: u8 = u8::MAX;
 pub struct SnakeScore {
     pub food_count: NumType,
     pub tile_count: NumType,
+    pub hazard_count: NumType,
     pub food_distance: NumType,
     pub food_at_min_distance: NumType,
     pub distance_to_collision: [NumType; MAX_SNAKES],
@@ -70,6 +71,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
             *element = MaybeUninit::new(SnakeScore {
                 food_count: 0,
                 tile_count: 0,
+                hazard_count: 0,
                 food_distance: NumType::MAX,
                 food_at_min_distance: 0,
                 distance_to_collision: [NumType::MAX; MAX_SNAKES],
@@ -146,6 +148,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
             }
 
             scores[snake].tile_count -= 1;
+            scores[snake].hazard_count -= game.board.hazard_count(&work.p) as NumType;
             if game.board.is_food(&work.p) {
                 scores[snake].food_count -= 1;
                 if scores[snake].food_distance == work.snake_distance {
@@ -165,6 +168,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
                 // Remove score from previous snake if there is one
                 let snake = board[x][y].snake as usize;
                 scores[snake].tile_count -= 1;
+                scores[snake].hazard_count -= game.board.hazard_count(&work.p) as NumType;
                 if game.board.is_food(&work.p) {
                     scores[snake].food_count -= 1;
                     if scores[snake].food_distance == work.snake_distance {
@@ -181,6 +185,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
             let has_food = tile.has_food();
 
             scores[work.snake as usize].tile_count += 1;
+            scores[work.snake as usize].hazard_count += game.board.hazard_count(&work.p) as NumType;
             if has_food {
                 scores[work.snake as usize].food_count += 1;
                 if scores[work.snake as usize].food_distance > work.snake_distance {
@@ -285,6 +290,7 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
 pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_food: i64,
     pub points_per_tile: i64,
+    pub points_per_hazard: i64,
     pub points_per_length_rank: i64,
     pub points_per_health: i64,
     pub points_per_distance_to_food: i64,
@@ -306,7 +312,8 @@ impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
         Self {
             points_per_food: rng.gen_range(0..30),
             points_per_tile: rng.gen_range(0..30),
-            points_per_length_rank: rng.gen_range(-80..10),
+            points_per_hazard: rng.gen_range(-10..0),
+            points_per_length_rank: rng.gen_range(-200..10),
             points_per_health: rng.gen_range(0..30),
             points_per_distance_to_food: rng.gen_range(-30..5),
             points_per_kill: rng.gen_range(0..1000),
@@ -327,7 +334,7 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
 
         let mut res = self.clone();
         let mul = rng.gen_range::<i64, _>(-3..3).pow(2);
-        match rng.gen_range(0..12) {
+        match rng.gen_range(0..13) {
             0 => res.points_per_food += mul,
             1 => res.points_per_tile += mul,
             2 => res.points_per_length_rank += 2 * mul,
@@ -343,6 +350,7 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
             9 => res.hungry_mode_food_multiplier += 0.05 * mul as f64,
             10 => res.food_distance_cap = cmp::max(1, res.food_distance_cap + mul as NumType),
             11 => res.enemy_distance_cap = cmp::max(1, res.enemy_distance_cap + mul as NumType),
+            12 => res.points_per_hazard += mul,
             _ => unreachable!(),
         }
 
@@ -423,9 +431,11 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
         score += self.points_per_health * game.you.health as i64;
         log!("points including health: {}", score);
         score += self.points_per_tile * flood_info[0].tile_count as i64;
+        score += self.points_per_hazard * flood_info[0].hazard_count as i64;
         log!(
-            "points including tiles ({}): {}",
+            "points including tiles ({} + {} hazards): {}",
             flood_info[0].tile_count,
+            flood_info[0].hazard_count,
             score
         );
 

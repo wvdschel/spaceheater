@@ -26,7 +26,22 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert(
         "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
-            scoring::winter::Config::<{ u16::MAX }>::try_from(WINTER_CHAMPION).unwrap(),
+            scoring::winter::Config::<{ u16::MAX }> {
+                points_per_food: 28,
+                points_per_tile: 18,
+                points_per_hazard: -10,
+                points_per_length_rank: -29,
+                points_per_health: 10,
+                points_per_distance_to_food: -20,
+                food_distance_cap: 23,
+                points_per_kill: 760,
+                points_per_turn_survived: 547,
+                points_per_distance_to_smaller_enemies: 2,
+                enemy_distance_cap: 29,
+                points_when_dead: -10000000,
+                hungry_mode_max_health: 50,
+                hungry_mode_food_multiplier: 6.58492057400877,
+            },
             Some(Customizations {
                 color: "#03befc".to_string(),
                 head: "scarf".to_string(),
@@ -34,6 +49,11 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
+
+    // println!(
+    //     "Winter champion config: {:?}",
+    //     scoring::winter::Config::<{ u16::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+    // );
 
     snakes
 }

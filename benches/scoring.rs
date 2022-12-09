@@ -9,7 +9,7 @@ use topsnek::{
         scoring::{self, winter::Config, Scorer},
         voronoi,
     },
-    util::gamelogger,
+    util::{gamelogger, gauntlet::RandomConfig},
 };
 
 #[allow(unused)]
@@ -47,24 +47,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
 
         c.bench_function(format!("winter_turn_{}", turn).as_str(), |b| {
-            b.iter(|| {
-                Config::<{ u16::MAX }> {
-                    points_per_food: 30,
-                    points_per_tile: 10,
-                    points_per_length_rank: -20,
-                    points_per_health: 1,
-                    points_per_distance_to_food: -1,
-                    points_per_kill: 100,
-                    points_per_turn_survived: 300,
-                    points_per_distance_to_smaller_enemies: -1,
-                    points_when_dead: -1000000,
-                    hungry_mode_max_health: 35,
-                    hungry_mode_food_multiplier: 6.0,
-                    food_distance_cap: 20,
-                    enemy_distance_cap: 20,
-                }
-                .score(&games[turn])
-            })
+            b.iter(|| Config::<{ u16::MAX }>::random().score(&games[turn]))
         });
 
         // c.bench_function(format!("voronoi_all_turn_{}", turn).as_str(), |b| {
