@@ -161,8 +161,8 @@ impl Gauntlet {
             let minutes_remaining = (seconds_remaining % 3600) / 60;
             let seconds_remaining = seconds_remaining % 60;
             println!(
-                "Estimated time left for this generation to end: {}h{:02}m{:02}s",
-                hours_remaining, minutes_remaining, seconds_remaining
+                "Estimated time left for generation {} to end: {}h{:02}m{:02}s",
+                self.generation, hours_remaining, minutes_remaining, seconds_remaining
             );
         }
         println!();
