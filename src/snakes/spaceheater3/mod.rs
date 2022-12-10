@@ -110,9 +110,9 @@ where
                         _turn,
                         _start.elapsed().as_millis(),
                         current_depth,
-                        node_count,
-                        dir,
-                        score,
+                        _node_count,
+                        _dir,
+                        _score,
                     );
                 }
                 None => {

@@ -4,7 +4,6 @@ use std::{cmp, mem::MaybeUninit};
 use rand::Rng;
 
 use crate::{
-    log,
     logic::{game::GameMode, Game, Point},
     snakes::Spaceheater3,
     util::{
@@ -416,8 +415,6 @@ fn hex_encoded_config() {
 
 impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
     fn score(&self, game: &Game) -> i64 {
-        log!("scoring {}", game);
-        log!("using config {:?}", self);
         let mut score: i64 = 0;
         score += self.points_per_kill * game.dead_snakes as i64;
         score += self.points_per_turn_survived * game.turn as i64;
@@ -428,21 +425,11 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
             return score;
         }
 
-        log!("points including surviving and killing: {}", score);
-
         let flood_info = winter_floodfill::<MAX_DISTANCE>(game);
-        log!("flood fill: {:?}", flood_info);
 
         score += self.points_per_health * game.you.health as i64;
-        log!("points including health: {}", score);
         score += self.points_per_tile * flood_info[0].tile_count as i64;
         score += self.points_per_hazard * flood_info[0].hazard_count as i64;
-        log!(
-            "points including tiles ({} + {} hazards): {}",
-            flood_info[0].tile_count,
-            flood_info[0].hazard_count,
-            score
-        );
 
         let mut length_rank = 0;
         for (i, snake) in game.others.iter().enumerate() {
@@ -454,37 +441,18 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
                         flood_info[0].distance_to_collision[i + 1],
                         self.enemy_distance_cap,
                     ) as i64;
-                log!("points including distance to snake {}: {}", i, score);
             }
         }
         score += self.points_per_length_rank * length_rank;
-        log!("points including length rank ({}): {}", length_rank, score);
 
         let mut food_score = self.points_per_food * flood_info[0].food_count as i64;
-        log!(
-            "points including food tiles ({}): {}",
-            flood_info[0].food_count,
-            score + food_score
-        );
         food_score += self.points_per_distance_to_food
             * cmp::min(flood_info[0].food_distance, self.food_distance_cap) as i64;
-        log!(
-            "points including food distance ({}): {}",
-            flood_info[0].food_distance,
-            score + food_score
-        );
         if game.you.health < self.hungry_mode_max_health {
             food_score = f64::round(self.hungry_mode_food_multiplier * food_score as f64) as i64;
-            log!(
-                "points including humgry multiplier ({}): {}",
-                flood_info[0].food_distance,
-                score + food_score
-            );
         }
-
         score += food_score;
 
-        log!("final score: {}", score);
         score
     }
 }
