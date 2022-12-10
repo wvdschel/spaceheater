@@ -74,82 +74,84 @@ where
             thread_count(),
         );
 
-        let mut best_score = None;
-        let mut last_score = None;
-        for current_depth in base_depth..max_depth {
-            log!(
-                "turn {}: {}ms: starting depth {}",
-                _turn,
-                _start.elapsed().as_millis(),
-                current_depth,
-            );
-            let (tx, rx) = channel();
-            {
-                let scorer = self.scorer.clone();
-                let deadline = deadline.clone();
-                let game = game.clone();
-                thread::spawn(move || {
-                    let mut root = MaximizingNode::new(game);
-                    let (res, node_count) = root.solve(
-                        &deadline,
-                        current_depth,
-                        &scorer,
-                        &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
-                        thread_count() as f32,
-                    );
-                    let _ = tx.send((res, node_count));
-                    //log!("complete tree for depth {}:\n{}", current_depth, root);
-                });
-            }
-            let (res, _node_count) = rx.recv().unwrap();
-            match &res {
-                Some((_dir, _score)) => {
-                    best_score = res.clone();
-                    log!(
-                        "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
-                        _turn,
-                        _start.elapsed().as_millis(),
-                        current_depth,
-                        _node_count,
-                        _dir,
-                        _score,
-                    );
+        let (tx, rx) = channel();
+
+        let scorer = self.scorer.clone();
+        let deadline = deadline.clone();
+        let game = game.clone();
+        thread::spawn(move || {
+            let mut root = MaximizingNode::new(game);
+            let mut best_score = None;
+            let mut last_score = None;
+            let mut total_node_count = 0;
+            for current_depth in base_depth..max_depth {
+                log!(
+                    "turn {}: {}ms: starting depth {}",
+                    _turn,
+                    _start.elapsed().as_millis(),
+                    current_depth,
+                );
+                let (res, node_count) = root.solve(
+                    &deadline,
+                    current_depth,
+                    &scorer,
+                    &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
+                    thread_count() as f32,
+                );
+                total_node_count += node_count;
+                //log!("complete tree for depth {}:\n{}", current_depth, root);
+
+                match &res {
+                    Some((_dir, _score)) => {
+                        best_score = res.clone();
+                        log!(
+                            "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
+                            _turn,
+                            _start.elapsed().as_millis(),
+                            current_depth,
+                            total_node_count,
+                            _dir,
+                            _score,
+                        );
+                    }
+                    None => {
+                        log!(
+                            "turn {}: {}ms: aborted depth {}",
+                            _turn,
+                            _start.elapsed().as_millis(),
+                            current_depth
+                        );
+                        break;
+                    }
                 }
-                None => {
+                if last_score == best_score.as_ref().map(|s| s.1.clone()) {
                     log!(
-                        "turn {}: {}ms: aborted depth {}",
+                        "turn {}: {}ms: tree completed at depth {} after {} nodes",
                         _turn,
                         _start.elapsed().as_millis(),
-                        current_depth
+                        current_depth - 1,
+                        total_node_count,
                     );
                     break;
                 }
+                last_score = best_score.as_ref().map(|s| s.1.clone())
             }
-            if last_score == best_score.as_ref().map(|s| s.1.clone()) {
-                log!(
-                    "turn {}: {}ms: tree completed at depth {}",
-                    _turn,
-                    _start.elapsed().as_millis(),
-                    current_depth - 1,
-                );
-                break;
-            }
-            last_score = best_score.as_ref().map(|s| s.1.clone())
-        }
 
-        let _statm = procinfo::pid::statm_self().unwrap();
-        log!(
-            "turn {}: {}ms / {} MB: returning {}",
-            _turn,
-            _start.elapsed().as_millis(),
-            _statm.size * 4096 / 1024 / 1024,
-            best_score
-                .clone()
-                .map(|v| v.0.to_string())
-                .unwrap_or("None".to_string())
-        );
+            let _ = tx.send(best_score);
+            let _statm = procinfo::pid::statm_self().unwrap();
+            log!(
+                "turn {}: {}ms / {} MB: returning {}",
+                _turn,
+                _start.elapsed().as_millis(),
+                _statm.size * 4096 / 1024 / 1024,
+                best_score
+                    .clone()
+                    .map(|v| v.0.to_string())
+                    .unwrap_or("None".to_string())
+            );
+        });
 
-        best_score
+        rx.recv().unwrap()
     }
 }
 

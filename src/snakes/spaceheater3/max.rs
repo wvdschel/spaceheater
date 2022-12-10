@@ -1,7 +1,6 @@
 use rayon::prelude::*;
 
 use std::{
-    cmp,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -41,7 +40,7 @@ impl MaximizingNode {
                 }
             }
         } else {
-            self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2))
+            self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2));
         }
     }
 
@@ -64,19 +63,6 @@ impl MaximizingNode {
         false
     }
 
-    pub fn cmp_scores(&self, other: &Self) -> cmp::Ordering {
-        if self.score == other.score {
-            return cmp::Ordering::Equal;
-        }
-        match &self.score {
-            Some((_, self_score)) => match &other.score {
-                Some((_, other_score)) => self_score.cmp(other_score),
-                None => cmp::Ordering::Less,
-            },
-            None => cmp::Ordering::Greater,
-        }
-    }
-
     pub fn format_tree(&self, depth: usize) -> String {
         let mut strings = std::vec::Vec::<String>::new();
         strings.push(format!(
@@ -93,9 +79,7 @@ impl MaximizingNode {
         };
         strings.push(format!("{}", self.game));
 
-        let mut children: std::vec::Vec<&MinimizingNode> = self.children.iter().collect();
-        children.sort_by(|c1, c2| c1.cmp_scores(c2));
-        for c in children {
+        for c in self.children.iter() {
             strings.push(c.format_tree(depth));
         }
 
@@ -194,10 +178,14 @@ impl MaximizingNode {
         }
 
         let (top_move, top_score) = top_score.read().unwrap().clone();
-        return (
-            top_score.map(|s| (top_move, s)),
-            total_node_count.load(Ordering::Relaxed),
-        );
+        self.score = top_score.map(|s| (top_move, s));
+        return (self.score, total_node_count.load(Ordering::Relaxed));
+    }
+
+    pub fn cmp_scores(&self, other: &Self) -> std::cmp::Ordering {
+        let self_score = self.score.map(|s| s.1).unwrap_or(i64::MAX);
+        let other_score = other.score.map(|s| s.1).unwrap_or(i64::MAX);
+        self_score.cmp(&other_score)
     }
 }
 

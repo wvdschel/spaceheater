@@ -1,7 +1,6 @@
 use rayon::prelude::*;
 
 use std::{
-    cmp,
     sync::{
         atomic::{AtomicI64, AtomicUsize, Ordering},
         Arc,
@@ -9,10 +8,7 @@ use std::{
     time::Instant,
 };
 
-use crate::{
-    logic::{self, Direction, Game},
-    util::invert::invert,
-};
+use crate::logic::{self, Direction, Game};
 
 use super::{alphabeta::AlphaBeta, max::MaximizingNode, util::all_sensible_enemy_moves};
 
@@ -31,23 +27,6 @@ impl MinimizingNode {
         }
     }
 
-    pub fn cmp_scores(&self, other: &Self) -> cmp::Ordering {
-        if self.score == other.score {
-            return cmp::Ordering::Equal;
-        }
-        match &self.score {
-            Some(self_score) => match &other.score {
-                Some(other_score) => invert(self_score).cmp(&invert(other_score)),
-                None => cmp::Ordering::Less,
-            },
-            None => cmp::Ordering::Greater,
-        }
-    }
-
-    fn sort_children(&mut self) {
-        self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2))
-    }
-
     pub(super) fn update_children(&mut self, game: &Game) {
         if self.children.len() == 0 {
             for combo in all_sensible_enemy_moves(game) {
@@ -56,7 +35,7 @@ impl MinimizingNode {
                 self.children.push(MaximizingNode::new(game));
             }
         } else {
-            self.sort_children()
+            self.children.sort_unstable_by(|c1, c2| c1.cmp_scores(c2));
         }
     }
 
@@ -73,9 +52,7 @@ impl MinimizingNode {
             None => {}
         };
 
-        let mut children: std::vec::Vec<&MaximizingNode> = self.children.iter().collect();
-        children.sort_by(|c1, c2| c1.cmp_scores(c2));
-        for c in children {
+        for c in self.children.iter() {
             strings.push(c.format_tree(depth + 1));
         }
 
@@ -88,6 +65,12 @@ impl MinimizingNode {
             len += c.len()
         }
         len
+    }
+
+    pub fn cmp_scores(&self, other: &Self) -> std::cmp::Ordering {
+        let self_score = self.score.unwrap_or(i64::MIN);
+        let other_score = other.score.unwrap_or(i64::MIN);
+        other_score.cmp(&self_score)
     }
 }
 
@@ -154,6 +137,7 @@ impl MinimizingNode {
         } else {
             Some(min_score)
         };
+        self.score = min_score;
         (min_score, total_node_count.load(Ordering::Relaxed))
     }
 }

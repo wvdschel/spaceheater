@@ -33,6 +33,24 @@ impl<'a> AlphaBeta<'a> {
         self.beta.fetch_min(b, Ordering::Relaxed)
     }
 
+    pub fn values(&self) -> (i64, i64) {
+        let mut max_alpha = self.alpha.load(Ordering::Relaxed);
+        let mut min_beta = self.beta.load(Ordering::Relaxed);
+        let mut next = self;
+        while let Some(v) = next.parent {
+            let next_alpha = v.alpha.load(Ordering::Relaxed);
+            let next_beta = v.beta.load(Ordering::Relaxed);
+            if next_alpha > max_alpha {
+                max_alpha = next_alpha
+            }
+            if next_beta < min_beta {
+                min_beta = next_beta
+            }
+            next = v;
+        }
+        (max_alpha, min_beta)
+    }
+
     pub fn should_be_pruned(&self) -> bool {
         let mut max_alpha = self.alpha.load(Ordering::Relaxed);
         let mut min_beta = self.beta.load(Ordering::Relaxed);
