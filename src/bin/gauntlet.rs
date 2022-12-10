@@ -17,10 +17,10 @@ fn main() {
             g.add_contestant(format!("champion_{}", i).as_str(), cfg)
         }
     }
-    g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
+    //g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
     loop {
         g.new_round(4);
     }
 }
 
-const CHAMPIONS: &str = "";
+const CHAMPIONS: &str = include_str!("champions.txt");
