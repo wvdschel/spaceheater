@@ -3,7 +3,12 @@
 - None! :D
 
 # The Gauntlet
-- Support games with something other than 4 snakes per game (needs changes to `fn new_round()`)
+- Support games with something other than 4 snakes per game
+- Re-introduce random configs during next generation evaluation
+
+# Quality of life
+- Add nice naming to gauntlet generations / offspring
+- Display games + move in the server log, not the raw requests
 
 # Profiling
 Create flamegraph.svg:

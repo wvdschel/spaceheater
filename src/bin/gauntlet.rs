@@ -22,7 +22,9 @@ fn main() {
             g.add_contestant(format!("champion_{}", i).as_str(), cfg)
         }
     }
-    //g.generate_contestants::<winter::Config<{ u16::MAX }>>(50);
+    if g.contestant_count() < 75 {
+        g.generate_contestants::<winter::Config<{ u16::MAX }>>(75 - g.contestant_count());
+    }
     loop {
         g.new_round(4);
     }

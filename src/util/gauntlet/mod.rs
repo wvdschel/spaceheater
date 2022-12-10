@@ -11,6 +11,7 @@ use self::{generation::next_generation, report::write_report};
 
 mod gamerunner;
 mod generation;
+mod names;
 mod pairing;
 mod report;
 mod webserver;
@@ -48,6 +49,10 @@ impl Gauntlet {
             generation: 0,
             battlesnake_cli_args: cli_args.iter().map(|v| v.to_string()).collect(),
         }
+    }
+
+    pub fn contestant_count(&self) -> usize {
+        self.configs.len()
     }
 
     pub fn add_contestant<T: GeneticConfig + 'static>(&mut self, name: &str, cfg: T) {

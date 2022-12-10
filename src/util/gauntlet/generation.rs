@@ -2,11 +2,16 @@ use std::collections::HashMap;
 
 use rand::Rng;
 
+#[cfg(test)]
+use super::RandomConfig;
+#[cfg(test)]
+use crate::logic::scoring::winter;
+
 use super::{GeneticConfig, Score};
 
 fn breeding_chance(rank: usize, count: usize) -> f64 {
     let exp = (rank + 1) * 100 / count;
-    0.98f64.powf(exp as f64)
+    0.985f64.powf(exp as f64)
 }
 
 fn survival_chance(rank: usize, count: usize) -> f64 {
@@ -71,6 +76,11 @@ pub fn next_generation(
                 }
             }
         }
+        println!(
+            "snakes after breeding: {} + {}",
+            scores.len(),
+            next_gen.len(),
+        )
     }
     println!();
 
@@ -79,4 +89,24 @@ pub fn next_generation(
     }
 
     next_gen
+}
+
+#[test]
+fn test_new_round() {
+    let mut cfgs = Vec::<Box<dyn GeneticConfig>>::new();
+    for _ in 0..100 {
+        cfgs.push(Box::new(winter::Config::<10>::random()));
+    }
+
+    let mut snakes = vec![];
+    for i in 0..cfgs.len() {
+        snakes.push(Score {
+            snake_name: format!("snake_{}", i),
+            snake_config: Some(&cfgs[i]),
+            points: 0,
+        });
+    }
+
+    let next_gen = next_generation(1, &snakes, snakes.len());
+    assert_eq!(next_gen.len(), snakes.len())
 }
