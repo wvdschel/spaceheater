@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::{logic::scoring, protocol::Customizations, Battlesnake};
 
-const WINTER_CHAMPION: &str = "08000000000000000700000000000000fbffffffffffffff58ffffffffffffff0700000000000000f4ffffffffffffff0b004b010000000000000701000000000000fdffffffffffffff2000806967ffffffffff216dc437a494131440";
+const WINTER_CHAMPION: &str = "11000000000000001100000000000000f6ffffffffffffff84ffffffffffffff0700000000000000e3ffffffffffffff050045010000000000006d03000000000000fbffffffffffffff2200806967ffffffffff128ff091c214472b40";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
