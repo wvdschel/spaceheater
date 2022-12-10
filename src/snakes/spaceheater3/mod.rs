@@ -83,7 +83,7 @@ where
             let mut root = MaximizingNode::new(game);
             let mut best_score = None;
             let mut last_score = None;
-            let mut total_node_count = 0;
+            let mut _total_node_count = 0;
             for current_depth in base_depth..max_depth {
                 log!(
                     "turn {}: {}ms: starting depth {}",
@@ -98,7 +98,7 @@ where
                     &alphabeta::AlphaBeta::new(i64::MIN, i64::MAX),
                     thread_count() as f32,
                 );
-                total_node_count += node_count;
+                _total_node_count += node_count;
                 //log!("complete tree for depth {}:\n{}", current_depth, root);
 
                 match &res {
@@ -109,7 +109,7 @@ where
                             _turn,
                             _start.elapsed().as_millis(),
                             current_depth,
-                            total_node_count,
+                            _total_node_count,
                             _dir,
                             _score,
                         );
