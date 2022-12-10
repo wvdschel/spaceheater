@@ -51,6 +51,7 @@ const MAX_HEIGHT: usize = 25;
 const MAX_SNAKES: usize = 12;
 
 pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_SNAKES] {
+    let constrictor = game.rules.game_mode == GameMode::Constrictor;
     let warp = game.rules.game_mode == GameMode::Wrapped;
 
     let mut queue: StackDequeue<Work, 256> = StackDequeue::new();
@@ -100,7 +101,11 @@ pub fn winter_floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore
 
     for (idx, p) in game.you.body.iter().enumerate() {
         let (x, y) = (p.x as usize, p.y as usize);
-        let present_for_turns = (game.you.length - idx - 1) as NumType;
+        let present_for_turns = if constrictor {
+            NumType::MAX
+        } else {
+            (game.you.length - idx - 1) as NumType
+        };
         board[x][y].inaccessible_turns =
             cmp::max(board[x][y].inaccessible_turns, present_for_turns);
     }
