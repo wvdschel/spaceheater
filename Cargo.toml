@@ -19,6 +19,10 @@ name = "gauntlet"
 name = "scoring"
 harness = false
 
+[[bench]]
+name = "winter"
+harness = false
+
 [profile.release]
 debug = 1
 

@@ -1,6 +1,6 @@
 # Spaceheater
 # Weird choices to debug
-- None! :D
+- 890bcfde-b71d-4c8c-a566-4932382a9757 -> should really not choose certain death in 2 iso 50% chance of death in 1
 
 # The Gauntlet
 - Support games with something other than 4 snakes per game
