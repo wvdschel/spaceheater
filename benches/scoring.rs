@@ -31,12 +31,13 @@ fn criterion_benchmark(c: &mut Criterion) {
         .collect::<Vec<logic::Game>>();
 
     let count = games.len();
-    if count < 8 {
-        panic!("need at least 8 turns")
+    if count < 3 {
+        panic!("need at least 3 turns")
     }
 
-    let turns: Vec<usize> = (0..8).map(|i| i * count / 8).collect();
+    let turns: Vec<usize> = (0..3).map(|i| i * count / 3).collect();
 
+    let winter_cfg = Config::<{ u16::MAX }>::random();
     for turn in turns {
         c.bench_function(format!("classic_turn_{}", turn).as_str(), |b| {
             b.iter(|| scoring::classic(&games[turn]))
@@ -47,20 +48,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
 
         c.bench_function(format!("winter_turn_{}", turn).as_str(), |b| {
-            b.iter(|| Config::<{ u16::MAX }>::random().score(&games[turn]))
+            b.iter(|| winter_cfg.score(&games[turn]))
         });
-
-        // c.bench_function(format!("voronoi_all_turn_{}", turn).as_str(), |b| {
-        //     b.iter(|| score_game(scoring::voronoi_all, &games[turn]))
-        // });
-
-        // c.bench_function(format!("voronoi_limit5_turn_{}", turn).as_str(), |b| {
-        //     b.iter(|| score_game(|g| voronoi::me_range_limit(g, 5), &games[turn]))
-        // });
-
-        // c.bench_function(format!("voronoi_limit8_turn_{}", turn).as_str(), |b| {
-        //     b.iter(|| score_game(|g| voronoi::me_range_limit(g, 8), &games[turn]))
-        // });
     }
 }
 
