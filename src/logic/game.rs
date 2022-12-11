@@ -256,6 +256,7 @@ impl From<&protocol::Ruleset> for Rules {
                 "standard" => GameMode::Standard,
                 "royale" => GameMode::Royale,
                 "wrapped" => GameMode::Wrapped,
+                "constrictor" => GameMode::Constrictor,
                 "solo" => GameMode::Solo,
                 _ => {
                     println!("unknown game mode: {}", r.name);
