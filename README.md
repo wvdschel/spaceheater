@@ -31,6 +31,9 @@ Create flamegraph.svg:
 
 # Other
 - de.fixnum.org running commit 66229d95f354c1d2c99a45357d4aee5087804a04 seems to be outperforming current master bc94a137e897a2b6a17618d8b1da5e6115ea7d45 on ghost
+  -> seems to be related to the snake switching to 8bit counters in the score struct, it doesn't feed as much
+  -> compare scores for games where both snakes were present on evening of 12/12/22
+  -> might be because configs contain numtype and deserializing from strings with 16bit encoded values to 8bit values will do weird, weird things
 
 # Game logic
 ## Unsupported game features

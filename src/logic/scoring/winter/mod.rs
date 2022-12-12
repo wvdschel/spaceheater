@@ -16,7 +16,7 @@ use super::Scorer;
 mod floodfill;
 pub mod floodfill_baseline;
 
-pub type NumType = u16;
+pub type NumType = u8;
 pub const NO_SNAKE: u8 = u8::MAX;
 const MAX_SNAKES: usize = 12;
 
@@ -38,13 +38,13 @@ pub struct Config<const MAX_DISTANCE: NumType> {
     pub points_per_length_rank: i64,
     pub points_per_health: i64,
     pub points_per_distance_to_food: i64,
-    pub food_distance_cap: NumType,
+    pub food_distance_cap: u16,
     pub points_per_kill: i64,
     pub points_per_turn_survived: i64,
     // should be balanced with points_per_length_rank: being longer should outweigh
     // the penalties of being far away from a smaller snake
     pub points_per_distance_to_smaller_enemies: i64,
-    pub enemy_distance_cap: NumType,
+    pub enemy_distance_cap: u16,
     pub points_when_dead: i64,
     pub hungry_mode_max_health: i8,
     pub hungry_mode_food_multiplier: f64,
@@ -92,8 +92,8 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
                     cmp::min(100, cmp::max(0, res.hungry_mode_max_health + mul as i8))
             }
             9 => res.hungry_mode_food_multiplier += 0.05 * mul as f64,
-            10 => res.food_distance_cap = cmp::max(1, res.food_distance_cap + mul as NumType),
-            11 => res.enemy_distance_cap = cmp::max(1, res.enemy_distance_cap + mul as NumType),
+            10 => res.food_distance_cap = cmp::max(1, res.food_distance_cap + mul as u16),
+            11 => res.enemy_distance_cap = cmp::max(1, res.enemy_distance_cap + mul as u16),
             12 => res.points_per_hazard += mul,
             _ => unreachable!(),
         }
@@ -179,7 +179,7 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
                 score += self.points_per_distance_to_smaller_enemies
                     * cmp::min(
                         flood_info[0].distance_to_collision[i + 1],
-                        self.enemy_distance_cap,
+                        self.enemy_distance_cap as NumType,
                     ) as i64;
             }
         }
@@ -187,7 +187,10 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
 
         let mut food_score = self.points_per_food * flood_info[0].food_count as i64;
         food_score += self.points_per_distance_to_food
-            * cmp::min(flood_info[0].food_distance, self.food_distance_cap) as i64;
+            * cmp::min(
+                flood_info[0].food_distance,
+                self.food_distance_cap as NumType,
+            ) as i64;
         if game.you.health < self.hungry_mode_max_health {
             food_score = f64::round(self.hungry_mode_food_multiplier * food_score as f64) as i64;
         }
