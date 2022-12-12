@@ -5,7 +5,11 @@ pub use simple::SimpleSnake;
 pub use spaceheater3::Spaceheater3;
 use std::collections::HashMap;
 
-use crate::{logic::scoring, protocol::Customizations, Battlesnake};
+use crate::{
+    logic::scoring::{self, winter},
+    protocol::Customizations,
+    Battlesnake,
+};
 
 const WINTER_CHAMPION: &str = "11000000000000001100000000000000f6ffffffffffffff84ffffffffffffff0700000000000000e3ffffffffffffff050045010000000000006d03000000000000fbffffffffffffff2200806967ffffffffff128ff091c214472b40";
 
@@ -26,7 +30,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     snakes.insert(
         "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
-            scoring::winter::Config::<{ u16::MAX }>::try_from(WINTER_CHAMPION).unwrap(),
+            scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap(),
             Some(Customizations {
                 color: "#03befc".to_string(),
                 head: "scarf".to_string(),
@@ -37,7 +41,7 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
 
     println!(
         "Winter champion config: {:?}",
-        scoring::winter::Config::<{ u16::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+        scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
     );
 
     snakes

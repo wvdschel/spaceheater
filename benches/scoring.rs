@@ -6,7 +6,11 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use topsnek::{
     logic::{
         self,
-        scoring::{self, winter::Config, Scorer},
+        scoring::{
+            self,
+            winter::{self, Config},
+            Scorer,
+        },
         voronoi,
     },
     util::{gamelogger, gauntlet::RandomConfig},
@@ -37,7 +41,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let turns: Vec<usize> = (0..3).map(|i| i * count / 3).collect();
 
-    let winter_cfg = Config::<{ u16::MAX }>::random();
+    let winter_cfg = Config::<{ winter::NumType::MAX }>::random();
     for turn in turns {
         c.bench_function(format!("classic_turn_{}", turn).as_str(), |b| {
             b.iter(|| scoring::classic(&games[turn]))

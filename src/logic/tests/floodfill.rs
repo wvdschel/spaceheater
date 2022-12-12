@@ -25,7 +25,7 @@ fn winter_fill() {
         serde_json::from_str(include_str!("data/wrapped_rivers_and_lakes_opening.json")).unwrap();
     let game = Game::from(&request);
 
-    let all_scores = winter::floodfill::<{ u16::MAX }>(&game);
+    let all_scores = winter::floodfill::<{ winter::NumType::MAX }>(&game);
     for (i, score) in all_scores[0..4].iter().enumerate() {
         println!("{:?}", score);
         if i == 1 {
@@ -45,7 +45,7 @@ fn winter_fill_survivable_hazards() {
     let mut game = Game::from(&request);
     game.rules.hazard_damage_per_turn = 25;
 
-    let all_scores = winter::floodfill::<{ u16::MAX }>(&game);
+    let all_scores = winter::floodfill::<{ winter::NumType::MAX }>(&game);
     for (i, score) in all_scores[0..4].iter().enumerate() {
         println!("{:?}", score);
         if i == 1 {

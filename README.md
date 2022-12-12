@@ -22,9 +22,12 @@ Create flamegraph.svg:
 - "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
 
 # Performance
-- remove hazard count lookups from floodfill loop
-- try packed bitfield struct in floodfill loop
-- replace score struct in floodfill with a 64bit number, and shift food/hazards/tile count into 16bit values
+- Stateful tree search:
+  - Keep tree across turns, start from subtree
+  - Start computing from the game start, not the first move
+  - Move request fetches relevant subtree from background worker & submits the new root back after returning
+  - Stop background worker upon receiving a game end request or 2 seconds after receiving the last move.
+  - One background worker per active game, background workers have lowest priority. 
 
 # Game logic
 ## Unsupported game features

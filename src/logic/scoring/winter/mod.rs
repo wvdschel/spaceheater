@@ -16,7 +16,7 @@ use super::Scorer;
 mod floodfill;
 pub mod floodfill_baseline;
 
-type NumType = u16;
+pub type NumType = u8;
 pub const NO_SNAKE: u8 = u8::MAX;
 const MAX_SNAKES: usize = 12;
 
@@ -143,12 +143,12 @@ impl<const MAX_DISTANCE: NumType> TryFrom<&str> for Config<MAX_DISTANCE> {
 
 #[test]
 fn hex_encoded_config() {
-    let cfg = Config::<{ u16::MAX }>::random();
+    let cfg = Config::<{ NumType::MAX }>::random();
     let cfg_str = cfg.to_string();
 
     println!("as string: {}", cfg_str);
 
-    let cfg_parsed = Config::<{ u16::MAX }>::try_from(cfg_str.as_str()).unwrap();
+    let cfg_parsed = Config::<{ NumType::MAX }>::try_from(cfg_str.as_str()).unwrap();
 
     assert_eq!(cfg, cfg_parsed);
 }
