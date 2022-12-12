@@ -7,6 +7,46 @@ use crate::{
 
 use super::{NumType, SnakeScore, MAX_SNAKES, NO_SNAKE};
 
+struct SnakeScorePacked {
+    food_counts: u64,
+    score: u64,
+    distance_to_collision: [NumType; MAX_SNAKES],
+}
+
+impl SnakeScorePacked {
+    #[inline(always)]
+    fn has_food(v: u64) -> bool {
+        v & 1 == 1
+    }
+
+    #[inline(always)]
+    fn hazard_count(v: u64) -> i8 {
+        ((v & (0xff << 16)) >> 16) as i8
+    }
+
+    #[inline(always)]
+    fn tiles(v: u64) -> u16 {
+        (v >> 32) as u16
+    }
+
+    #[inline(always)]
+    fn score(food: bool, hazards: u8) -> u64 {
+        let food: u64 = if food { 1 } else { 0 };
+        let hazards: u64 = (hazards as u64) << 16;
+        (1 << 32) | hazards | food
+    }
+
+    #[inline(always)]
+    fn food_count_at_distance(v: u64, distance: u8) -> u8 {
+        (v >> (distance * 4)) as u8 & 0xf
+    }
+
+    #[inline(always)]
+    fn food_at_distance(distance: u8) -> u64 {
+        (distance as u64) << (distance * 4)
+    }
+}
+
 #[derive(Copy, Clone)]
 struct TileInfo {
     snake_length: NumType,
@@ -147,7 +187,7 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
 
             scores[snake].tile_count -= 1;
             scores[snake].hazard_count -= board[x][y].hazard_count as NumType;
-            if game.board.is_food(&work.p) {
+            if board[x][y].food {
                 scores[snake].food_count -= 1;
                 if scores[snake].food_distance == work.snake_distance {
                     scores[snake].food_at_min_distance -= 1;
@@ -167,7 +207,7 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
                 let snake = board[x][y].snake as usize;
                 scores[snake].tile_count -= 1;
                 scores[snake].hazard_count -= board[x][y].hazard_count as NumType;
-                if game.board.is_food(&work.p) {
+                if board[x][y].food {
                     scores[snake].food_count -= 1;
                     if scores[snake].food_distance == work.snake_distance {
                         scores[snake].food_at_min_distance -= 1;
