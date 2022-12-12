@@ -16,8 +16,8 @@ fn main() {
 
     println!("starting server on {}", address);
     rouille::start_server(address, move |request| {
-        let body = util::dump_request(request).unwrap_or_default();
-        let resp = router!(request,
+        let body = util::read_body(request);
+        router!(request,
             (GET) (/) => {
                 // List all registered snake bots
                 let mut list = vec!["<html><head><title>Battle snakes</title></head><body><ul>".to_string()];
@@ -93,7 +93,6 @@ fn main() {
             },
 
             (POST) (/{id: String}/move) => {
-                println!("new move for: '{}'", id);
                 match snakes.get(&id) {
                     Some(snake) => {
                         match serde_json::from_slice(&body) {
@@ -104,6 +103,7 @@ fn main() {
                                             let mut gamelogger = gamelogger.lock().unwrap();
                                             gamelogger.log_move(&request_body, Some(&response));
                                         }
+                                        println!("{}\n{} {}", logic::Game::from(&request_body), response.direction, response.shout);
                                         rouille::Response::json(&response)
                                     },
                                     Err(msg) => {
@@ -111,6 +111,7 @@ fn main() {
                                             let mut gamelogger = gamelogger.lock().unwrap();
                                             gamelogger.log_move(&request_body, None);
                                         }
+                                        println!("{}\nERROR {}", logic::Game::from(&request_body), msg);
                                         rouille::Response::text(msg).with_status_code(500)
                                     },
                                 }
@@ -126,7 +127,6 @@ fn main() {
             },
 
             _ => rouille::Response::empty_404()
-        );
-        util::dump_response(resp)
+        )
     });
 }

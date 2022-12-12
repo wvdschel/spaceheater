@@ -31,6 +31,23 @@ pub fn thread_count() -> usize {
     1
 }
 
+pub fn read_body(request: &Request) -> Vec<u8> {
+    match request.data() {
+        Some(mut req_body) => {
+            println!();
+            let mut body_bytes = Vec::new();
+            match req_body.read_to_end(&mut body_bytes) {
+                Ok(_) => body_bytes,
+                Err(e) => {
+                    println!("failed to read request body: {:?}", e);
+                    vec![]
+                }
+            }
+        }
+        None => vec![],
+    }
+}
+
 pub fn dump_request(request: &Request) -> Option<Vec<u8>> {
     println!("{} {}", request.method(), request.raw_url());
     for (k, v) in request.headers() {
