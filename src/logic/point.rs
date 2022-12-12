@@ -57,6 +57,7 @@ impl Point {
         ]
     }
 
+    #[inline(always)]
     pub fn out_of_bounds(&self, width: isize, height: isize) -> bool {
         let (width, height) = (width as i8, height as i8);
         self.x < 0 || self.y < 0 || self.x >= width || self.y >= height

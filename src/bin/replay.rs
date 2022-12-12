@@ -1,4 +1,4 @@
-use std::{io::stdin, thread, time::Duration};
+use std::io::stdin;
 
 #[cfg(feature = "profiling")]
 use std::fs::File;
@@ -60,7 +60,4 @@ fn main() {
             std::process::exit(1);
         }
     }
-
-    println!("sleeping 10s to let worker threads finish logging :)");
-    thread::sleep(Duration::from_millis(10000));
 }

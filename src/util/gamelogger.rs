@@ -8,7 +8,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde::{Deserialize, Serialize};
 
-use crate::{protocol, Battlesnake};
+use crate::{logic, protocol, Battlesnake};
 
 #[derive(Serialize, Deserialize)]
 pub struct Game {
@@ -89,6 +89,7 @@ impl Game {
                 if let Some(millis) = time_per_turn {
                     req.game.timeout = millis as isize;
                 }
+                println!("{}", logic::Game::from(&req));
                 let start = Instant::now();
                 let res = snake.make_move(&req);
                 println!(

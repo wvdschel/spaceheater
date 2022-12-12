@@ -1,6 +1,7 @@
 # Spaceheater
 # Weird choices to debug
 - 890bcfde-b71d-4c8c-a566-4932382a9757 -> should really not choose certain death in 2 iso 50% chance of death in 1
+- 00b39db7-6d0d-46da-80f2-ccfa5659fdec -> turn 27 crash
 
 # The Gauntlet
 - Support games with something other than 4 snakes per game
@@ -21,9 +22,8 @@ Create flamegraph.svg:
 - "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
 
 # Performance
-- stop evaluating when the algorithm reaches game over in all branches
-- const usize type parameter for board sizes?
-- Convert scoring functions to use i64, not S: Ord + ...
+- remove hazard count lookups from floodfill loop
+- try packed bitfield struct in floodfill loop
 
 # Game logic
 ## Unsupported game features

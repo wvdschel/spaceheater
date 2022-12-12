@@ -40,11 +40,6 @@ impl Snake {
         // Starve snake
         self.health -= 1;
 
-        // Apply out of bounds damage
-        if new_head.out_of_bounds(board.width(), board.height()) {
-            self.health = 0;
-        }
-
         // Update snake position and board
         // We intentionally don't add new heads here, as they would break
         // our collision detection in Game.death_by_collission()
@@ -74,6 +69,11 @@ impl Snake {
             self.length += 1;
             self.body.push_back(self.body.back().unwrap().clone())
         }
+
+        // Apply out of bounds damage
+        if new_head.out_of_bounds(board.width(), board.height()) {
+            self.health = 0;
+        }
     }
 
     pub fn dead(&self) -> bool {
@@ -82,7 +82,7 @@ impl Snake {
 
     pub fn remove_from_board(&self, board: &mut Board) {
         for t in self.body.iter() {
-            if ! t.out_of_bounds(board.width(), board.height()) {
+            if !t.out_of_bounds(board.width(), board.height()) {
                 board.clear_snake(t)
             }
         }
