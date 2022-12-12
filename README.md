@@ -24,6 +24,7 @@ Create flamegraph.svg:
 # Performance
 - remove hazard count lookups from floodfill loop
 - try packed bitfield struct in floodfill loop
+- replace score struct in floodfill with a 64bit number, and shift food/hazards/tile count into 16bit values
 
 # Game logic
 ## Unsupported game features

@@ -14,6 +14,7 @@ pub use self::floodfill::floodfill;
 use super::Scorer;
 
 mod floodfill;
+pub mod floodfill_baseline;
 
 type NumType = u16;
 pub const NO_SNAKE: u8 = u8::MAX;

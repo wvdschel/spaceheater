@@ -63,6 +63,7 @@ impl Point {
         self.x < 0 || self.y < 0 || self.x >= width || self.y >= height
     }
 
+    #[inline(always)]
     pub fn warp(&mut self, width: isize, height: isize) {
         let (width, height) = (width as i8, height as i8);
         if self.x == -1 {

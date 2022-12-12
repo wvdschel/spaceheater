@@ -29,7 +29,11 @@ fn criterion_benchmark(c: &mut Criterion) {
         .map(|(request, _response)| logic::Game::from(request))
         .collect::<Vec<logic::Game>>();
 
-    c.bench_function("winter_score", |b| {
+    c.bench_function("floodfill_baseline", |b| {
+        b.iter(|| winter::floodfill_baseline::floodfill::<{ u16::MAX }>(&games[0]))
+    });
+
+    c.bench_function("floodfill_optimized", |b| {
         b.iter(|| winter::floodfill::<{ u16::MAX }>(&games[0]))
     });
 }

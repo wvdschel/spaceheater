@@ -1,7 +1,7 @@
 use std::{cmp, mem::MaybeUninit};
 
 use crate::{
-    logic::{game::GameMode, Game, Point, Tile},
+    logic::{game::GameMode, Game, Point},
     util::stackqueue::StackDequeue,
 };
 
@@ -12,8 +12,7 @@ struct TileInfo {
     snake_length: NumType,
     snake_distance: NumType,
     inaccessible_turns: NumType,
-    food: bool,
-    hazard_count: i8,
+    damage_amount: i8,
     snake: u8,
 }
 
@@ -32,16 +31,14 @@ const MAX_HEIGHT: usize = 25;
 pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_SNAKES] {
     let constrictor = game.rules.game_mode == GameMode::Constrictor;
     let warp = game.rules.game_mode == GameMode::Wrapped;
-    let hazard_damage = game.rules.hazard_damage_per_turn;
 
     let mut queue: StackDequeue<Work, 256> = StackDequeue::new();
     let mut board = [[TileInfo {
         snake_length: 0,
         snake_distance: NumType::MAX,
         inaccessible_turns: 0,
-        hazard_count: 0,
+        damage_amount: 0,
         snake: NO_SNAKE,
-        food: false,
     }; MAX_HEIGHT]; MAX_WIDTH];
 
     let mut scores = {
@@ -70,25 +67,13 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
 
     for x in 0..w {
         for y in 0..h {
-            let hazards = match game.board.get(&Point {
+            let hazards = game.board.hazard_count(&Point {
                 x: x as i8,
                 y: y as i8,
-            }) {
-                Tile::Food => {
-                    board[x][y].food = true;
-                    0
-                }
-                Tile::Hazard(hazards)
-                | Tile::HazardWithSnake(hazards)
-                | Tile::HazardWithHead(hazards) => hazards,
-                Tile::HazardWithFood(hazards) => {
-                    board[x][y].food = true;
-                    hazards
-                }
-                _ => 0,
-            };
-
-            board[x][y].hazard_count = hazards as i8;
+            }) as i8;
+            if hazards > 0 {
+                board[x][y].damage_amount = game.rules.hazard_damage_per_turn * hazards;
+            }
         }
     }
 
@@ -146,7 +131,7 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
             }
 
             scores[snake].tile_count -= 1;
-            scores[snake].hazard_count -= board[x][y].hazard_count as NumType;
+            scores[snake].hazard_count -= game.board.hazard_count(&work.p) as NumType;
             if game.board.is_food(&work.p) {
                 scores[snake].food_count -= 1;
                 if scores[snake].food_distance == work.snake_distance {
@@ -166,7 +151,7 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
                 // Remove score from previous snake if there is one
                 let snake = board[x][y].snake as usize;
                 scores[snake].tile_count -= 1;
-                scores[snake].hazard_count -= board[x][y].hazard_count as NumType;
+                scores[snake].hazard_count -= game.board.hazard_count(&work.p) as NumType;
                 if game.board.is_food(&work.p) {
                     scores[snake].food_count -= 1;
                     if scores[snake].food_distance == work.snake_distance {
@@ -179,9 +164,12 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
                 board[x][y].snake = NO_SNAKE;
             }
 
+            let tile = game.board.get(&work.p);
+            let has_food = tile.has_food();
+
             scores[work.snake as usize].tile_count += 1;
-            scores[work.snake as usize].hazard_count += board[x][y].hazard_count as NumType;
-            if board[x][y].food {
+            scores[work.snake as usize].hazard_count += game.board.hazard_count(&work.p) as NumType;
+            if has_food {
                 scores[work.snake as usize].food_count += 1;
                 if scores[work.snake as usize].food_distance > work.snake_distance {
                     scores[work.snake as usize].food_distance = work.snake_distance;
@@ -196,10 +184,10 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
             board[x][y].snake_distance = work.snake_distance;
             board[x][y].snake_length = work.snake_length;
 
-            let next_health = if board[x][y].food {
+            let next_health = if has_food {
                 100
             } else {
-                work.health - board[x][y].hazard_count * hazard_damage - 1
+                work.health - board[x][y].damage_amount - 1
             };
 
             // Enqueue neighbouring tiles
@@ -214,8 +202,10 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
                 }
 
                 let (x, y) = (next_p.x as usize, next_p.y as usize);
+                let next_tile = game.board.get(&next_p);
+                let next_has_food = next_tile.has_food();
                 let next_work = Work {
-                    snake_length: if board[x][y].food {
+                    snake_length: if has_food {
                         work.snake_length + 1
                     } else {
                         work.snake_length
@@ -226,8 +216,8 @@ pub fn floodfill<const MAX_DISTANCE: NumType>(game: &Game) -> [SnakeScore; MAX_S
                     health: next_health,
                 };
 
-                let damage = if !board[x][y].food {
-                    board[x][y].hazard_count * hazard_damage + 1
+                let damage = if !next_has_food {
+                    board[x][y].damage_amount + 1
                 } else {
                     0
                 };
