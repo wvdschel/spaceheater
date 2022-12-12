@@ -16,7 +16,7 @@ use super::Scorer;
 mod floodfill;
 pub mod floodfill_baseline;
 
-pub type NumType = u8;
+pub type NumType = u16;
 pub const NO_SNAKE: u8 = u8::MAX;
 const MAX_SNAKES: usize = 12;
 

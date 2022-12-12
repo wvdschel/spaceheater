@@ -29,6 +29,9 @@ Create flamegraph.svg:
   - Stop background worker upon receiving a game end request or 2 seconds after receiving the last move.
   - One background worker per active game, background workers have lowest priority. 
 
+# Other
+- de.fixnum.org running commit 66229d95f354c1d2c99a45357d4aee5087804a04 seems to be outperforming current master bc94a137e897a2b6a17618d8b1da5e6115ea7d45 on ghost
+
 # Game logic
 ## Unsupported game features
 - stacked hazards:
