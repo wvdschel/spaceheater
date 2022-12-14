@@ -11,7 +11,7 @@ use crate::{
     Battlesnake,
 };
 
-const WINTER_CHAMPION: &str = "1100000011000000f6ffffff84ffffff07000000e3ffffff0500450100006d030000fbffffff2200806967ff12a6385a410a00000003";
+const WINTER_CHAMPION: &str = "⠑⠀⠀⠀⠑⠀⠀⠀⣶⣿⣿⣿⢄⣿⣿⣿⠇⠀⠀⠀⣣⣿⣿⣿⠅⠀⡅⠁⠀⠀⡭⠃⠀⠀⣻⣿⣿⣿⠢⠀⢀⡩⡧⣿⠒⢦⠸⡚⡁⠊⠀⠀⠀⠃";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();

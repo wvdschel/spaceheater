@@ -9,6 +9,8 @@ use crate::{
     util::gauntlet::{GeneticConfig, RandomConfig},
 };
 
+const ENCODING: &str = include_str!("encoding.txt");
+
 pub use self::floodfill::floodfill;
 
 use super::Scorer;
@@ -122,56 +124,58 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
 
 impl<const MAX_DISTANCE: NumType> ToString for Config<MAX_DISTANCE> {
     fn to_string(&self) -> String {
+        let characters: Vec<String> = ENCODING
+            .split("")
+            .filter(|v| v.len() != 0)
+            .map(|c| c.to_string())
+            .collect();
         let encoded: Vec<u8> = bincode::serialize(self).unwrap();
-        let stringified: Vec<String> = encoded.iter().map(|b| format!("{:02x}", b)).collect();
+        let stringified: Vec<String> = encoded
+            .iter()
+            .map(|b| characters[*b as usize].clone())
+            .collect();
         stringified.join("")
     }
 }
 
 impl<const MAX_DISTANCE: NumType> TryFrom<&str> for Config<MAX_DISTANCE> {
-    type Error = ();
+    type Error = String;
 
     fn try_from(v: &str) -> Result<Self, Self::Error> {
-        let mut bytes = Vec::<u8>::with_capacity(v.len() / 2);
-        for i in (0..v.len()).step_by(2) {
-            if let Ok(b) = u8::from_str_radix(&v[i..i + 2], 16) {
-                bytes.push(b);
-            } else {
-                return Err(());
+        let mut bytes = Vec::<u8>::with_capacity(v.len());
+        let characters: Vec<char> = ENCODING
+            .split("")
+            .filter(|v| v.len() != 0)
+            .map(|c| c.chars().next().unwrap_or('?'))
+            .collect();
+
+        for c in v.chars() {
+            let pos = characters
+                .iter()
+                .enumerate()
+                .find(|(_, &v)| v == c)
+                .map(|(idx, _)| idx);
+            match pos {
+                Some(idx) => bytes.push(idx as u8),
+                None => return Err(format!("no such character in encoding table: '{}'", c)),
             }
         }
+
         match bincode::deserialize::<Self>(bytes.as_slice()) {
             Ok(v) => Ok(v),
-            Err(_) => Err(()),
+            Err(e) => Err(format!("failed to deserialize config: {}", e)),
         }
     }
 }
 
 #[test]
 fn hex_encoded_config() {
+    assert_eq!(ENCODING.chars().count(), 256);
+
     let cfg = Config::<{ NumType::MAX }>::random();
 
-    let cfg = Config::<{ NumType::MAX }> {
-        points_per_food: 17,
-        points_per_tile: 17,
-        points_per_hazard: -10,
-        points_per_length_rank: -124,
-        points_per_health: 7,
-        points_per_distance_to_food: -29,
-        food_distance_cap: 5,
-        points_per_kill: 325,
-        points_per_turn_survived: 877,
-        points_per_distance_to_smaller_enemies: -5,
-        enemy_distance_cap: 34,
-        points_when_dead: -10000000,
-        hungry_mode_max_health: 18,
-        hungry_mode_food_multiplier: 13.638830261530783,
-        points_per_length_diff: 10,
-        length_diff_cap: 3,
-    };
-
     let cfg_str = cfg.to_string();
-    println!("as string: {}", cfg_str);
+    println!("as string: \"{}\"", cfg_str);
 
     let cfg_parsed = Config::<{ NumType::MAX }>::try_from(cfg_str.as_str()).unwrap();
 
