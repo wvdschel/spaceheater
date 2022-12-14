@@ -16,7 +16,7 @@ fn breeding_chance(rank: usize, count: usize) -> f64 {
 
 fn survival_chance(rank: usize, count: usize) -> f64 {
     let exp = (rank + 1) * 100 / count;
-    0.99f64.powf(exp as f64)
+    0.99f64.powf(1.2 * exp as f64)
 }
 
 fn maybe_kill_snake(rank: usize, count: usize) -> bool {
@@ -42,7 +42,7 @@ pub fn next_generation(
             if maybe_kill_snake(*rank, scores.len()) {
                 println!(
                     "killing snake {} (ranked #{}, {} points)",
-                    score.snake_name, score.points, rank
+                    score.snake_name, rank, score.points
                 );
                 false
             } else {
@@ -56,11 +56,11 @@ pub fn next_generation(
 
     let mut snakes_spawned = 0;
     let mut next_gen: HashMap<String, Box<dyn GeneticConfig>> = HashMap::new();
-    while scores.len() + next_gen.len() != target_count {
+    while scores.len() + next_gen.len() < target_count {
         for (rank, score) in scores.iter().enumerate() {
             if maybe_breed_snake(rank, scores.len()) {
                 let new_name = format!("gen{}_snake{}", generation, snakes_spawned);
-                let new_config = score.snake_config.unwrap().evolve().evolve();
+                let new_config = score.snake_config.unwrap().evolve();
                 println!(
                     "{} (rank #{}, {} points) spawned a new child {} with config {}",
                     score.snake_name,

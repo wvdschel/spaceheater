@@ -102,6 +102,7 @@ impl Gauntlet {
             games.append(&mut pairing::generate_pairings(&all_snake_names, 4));
         }
         let mut scores = HashMap::new();
+        let mut sorted_scores = vec![];
         for snake in all_snake_names {
             scores.insert(snake, 0 as isize);
         }
@@ -174,26 +175,27 @@ impl Gauntlet {
                 self.generation, hours_remaining, minutes_remaining, seconds_remaining
             );
 
-            let mut scores: Vec<Score> = scores
-                .into_iter()
-                .map(|(snake, score)| Score {
-                    snake_config: self.configs.get(&snake),
-                    snake_name: snake,
+            sorted_scores = scores
+                .iter()
+                .map(|(snake, &score)| Score {
+                    snake_config: self.configs.get(snake),
+                    snake_name: snake.clone(),
                     points: score,
                 })
                 .collect();
 
             // Sort by score: best scoring first
-            scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));
+            sorted_scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));
 
-            if let Err(e) =
-                write_report(format!("generation_{}", self.generation).as_str(), &scores)
-            {
+            if let Err(e) = write_report(
+                format!("generation_{}", self.generation).as_str(),
+                &sorted_scores,
+            ) {
                 println!("warning: failed to generate report: {}", e)
             };
         }
 
-        let next_gen = next_generation(self.generation, &scores, self.configs.len());
+        let next_gen = next_generation(self.generation, &sorted_scores, self.configs.len());
         self.configs = next_gen;
         self.generation += 1;
 
