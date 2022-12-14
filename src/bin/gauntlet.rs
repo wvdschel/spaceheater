@@ -1,6 +1,8 @@
-use topsnek::{logic::scoring::winter, util::gauntlet::Gauntlet};
+use topsnek::{logic::scoring::winter, snakes, util::gauntlet::Gauntlet};
 
 const CHAMPIONS: &str = include_str!("champions.txt");
+
+const SNAKE_COUNT: usize = 45;
 
 fn main() {
     let mut g = Gauntlet::new(&[
@@ -13,6 +15,9 @@ fn main() {
         "-t",
         "900",
     ]);
+
+    let ref_snake_count = snakes::snakes().len();
+
     if CHAMPIONS != "" {
         for (i, champ) in CHAMPIONS.split("\n").enumerate() {
             if champ == "" {
@@ -22,9 +27,9 @@ fn main() {
             g.add_contestant(format!("champion_{}", i).as_str(), cfg)
         }
     }
-    if g.contestant_count() < 75 {
+    if g.contestant_count() + ref_snake_count < SNAKE_COUNT {
         g.generate_contestants::<winter::Config<{ winter::NumType::MAX }>>(
-            75 - g.contestant_count(),
+            SNAKE_COUNT - g.contestant_count() - ref_snake_count,
         );
     }
     loop {

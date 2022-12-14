@@ -27,10 +27,42 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
+
+    let champion_cfg =
+        scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap();
+
+    let mut bigger_kill_value = champion_cfg.clone();
+    bigger_kill_value.points_per_kill = bigger_kill_value.points_per_kill * 2 / 3;
+
+    let mut no_enemy_distance_penalty = champion_cfg.clone();
+    no_enemy_distance_penalty.points_per_distance_to_smaller_enemies = 0;
+
+    snakes.insert(
+        "spaceheater_bigger_kill".to_string(),
+        Box::new(Spaceheater3::new(
+            bigger_kill_value,
+            Some(Customizations {
+                color: "#03befc".to_string(),
+                head: "scarf".to_string(),
+                tail: "coffee".to_string(),
+            }),
+        )),
+    );
     snakes.insert(
         "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
-            scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap(),
+            champion_cfg,
+            Some(Customizations {
+                color: "#03befc".to_string(),
+                head: "scarf".to_string(),
+                tail: "coffee".to_string(),
+            }),
+        )),
+    );
+    snakes.insert(
+        "spaceheater_no_enemy_distance".to_string(),
+        Box::new(Spaceheater3::new(
+            no_enemy_distance_penalty,
             Some(Customizations {
                 color: "#03befc".to_string(),
                 head: "scarf".to_string(),
@@ -39,10 +71,10 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         )),
     );
 
-    println!(
-        "Winter champion config: {:?}",
-        scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
-    );
+    // println!(
+    //     "Winter champion config: {:?}",
+    //     scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+    // );
 
     snakes
 }
