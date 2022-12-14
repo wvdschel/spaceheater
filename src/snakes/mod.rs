@@ -11,7 +11,7 @@ use crate::{
     Battlesnake,
 };
 
-const WINTER_CHAMPION: &str = "11000000000000001100000000000000f6ffffffffffffff84ffffffffffffff0700000000000000e3ffffffffffffff050045010000000000006d03000000000000fbffffffffffffff2200806967ffffffffff128ff091c214472b40";
+const WINTER_CHAMPION: &str = "1100000011000000f6ffffff84ffffff07000000e3ffffff0500450100006d030000fbffffff2200806967ff12a6385a410a00000003";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
@@ -40,6 +40,10 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut why_not_both = champion_cfg.clone();
     why_not_both.points_per_distance_to_smaller_enemies = 0;
     why_not_both.points_per_kill = why_not_both.points_per_kill * 2 / 3;
+
+    let mut no_len = champion_cfg.clone();
+    no_len.length_diff_cap = 0;
+    no_len.points_per_length_diff = 0;
 
     snakes.insert(
         "spaceheater_bigger_kill".to_string(),
@@ -85,11 +89,22 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
-
-    println!(
-        "Winter champion config: {:?}",
-        scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+    snakes.insert(
+        "spaceheater_no_len".to_string(),
+        Box::new(Spaceheater3::new(
+            no_len,
+            Some(Customizations {
+                color: "#03befc".to_string(),
+                head: "scarf".to_string(),
+                tail: "coffee".to_string(),
+            }),
+        )),
     );
+
+    // println!(
+    //     "Winter champion config: {:?}",
+    //     scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+    // );
 
     snakes
 }

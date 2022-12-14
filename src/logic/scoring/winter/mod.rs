@@ -32,22 +32,24 @@ pub struct SnakeScore {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config<const MAX_DISTANCE: NumType> {
-    pub points_per_food: i64,
-    pub points_per_tile: i64,
-    pub points_per_hazard: i64,
-    pub points_per_length_rank: i64,
-    pub points_per_health: i64,
-    pub points_per_distance_to_food: i64,
+    pub points_per_food: i32,
+    pub points_per_tile: i32,
+    pub points_per_hazard: i32,
+    pub points_per_length_rank: i32,
+    pub points_per_health: i32,
+    pub points_per_distance_to_food: i32,
     pub food_distance_cap: u16,
-    pub points_per_kill: i64,
-    pub points_per_turn_survived: i64,
+    pub points_per_kill: i32,
+    pub points_per_turn_survived: i32,
     // should be balanced with points_per_length_rank: being longer should outweigh
     // the penalties of being far away from a smaller snake
-    pub points_per_distance_to_smaller_enemies: i64,
+    pub points_per_distance_to_smaller_enemies: i32,
     pub enemy_distance_cap: u16,
-    pub points_when_dead: i64,
+    pub points_when_dead: i32,
     pub hungry_mode_max_health: i8,
-    pub hungry_mode_food_multiplier: f64,
+    pub hungry_mode_food_multiplier: f32,
+    pub points_per_length_diff: i32,
+    pub length_diff_cap: u8,
 }
 
 impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
@@ -68,6 +70,8 @@ impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
             hungry_mode_food_multiplier: rng.gen_range((1.0)..(15.0)),
             food_distance_cap: rng.gen_range(3..50),
             enemy_distance_cap: rng.gen_range(3..50),
+            points_per_length_diff: rng.gen_range(0..150),
+            length_diff_cap: rng.gen_range(0..10),
         }
     }
 }
@@ -77,11 +81,11 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
         let mut rng = rand::thread_rng();
 
         let mut res = self.clone();
-        let mul = rng.gen_range::<i64, _>(-3..3).pow(2);
-        match rng.gen_range(0..13) {
+        let mul = rng.gen_range::<i32, _>(-3..3).pow(2);
+        match rng.gen_range(0..15) {
             0 => res.points_per_food += mul,
             1 => res.points_per_tile += mul,
-            2 => res.points_per_length_rank += 2 * mul,
+            2 => res.points_per_length_rank += 3 * mul,
             3 => res.points_per_health += mul,
             4 => res.points_per_distance_to_food += mul,
             5 => res.points_per_kill += 5 * mul,
@@ -91,10 +95,12 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
                 res.hungry_mode_max_health =
                     cmp::min(100, cmp::max(0, res.hungry_mode_max_health + mul as i8))
             }
-            9 => res.hungry_mode_food_multiplier += 0.05 * mul as f64,
+            9 => res.hungry_mode_food_multiplier += 0.05 * mul as f32,
             10 => res.food_distance_cap = cmp::max(1, res.food_distance_cap + mul as u16),
             11 => res.enemy_distance_cap = cmp::max(1, res.enemy_distance_cap + mul as u16),
             12 => res.points_per_hazard += mul,
+            13 => res.points_per_length_diff += mul * 3,
+            14 => res.length_diff_cap += mul as u8,
             _ => unreachable!(),
         }
 
@@ -144,8 +150,27 @@ impl<const MAX_DISTANCE: NumType> TryFrom<&str> for Config<MAX_DISTANCE> {
 #[test]
 fn hex_encoded_config() {
     let cfg = Config::<{ NumType::MAX }>::random();
-    let cfg_str = cfg.to_string();
 
+    let cfg = Config::<{ NumType::MAX }> {
+        points_per_food: 17,
+        points_per_tile: 17,
+        points_per_hazard: -10,
+        points_per_length_rank: -124,
+        points_per_health: 7,
+        points_per_distance_to_food: -29,
+        food_distance_cap: 5,
+        points_per_kill: 325,
+        points_per_turn_survived: 877,
+        points_per_distance_to_smaller_enemies: -5,
+        enemy_distance_cap: 34,
+        points_when_dead: -10000000,
+        hungry_mode_max_health: 18,
+        hungry_mode_food_multiplier: 13.638830261530783,
+        points_per_length_diff: 10,
+        length_diff_cap: 3,
+    };
+
+    let cfg_str = cfg.to_string();
     println!("as string: {}", cfg_str);
 
     let cfg_parsed = Config::<{ NumType::MAX }>::try_from(cfg_str.as_str()).unwrap();
@@ -156,43 +181,50 @@ fn hex_encoded_config() {
 impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
     fn score(&self, game: &Game) -> i64 {
         let mut score: i64 = 0;
-        score += self.points_per_kill * game.dead_snakes as i64;
-        score += self.points_per_turn_survived * game.turn as i64;
+        score += self.points_per_kill as i64 * game.dead_snakes as i64;
+        score += self.points_per_turn_survived as i64 * game.turn as i64;
 
         if game.you.dead() {
-            score -= self.points_per_turn_survived + self.points_per_kill;
-            score += self.points_when_dead;
+            score -= self.points_per_turn_survived as i64 + self.points_per_kill as i64;
+            score += self.points_when_dead as i64;
             return score;
         }
 
         let flood_info = floodfill::<MAX_DISTANCE>(game);
 
-        score += self.points_per_health * game.you.health as i64;
-        score += self.points_per_tile * flood_info[0].tile_count as i64;
-        score += self.points_per_hazard * flood_info[0].hazard_count as i64;
+        score += self.points_per_health as i64 * game.you.health as i64;
+        score += self.points_per_tile as i64 * flood_info[0].tile_count as i64;
+        score += self.points_per_hazard as i64 * flood_info[0].hazard_count as i64;
 
         let mut length_rank = 0;
         for (i, snake) in game.others.iter().enumerate() {
+            score += cmp::min(
+                self.length_diff_cap as i16,
+                cmp::max(
+                    -(self.length_diff_cap as i16),
+                    (game.you.length - snake.length) as i16,
+                ),
+            ) as i64;
             if snake.length >= game.you.length {
                 length_rank += 1;
             } else {
-                score += self.points_per_distance_to_smaller_enemies
+                score += self.points_per_distance_to_smaller_enemies as i64
                     * cmp::min(
                         flood_info[0].distance_to_collision[i + 1],
                         self.enemy_distance_cap as NumType,
                     ) as i64;
             }
         }
-        score += self.points_per_length_rank * length_rank;
+        score += self.points_per_length_rank as i64 * length_rank as i64;
 
-        let mut food_score = self.points_per_food * flood_info[0].food_count as i64;
-        food_score += self.points_per_distance_to_food
+        let mut food_score = self.points_per_food as i64 * flood_info[0].food_count as i64;
+        food_score += self.points_per_distance_to_food as i64
             * cmp::min(
                 flood_info[0].food_distance,
                 self.food_distance_cap as NumType,
             ) as i64;
         if game.you.health < self.hungry_mode_max_health {
-            food_score = f64::round(self.hungry_mode_food_multiplier * food_score as f64) as i64;
+            food_score = f32::round(self.hungry_mode_food_multiplier * food_score as f32) as i64;
         }
         score += food_score;
 
