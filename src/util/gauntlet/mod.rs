@@ -95,9 +95,12 @@ impl Gauntlet {
         all_snake_names
     }
 
-    pub fn new_round(&mut self, concurrent_games: usize) {
+    pub fn new_round(&mut self, matches_per_pair: usize, concurrent_games: usize) {
         let all_snake_names = self.all_snake_names();
-        let games = pairing::generate_pairings(&all_snake_names, 4);
+        let mut games = vec![];
+        for _ in 0..matches_per_pair {
+            games.append(&mut pairing::generate_pairings(&all_snake_names, 4));
+        }
         let mut scores = HashMap::new();
         for snake in all_snake_names {
             scores.insert(snake, 0 as isize);
