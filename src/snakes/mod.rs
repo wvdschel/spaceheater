@@ -37,6 +37,10 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut no_enemy_distance_penalty = champion_cfg.clone();
     no_enemy_distance_penalty.points_per_distance_to_smaller_enemies = 0;
 
+    let mut why_not_both = champion_cfg.clone();
+    why_not_both.points_per_distance_to_smaller_enemies = 0;
+    why_not_both.points_per_kill = why_not_both.points_per_kill * 2 / 3;
+
     snakes.insert(
         "spaceheater_bigger_kill".to_string(),
         Box::new(Spaceheater3::new(
@@ -70,11 +74,22 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
+    snakes.insert(
+        "spaceheater_both".to_string(),
+        Box::new(Spaceheater3::new(
+            why_not_both,
+            Some(Customizations {
+                color: "#03befc".to_string(),
+                head: "scarf".to_string(),
+                tail: "coffee".to_string(),
+            }),
+        )),
+    );
 
-    // println!(
-    //     "Winter champion config: {:?}",
-    //     scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
-    // );
+    println!(
+        "Winter champion config: {:?}",
+        scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
+    );
 
     snakes
 }
