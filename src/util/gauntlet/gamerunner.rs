@@ -30,6 +30,7 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
             let output = String::from_utf8_lossy(&res.stderr);
             let mut deaths = vec![];
             let mut alive: HashSet<String> = HashSet::from_iter(snake_names.into_iter());
+            let mut turn = 0;
             for line in output.split("\n") {
                 if let Some(p) = line.find("Snakes Alive: [") {
                     let p = p + "Snakes Alive: [".len();
@@ -39,10 +40,11 @@ pub fn run_game(args: &Vec<String>, base_url: &str, snake_names: Vec<String>) ->
                         newly_dead.remove(&snake);
                     }
                     for snake in newly_dead {
-                        println!("{} has died", snake);
+                        println!("{} has died (turn {})", snake, turn);
                         alive.remove(&snake);
                         deaths.push(snake);
                     }
+                    turn += 1;
                 }
             }
             for snake in alive {
