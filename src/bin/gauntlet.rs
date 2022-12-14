@@ -2,7 +2,7 @@ use topsnek::{logic::scoring::winter, snakes, util::gauntlet::Gauntlet};
 
 const CHAMPIONS: &str = include_str!("champions.txt");
 
-const SNAKE_COUNT: usize = 42;
+const SNAKE_COUNT: usize = 80;
 
 fn main() {
     let mut g = Gauntlet::new(&[
@@ -33,6 +33,6 @@ fn main() {
         g.generate_contestants::<winter::Config<{ winter::NumType::MAX }>>(gen_count);
     }
     loop {
-        g.new_round(3, 4);
+        g.new_round(1, 4);
     }
 }
