@@ -173,25 +173,25 @@ impl Gauntlet {
                 "Estimated time left for generation {} to end: {}h{:02}m{:02}s",
                 self.generation, hours_remaining, minutes_remaining, seconds_remaining
             );
+
+            let mut scores: Vec<Score> = scores
+                .into_iter()
+                .map(|(snake, score)| Score {
+                    snake_config: self.configs.get(&snake),
+                    snake_name: snake,
+                    points: score,
+                })
+                .collect();
+
+            // Sort by score: best scoring first
+            scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));
+
+            if let Err(e) =
+                write_report(format!("generation_{}", self.generation).as_str(), &scores)
+            {
+                println!("warning: failed to generate report: {}", e)
+            };
         }
-        println!();
-        println!("all scores processed, assembling results");
-
-        let mut scores: Vec<Score> = scores
-            .into_iter()
-            .map(|(snake, score)| Score {
-                snake_config: self.configs.get(&snake),
-                snake_name: snake,
-                points: score,
-            })
-            .collect();
-
-        // Sort by score: best scoring first
-        scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));
-
-        if let Err(e) = write_report(format!("generation_{}", self.generation).as_str(), &scores) {
-            println!("warning: failed to generate report: {}", e)
-        };
 
         let next_gen = next_generation(self.generation, &scores, self.configs.len());
         self.configs = next_gen;
