@@ -13,7 +13,7 @@ fn main() {
         "--map",
         "royale",
         "-t",
-        "620",
+        "1100",
     ]);
 
     let ref_snake_count = snakes::snakes().len();
