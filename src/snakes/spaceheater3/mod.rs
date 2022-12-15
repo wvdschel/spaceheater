@@ -130,7 +130,7 @@ where
                         _turn,
                         _start.elapsed().as_millis(),
                         current_depth - 1,
-                        total_node_count,
+                        _total_node_count,
                     );
                     break;
                 }
@@ -149,6 +149,16 @@ where
                     .map(|v| v.0.to_string())
                     .unwrap_or("None".to_string())
             );
+            log!("scores for moves: ");
+            for c in &root.children {
+                println!(
+                    "{}: {}",
+                    c.my_move,
+                    c.score
+                        .map(|s| s.to_string())
+                        .unwrap_or("pruned".to_string())
+                )
+            }
         });
 
         rx.recv().unwrap()

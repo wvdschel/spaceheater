@@ -11,7 +11,7 @@ use crate::{
     Battlesnake,
 };
 
-const WINTER_CHAMPION: &str = "⠑⠀⠀⠀⠑⠀⠀⠀⣶⣿⣿⣿⢄⣿⣿⣿⠇⠀⠀⠀⣣⣿⣿⣿⠅⠀⡅⠁⠀⠀⡭⠃⠀⠀⣻⣿⣿⣿⠢⠀⢀⡩⡧⣿⠒⢦⠸⡚⡁⠊⠀⠀⠀⠃";
+const WINTER_CHAMPION: &str = "⠑⠀⠀⠀⠑⠀⠀⠀⣶⣿⣿⣿⢄⣿⣿⣿⠇⠀⠀⠀⣣⣿⣿⣿⠅⠀⡅⠁⠀⠀⡭⠃⠀⠀⣻⣿⣿⣿⠢⠀⢀⡩⡧⣿⠒⢦⠸⡚⡁⠱⠀⠀⠀⠃";
 
 pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
     let mut snakes = HashMap::<String, Box<dyn Battlesnake + Sync + Send>>::new();
@@ -30,32 +30,12 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
 
     let champion_cfg =
         scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap();
-
-    let mut bigger_kill_value = champion_cfg.clone();
-    bigger_kill_value.points_per_kill = bigger_kill_value.points_per_kill * 2 / 3;
-
-    let mut no_enemy_distance_penalty = champion_cfg.clone();
-    no_enemy_distance_penalty.points_per_distance_to_smaller_enemies = 0;
-
-    let mut why_not_both = champion_cfg.clone();
-    why_not_both.points_per_distance_to_smaller_enemies = 0;
-    why_not_both.points_per_kill = why_not_both.points_per_kill * 2 / 3;
-
-    let mut no_len = champion_cfg.clone();
-    no_len.length_diff_cap = 0;
-    no_len.points_per_length_diff = 0;
-
-    snakes.insert(
-        "spaceheater_bigger_kill".to_string(),
-        Box::new(Spaceheater3::new(
-            bigger_kill_value,
-            Some(Customizations {
-                color: "#03befc".to_string(),
-                head: "scarf".to_string(),
-                tail: "coffee".to_string(),
-            }),
-        )),
+    println!(
+        "Winter champion config: {:?} '{}'",
+        champion_cfg,
+        champion_cfg.to_string()
     );
+
     snakes.insert(
         "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
@@ -67,44 +47,5 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
             }),
         )),
     );
-    snakes.insert(
-        "spaceheater_no_enemy_distance".to_string(),
-        Box::new(Spaceheater3::new(
-            no_enemy_distance_penalty,
-            Some(Customizations {
-                color: "#03befc".to_string(),
-                head: "scarf".to_string(),
-                tail: "coffee".to_string(),
-            }),
-        )),
-    );
-    snakes.insert(
-        "spaceheater_both".to_string(),
-        Box::new(Spaceheater3::new(
-            why_not_both,
-            Some(Customizations {
-                color: "#03befc".to_string(),
-                head: "scarf".to_string(),
-                tail: "coffee".to_string(),
-            }),
-        )),
-    );
-    snakes.insert(
-        "spaceheater_no_len".to_string(),
-        Box::new(Spaceheater3::new(
-            no_len,
-            Some(Customizations {
-                color: "#03befc".to_string(),
-                head: "scarf".to_string(),
-                tail: "coffee".to_string(),
-            }),
-        )),
-    );
-
-    // println!(
-    //     "Winter champion config: {:?}",
-    //     scoring::winter::Config::<{ winter::NumType::MAX }>::try_from(WINTER_CHAMPION).unwrap()
-    // );
-
     snakes
 }
