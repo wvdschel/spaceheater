@@ -60,7 +60,10 @@ pub fn next_generation(
         for (rank, score) in scores.iter().enumerate() {
             if maybe_breed_snake(rank, scores.len()) {
                 let new_name = format!("gen{}_snake{}", generation, snakes_spawned);
-                let new_config = score.snake_config.unwrap().mutate();
+                let mut new_config = score.snake_config.unwrap().boxed_clone();
+                for _ in 0..12 {
+                    new_config = new_config.mutate();
+                }
                 println!(
                     "{} (rank #{}, {} points) spawned a new child {} with config {}",
                     score.snake_name,

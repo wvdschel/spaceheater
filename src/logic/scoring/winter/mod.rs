@@ -64,7 +64,7 @@ impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
             points_per_length_rank: rng.gen_range(-200..10),
             points_per_health: rng.gen_range(0..30),
             points_per_distance_to_food: rng.gen_range(-30..5),
-            points_per_kill: rng.gen_range(0..1000),
+            points_per_kill: rng.gen_range(0..5000),
             points_per_turn_survived: rng.gen_range(0..1000),
             points_per_distance_to_smaller_enemies: rng.gen_range(-30..5),
             points_when_dead: -10000000,
@@ -83,9 +83,9 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
         let mut rng = rand::thread_rng();
 
         let mut res = self.clone();
-        let mul = rng.gen_range::<i32, _>(-3..3).pow(2);
+        let mul = rng.gen_range::<i32, _>(-5..5).pow(2);
         match rng.gen_range(0..15) {
-            0 => res.points_per_food += mul,
+            0 => res.points_per_food = mul,
             1 => res.points_per_tile += mul,
             2 => res.points_per_length_rank += 3 * mul,
             3 => res.points_per_health += mul,
