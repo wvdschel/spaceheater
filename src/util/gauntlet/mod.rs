@@ -16,7 +16,7 @@ mod pairing;
 mod report;
 mod webserver;
 
-const SCORES: [isize; 4] = [40, -10, -12, -14];
+const SCORES: [isize; 4] = [40, 20, 10, 0];
 
 pub trait RandomConfig {
     fn random() -> Self;
@@ -40,6 +40,7 @@ pub struct Score<'a> {
     pub snake_name: String,
     pub snake_config: Option<&'a Box<dyn GeneticConfig>>,
     pub points: isize,
+    pub games_played: usize,
 }
 
 impl Gauntlet {
@@ -103,8 +104,16 @@ impl Gauntlet {
         }
         let mut scores = HashMap::new();
         let mut sorted_scores = vec![];
-        for snake in all_snake_names {
-            scores.insert(snake, 0 as isize);
+        for snake in &all_snake_names {
+            scores.insert(
+                snake,
+                Score {
+                    snake_name: snake.clone(),
+                    snake_config: self.configs.get(snake),
+                    points: 0,
+                    games_played: 0,
+                },
+            );
         }
         let game_count = games.len();
         let (result_tx, result_rx) = channel();
@@ -155,13 +164,14 @@ impl Gauntlet {
             println!("Received results for game {}/{}", result_count, game_count);
             for (rank, snake) in result.into_iter().enumerate() {
                 let s = scores.get_mut(&snake).unwrap();
-                *s += SCORES[rank];
+                s.points += SCORES[rank];
+                s.games_played += 1;
                 println!(
                     "#{}: {}, points {}, new score is {}",
                     rank + 1,
                     snake,
                     SCORES[rank],
-                    *s
+                    s.points
                 );
             }
             let time_elapsed = start_time.elapsed();
@@ -175,14 +185,7 @@ impl Gauntlet {
                 self.generation, hours_remaining, minutes_remaining, seconds_remaining
             );
 
-            sorted_scores = scores
-                .iter()
-                .map(|(snake, &score)| Score {
-                    snake_config: self.configs.get(snake),
-                    snake_name: snake.clone(),
-                    points: score,
-                })
-                .collect();
+            sorted_scores = scores.iter().map(|(_, score)| score.clone()).collect();
 
             // Sort by score: best scoring first
             sorted_scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));

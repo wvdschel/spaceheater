@@ -107,6 +107,7 @@ fn test_new_round() {
             snake_name: format!("snake_{}", i),
             snake_config: Some(&cfgs[i]),
             points: 0,
+            games_played: 0,
         });
     }
 

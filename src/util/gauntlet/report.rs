@@ -3,7 +3,7 @@ use std::{
     io::{self, Write},
 };
 
-use super::Score;
+use super::{Score, SCORES};
 
 pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
     let filename = format!("{}.txt", report_name);
@@ -11,10 +11,11 @@ pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
     for (rank, score) in scores.iter().enumerate() {
         file.write(
             format!(
-                "#{}: {} with {} points ({})\n",
+                "#{}: {} with {}/{} points after playing ({})\n",
                 rank,
                 score.snake_name,
                 score.points,
+                SCORES[0] * score.games_played as isize,
                 score
                     .snake_config
                     .map(|c| c.to_string())
