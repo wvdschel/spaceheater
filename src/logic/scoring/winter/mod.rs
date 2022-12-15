@@ -204,10 +204,10 @@ impl<const MAX_DISTANCE: NumType> Scorer for Config<MAX_DISTANCE> {
         for (i, snake) in game.others.iter().enumerate() {
             score += self.points_per_length_diff as i64
                 * cmp::min(
-                    self.length_diff_cap as i16,
+                    self.length_diff_cap as i64,
                     cmp::max(
-                        -(self.length_diff_cap as i16),
-                        game.you.length as i16 - snake.length as i16,
+                        -(self.length_diff_cap as i64),
+                        game.you.length as i64 - snake.length as i64,
                     ),
                 ) as i64;
             if snake.length >= game.you.length {

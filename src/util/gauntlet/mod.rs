@@ -188,7 +188,11 @@ impl Gauntlet {
             sorted_scores = scores.iter().map(|(_, score)| score.clone()).collect();
 
             // Sort by score: best scoring first
-            sorted_scores.sort_by(|v1, v2| v2.points.cmp(&v1.points));
+            sorted_scores.sort_by(|v1, v2| {
+                let ratio2 = v2.points as f32 / v2.games_played as f32;
+                let ratio1 = v1.points as f32 / v1.games_played as f32;
+                ratio2.total_cmp(f32)
+            });
 
             if let Err(e) = write_report(
                 format!("generation_{}", self.generation).as_str(),
