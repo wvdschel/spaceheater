@@ -16,7 +16,7 @@ mod pairing;
 mod report;
 mod webserver;
 
-const SCORES: [isize; 4] = [40, 20, 10, 0];
+const SCORES: [isize; 4] = [4, 2, 1, 0];
 
 pub trait RandomConfig {
     fn random() -> Self;
