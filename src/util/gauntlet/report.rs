@@ -11,7 +11,7 @@ pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
     for (rank, score) in scores.iter().enumerate() {
         file.write(
             format!(
-                "#{}: {} with {}/{} points after playing ({})\n",
+                "#{}: {} with {}/{} points ({})\n",
                 rank,
                 score.snake_name,
                 score.points,
