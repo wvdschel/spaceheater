@@ -191,7 +191,7 @@ impl Gauntlet {
             sorted_scores.sort_by(|v1, v2| {
                 let ratio2 = v2.points as f32 / v2.games_played as f32;
                 let ratio1 = v1.points as f32 / v1.games_played as f32;
-                ratio2.total_cmp(f32)
+                ratio2.total_cmp(&ratio1)
             });
 
             if let Err(e) = write_report(
