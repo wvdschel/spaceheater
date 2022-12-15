@@ -90,8 +90,8 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
             2 => res.points_per_length_rank += 3 * mul,
             3 => res.points_per_health += mul,
             4 => res.points_per_distance_to_food += mul,
-            5 => res.points_per_kill += 5 * mul,
-            6 => res.points_per_turn_survived += 5 * mul,
+            5 => res.points_per_kill += 25 * mul,
+            6 => res.points_per_turn_survived += 8 * mul,
             7 => res.points_per_distance_to_smaller_enemies += mul,
             8 => {
                 res.hungry_mode_max_health =
