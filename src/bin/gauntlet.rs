@@ -2,7 +2,7 @@ use topsnek::{logic::scoring::winter, snakes, util::gauntlet::Gauntlet};
 
 const CHAMPIONS: &str = include_str!("champions.txt");
 
-const SNAKE_COUNT: usize = 80;
+const SNAKE_COUNT: usize = 60;
 
 fn main() {
     let mut g = Gauntlet::new(&[
@@ -13,7 +13,7 @@ fn main() {
         "--map",
         "royale",
         "-t",
-        "900",
+        "750",
     ]);
 
     let ref_snake_count = snakes::snakes().len();
