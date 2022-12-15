@@ -24,7 +24,7 @@ pub trait RandomConfig {
 
 pub trait GeneticConfig: ToString + Sync + Send {
     fn load(&mut self, cfg: &str);
-    fn evolve(&self) -> Box<dyn GeneticConfig>;
+    fn mutate(&self) -> Box<dyn GeneticConfig>;
     fn battlesnake(&self) -> Box<dyn Battlesnake + Sync + Send>;
     fn boxed_clone(&self) -> Box<dyn GeneticConfig>;
 }
@@ -72,7 +72,7 @@ impl Gauntlet {
     ) {
         for _ in 0..count {
             self.add_contestant(
-                format!("gen{}_snake{}", self.generation, self.configs.len()).as_str(),
+                format!("starter_gen{}_snake{}", self.generation, self.configs.len()).as_str(),
                 T::random(),
             );
         }

@@ -79,7 +79,7 @@ impl<const MAX_DISTANCE: NumType> RandomConfig for Config<MAX_DISTANCE> {
 }
 
 impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
-    fn evolve(&self) -> Box<dyn GeneticConfig> {
+    fn mutate(&self) -> Box<dyn GeneticConfig> {
         let mut rng = rand::thread_rng();
 
         let mut res = self.clone();
