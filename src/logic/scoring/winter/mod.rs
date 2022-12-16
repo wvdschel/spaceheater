@@ -120,6 +120,100 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
     fn boxed_clone(&self) -> Box<dyn GeneticConfig> {
         Box::new(self.clone())
     }
+
+    fn try_crossover(&self, other_genes: &str, ratio_other: f64) -> Option<Box<dyn GeneticConfig>> {
+        let other = if let Ok(v) = Self::try_from(other_genes) {
+            v
+        } else {
+            return None;
+        };
+        let mut rng = rand::thread_rng();
+
+        let res = Self {
+            points_per_food: if rng.gen_bool(ratio_other) {
+                other.points_per_food
+            } else {
+                self.points_per_food
+            },
+            points_per_tile: if rng.gen_bool(ratio_other) {
+                other.points_per_tile
+            } else {
+                self.points_per_tile
+            },
+            points_per_hazard: if rng.gen_bool(ratio_other) {
+                other.points_per_hazard
+            } else {
+                self.points_per_hazard
+            },
+            points_per_length_rank: if rng.gen_bool(ratio_other) {
+                other.points_per_length_rank
+            } else {
+                self.points_per_length_rank
+            },
+            points_per_health: if rng.gen_bool(ratio_other) {
+                other.points_per_health
+            } else {
+                self.points_per_health
+            },
+            points_per_distance_to_food: if rng.gen_bool(ratio_other) {
+                other.points_per_distance_to_food
+            } else {
+                self.points_per_distance_to_food
+            },
+            food_distance_cap: if rng.gen_bool(ratio_other) {
+                other.food_distance_cap
+            } else {
+                self.food_distance_cap
+            },
+            points_per_kill: if rng.gen_bool(ratio_other) {
+                other.points_per_kill
+            } else {
+                self.points_per_kill
+            },
+            points_per_turn_survived: if rng.gen_bool(ratio_other) {
+                other.points_per_turn_survived
+            } else {
+                self.points_per_turn_survived
+            },
+            points_per_distance_to_smaller_enemies: if rng.gen_bool(ratio_other) {
+                other.points_per_distance_to_smaller_enemies
+            } else {
+                self.points_per_distance_to_smaller_enemies
+            },
+            enemy_distance_cap: if rng.gen_bool(ratio_other) {
+                other.enemy_distance_cap
+            } else {
+                self.enemy_distance_cap
+            },
+            points_when_dead: if rng.gen_bool(ratio_other) {
+                other.points_when_dead
+            } else {
+                self.points_when_dead
+            },
+            hungry_mode_max_health: if rng.gen_bool(ratio_other) {
+                other.hungry_mode_max_health
+            } else {
+                self.hungry_mode_max_health
+            },
+            hungry_mode_food_multiplier: if rng.gen_bool(ratio_other) {
+                other.hungry_mode_food_multiplier
+            } else {
+                self.hungry_mode_food_multiplier
+            },
+            points_per_length_diff: if rng.gen_bool(ratio_other) {
+                other.points_per_length_diff
+            } else {
+                self.points_per_length_diff
+            },
+            length_diff_cap: if rng.gen_bool(ratio_other) {
+                other.length_diff_cap
+            } else {
+                self.length_diff_cap
+            },
+        };
+
+        Some(Box::new(res))
+    }
 }
 
 impl<const MAX_DISTANCE: NumType> ToString for Config<MAX_DISTANCE> {

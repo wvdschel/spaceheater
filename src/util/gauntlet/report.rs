@@ -15,7 +15,7 @@ pub fn write_report(report_name: &str, scores: &Vec<Score>) -> io::Result<()> {
                 rank,
                 score.snake_name,
                 score.points,
-                SCORES[0] * score.games_played as isize,
+                SCORES[0] * score.games_played,
                 score
                     .snake_config
                     .map(|c| c.to_string())

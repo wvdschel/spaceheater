@@ -16,7 +16,7 @@ mod pairing;
 mod report;
 mod webserver;
 
-const SCORES: [isize; 4] = [4, 2, 1, 0];
+const SCORES: [usize; 4] = [4, 2, 1, 0];
 
 pub trait RandomConfig {
     fn random() -> Self;
@@ -24,6 +24,7 @@ pub trait RandomConfig {
 
 pub trait GeneticConfig: ToString + Sync + Send {
     fn load(&mut self, cfg: &str);
+    fn try_crossover(&self, other_genes: &str, ratio_other: f64) -> Option<Box<dyn GeneticConfig>>;
     fn mutate(&self) -> Box<dyn GeneticConfig>;
     fn battlesnake(&self) -> Box<dyn Battlesnake + Sync + Send>;
     fn boxed_clone(&self) -> Box<dyn GeneticConfig>;
@@ -39,8 +40,17 @@ pub struct Gauntlet {
 pub struct Score<'a> {
     pub snake_name: String,
     pub snake_config: Option<&'a Box<dyn GeneticConfig>>,
-    pub points: isize,
+    pub points: usize,
     pub games_played: usize,
+}
+
+impl<'a> Score<'a> {
+    fn points_per_game(&self) -> f64 {
+        if self.games_played == 0 {
+            return 0.0;
+        }
+        self.points as f64 / self.games_played as f64
+    }
 }
 
 impl Gauntlet {
@@ -188,11 +198,7 @@ impl Gauntlet {
             sorted_scores = scores.iter().map(|(_, score)| score.clone()).collect();
 
             // Sort by score: best scoring first
-            sorted_scores.sort_by(|v1, v2| {
-                let ratio2 = v2.points as f32 / v2.games_played as f32;
-                let ratio1 = v1.points as f32 / v1.games_played as f32;
-                ratio2.total_cmp(&ratio1)
-            });
+            sorted_scores.sort_by(|v1, v2| v2.points_per_game().total_cmp(&v1.points_per_game()));
 
             if let Err(e) = write_report(
                 format!("generation_{}", self.generation).as_str(),

@@ -6,13 +6,9 @@ use rand::Rng;
 use super::RandomConfig;
 #[cfg(test)]
 use crate::logic::scoring::winter;
+use crate::util::gauntlet::SCORES;
 
 use super::{GeneticConfig, Score};
-
-fn breeding_chance(rank: usize, count: usize) -> f64 {
-    let exp = (rank + 1) * 100 / count;
-    0.985f64.powf(exp as f64)
-}
 
 fn survival_chance(rank: usize, count: usize) -> f64 {
     let exp = (rank + 1) * 100 / count;
@@ -22,11 +18,6 @@ fn survival_chance(rank: usize, count: usize) -> f64 {
 fn maybe_kill_snake(rank: usize, count: usize) -> bool {
     let mut rng = rand::thread_rng();
     rng.gen_range(0f64..1f64) > survival_chance(rank, count)
-}
-
-fn maybe_breed_snake(rank: usize, count: usize) -> bool {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(0f64..1f64) < breeding_chance(rank, count)
 }
 
 pub fn next_generation(
@@ -56,34 +47,55 @@ pub fn next_generation(
 
     let mut snakes_spawned = 0;
     let mut next_gen: HashMap<String, Box<dyn GeneticConfig>> = HashMap::new();
+
+    let mut rng = rand::thread_rng();
     while scores.len() + next_gen.len() < target_count {
-        for (rank, score) in scores.iter().enumerate() {
-            if maybe_breed_snake(rank, scores.len()) {
-                let new_name = format!("gen{}_snake{}", generation, snakes_spawned);
-                let mut new_config = score.snake_config.unwrap().boxed_clone();
-                for _ in 0..12 {
-                    new_config = new_config.mutate();
-                }
-                println!(
-                    "{} (rank #{}, {} points) spawned a new child {} with config {}",
-                    score.snake_name,
-                    rank,
-                    score.points,
-                    new_name,
-                    new_config.to_string()
-                );
-                snakes_spawned += 1;
-                next_gen.insert(new_name, new_config);
-                if scores.len() + next_gen.len() == target_count {
-                    break;
-                }
+        let mut snakes = vec![];
+        for _ in 0..4 {
+            snakes.push(&scores[rng.gen_range(0..scores.len())]);
+        }
+        snakes.sort_by(|s1, s2| s2.points_per_game().total_cmp(&s1.points_per_game()));
+        let snake1 = snakes[0];
+        let snake2 = snakes[1];
+
+        if snake1.snake_name != snake2.snake_name {
+            let new_name = format!("gen{}_snake{}", generation, snakes_spawned);
+            let snake2_genes = snake2.snake_config.unwrap().to_string();
+
+            let weight1 = snake1.points_per_game();
+            let weight2 = snake2.points_per_game();
+            let ratio_other = weight2 / (weight1 + weight2);
+
+            let mut new_config = if let Some(v) = snake1
+                .snake_config
+                .unwrap()
+                .try_crossover(snake2_genes.as_str(), ratio_other)
+            {
+                v
+            } else {
+                continue;
+            };
+
+            for _ in 0..rng.gen_range(0..10) {
+                new_config = new_config.mutate();
+            }
+            println!(
+                "{} ({}/{} points) and {} ({}/{} points) spawned a new child {} with config {}",
+                snake1.snake_name,
+                snake1.points,
+                snake1.games_played * SCORES[0],
+                snake2.snake_name,
+                snake2.points,
+                snake2.games_played * SCORES[0],
+                new_name,
+                new_config.to_string()
+            );
+            snakes_spawned += 1;
+            next_gen.insert(new_name, new_config);
+            if scores.len() + next_gen.len() == target_count {
+                break;
             }
         }
-        println!(
-            "snakes after breeding: {} + {}",
-            scores.len(),
-            next_gen.len(),
-        )
     }
     println!();
 
@@ -106,8 +118,8 @@ fn test_new_round() {
         snakes.push(Score {
             snake_name: format!("snake_{}", i),
             snake_config: Some(&cfgs[i]),
-            points: 0,
-            games_played: 0,
+            points: cfgs.len() - i,
+            games_played: 10,
         });
     }
 
