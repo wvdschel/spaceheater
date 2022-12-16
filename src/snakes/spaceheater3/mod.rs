@@ -150,11 +150,11 @@ where
                     .unwrap_or("None".to_string())
             );
             log!("scores for moves: ");
-            for c in &root.children {
-                println!(
+            for _c in &root.children {
+                log!(
                     "{}: {}",
-                    c.my_move,
-                    c.score
+                    _c.my_move,
+                    _c.score
                         .map(|s| s.to_string())
                         .unwrap_or("pruned".to_string())
                 )
