@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc, RwLock,
     },
     time::Instant,
@@ -17,6 +17,7 @@ use super::{alphabeta::AlphaBeta, min::MinimizingNode, util::certain_death};
 
 pub struct MaximizingNode {
     pub(super) game: Game,
+    pub(super) depth_completed: usize,
     pub(super) score: Option<(Direction, i64)>,
     pub(super) children: Vec<MinimizingNode>,
 }
@@ -25,6 +26,7 @@ impl MaximizingNode {
     pub fn new(game: Game) -> Self {
         Self {
             game,
+            depth_completed: 0,
             score: None,
             children: vec![],
         }
@@ -99,6 +101,7 @@ impl MaximizingNode {
 impl MaximizingNode {
     pub fn solve<S>(
         &mut self,
+        cancelled: Arc<AtomicBool>,
         deadline: &Instant,
         max_depth: usize,
         scorer: &S,
@@ -142,6 +145,7 @@ impl MaximizingNode {
 
             let (next_score, node_count) = min_node.solve(
                 game.clone(),
+                cancelled.clone(),
                 deadline,
                 max_depth,
                 scorer,
@@ -172,13 +176,14 @@ impl MaximizingNode {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
         }
 
-        if Instant::now() > *deadline {
+        if Instant::now() > *deadline || cancelled.load(Ordering::Relaxed) {
             // deadline exceeded
             return (None, total_node_count.load(Ordering::Relaxed));
         }
 
         let (top_move, top_score) = top_score.read().unwrap().clone();
         self.score = top_score.map(|s| (top_move, s));
+        self.depth_completed = max_depth;
         return (self.score, total_node_count.load(Ordering::Relaxed));
     }
 

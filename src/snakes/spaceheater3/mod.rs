@@ -2,18 +2,22 @@ use crate::{
     log,
     logic::{self, Game},
     protocol::{self, Customizations, Direction},
-    snakes::spaceheater3::max::MaximizingNode,
     util::thread_count,
     Battlesnake,
 };
+
 use std::{
     cmp,
-    sync::mpsc::channel,
+    collections::HashMap,
+    sync::{atomic::AtomicBool, mpsc::channel, Arc, Mutex},
     thread,
     time::{Duration, Instant},
 };
 
+use self::{background::BackgroundWorker, max::MaximizingNode};
+
 pub mod alphabeta;
+mod background;
 pub mod max;
 pub mod min;
 mod util;
@@ -29,6 +33,7 @@ where
 {
     scorer: S,
     customizations: Customizations,
+    background_workers: Arc<Mutex<HashMap<String, background::BackgroundWorker>>>,
 }
 
 impl<S> Spaceheater3<S>
@@ -43,48 +48,51 @@ where
                 head: DEFAULT_HEAD.into(),
                 tail: DEFAULT_TAIL.into(),
             }),
+            background_workers: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    fn get_background_work(&self, game_id: &String, g: Game) -> MaximizingNode {
+        let workers = self.background_workers.lock().unwrap();
+
+        let bgworker = if let Some(v) = workers.get(game_id) {
+            v
+        } else {
+            return MaximizingNode::new(g.clone());
+        };
+
+        bgworker.foreground(g)
     }
 
     pub fn solve(
         &self,
         game: Game,
         deadline: &Instant,
-        max_depth: usize,
+        game_id: String,
     ) -> Option<(Direction, i64)> {
-        let enemy_count = game.others.len();
         let _turn = game.turn;
-
-        let base_depth = match enemy_count {
-            0 => 5,
-            1 => 3,
-            2 => 2,
-            3 => 2,
-            4 => 2,
-            _ => 1,
-        };
         let _start = Instant::now();
-        let max_depth = cmp::max(base_depth + 1, max_depth);
-
-        log!(
-            "turn {}: start: calculating depths {} through {} using {} threads",
-            _turn,
-            base_depth,
-            max_depth,
-            thread_count(),
-        );
 
         let (tx, rx) = channel();
 
         let scorer = self.scorer.clone();
         let deadline = deadline.clone();
-        let game = game.clone();
+        let enemy_count = game.others.len();
+        let mut root = self.get_background_work(&game_id, game);
+        let base_depth = cmp::max(root.depth_completed, base_depth(enemy_count));
+        let bgworkers = self.background_workers.clone();
+
+        log!(
+            "turn {}: start: calculating depths {} through ... using {} threads",
+            _turn,
+            base_depth,
+            thread_count(),
+        );
         thread::spawn(move || {
-            let mut root = MaximizingNode::new(game);
             let mut best_score = None;
             let mut last_score = None;
             let mut _total_node_count = 0;
-            for current_depth in base_depth..max_depth {
+            for current_depth in base_depth..usize::MAX {
                 log!(
                     "turn {}: {}ms: starting depth {}",
                     _turn,
@@ -92,6 +100,7 @@ where
                     current_depth,
                 );
                 let (res, node_count) = root.solve(
+                    Arc::new(AtomicBool::new(false)),
                     &deadline,
                     current_depth,
                     &scorer,
@@ -159,6 +168,18 @@ where
                         .unwrap_or("pruned".to_string())
                 )
             }
+            let workers = bgworkers.lock().unwrap();
+            let bgworker = if let Some(v) = workers.get(&game_id) {
+                v
+            } else {
+                return;
+            };
+
+            for c in root.children {
+                if c.my_move == best_score.unwrap().0 {
+                    bgworker.background(background::BackgroundWork::Min(root.game.clone(), c))
+                }
+            }
         });
 
         rx.recv().unwrap()
@@ -180,11 +201,28 @@ where
         }
     }
 
-    fn start(&self, _: &crate::protocol::Request) -> Result<(), String> {
+    fn start(&self, req: &crate::protocol::Request) -> Result<(), String> {
+        #[cfg(not(feature = "sequential"))]
+        {
+            let game_id = req.game.id.clone();
+            let game = Game::from(req);
+            let work = background::BackgroundWork::Max(MaximizingNode::new(game));
+            let worker = BackgroundWorker::new(self.scorer.clone());
+            worker.background(work);
+
+            let mut workers = self.background_workers.lock().unwrap();
+            workers.insert(game_id, worker);
+        }
+
         Ok(())
     }
 
-    fn end(&self, _: &crate::protocol::Request) -> Result<(), String> {
+    fn end(&self, req: &crate::protocol::Request) -> Result<(), String> {
+        let workers = self.background_workers.lock().unwrap();
+        if let Some(w) = workers.get(&req.game.id) {
+            w.cancel();
+        }
+
         Ok(())
     }
 
@@ -192,9 +230,10 @@ where
         &self,
         req: &crate::protocol::Request,
     ) -> Result<crate::protocol::MoveResponse, String> {
+        let game_id = req.game.id.clone();
         let game = Game::from(req);
         let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
-        let res = self.solve(game, &deadline, usize::MAX);
+        let res = self.solve(game, &deadline, game_id);
 
         let (best_dir, top_score) = res
             .map(|(dir, score)| (dir, format!("{}", score)))
@@ -204,5 +243,16 @@ where
             direction: best_dir,
             shout: top_score,
         })
+    }
+}
+
+fn base_depth(enemy_count: usize) -> usize {
+    match enemy_count {
+        0 => 5,
+        1 => 3,
+        2 => 2,
+        3 => 2,
+        4 => 2,
+        _ => 1,
     }
 }

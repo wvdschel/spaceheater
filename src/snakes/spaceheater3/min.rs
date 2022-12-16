@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicI64, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
         Arc,
     },
     time::Instant,
@@ -14,6 +14,7 @@ use super::{alphabeta::AlphaBeta, max::MaximizingNode, util::all_sensible_enemy_
 
 pub struct MinimizingNode {
     pub my_move: Direction,
+    pub(super) depth_completed: usize,
     pub(super) score: Option<i64>,
     pub(super) children: Vec<MaximizingNode>,
 }
@@ -24,6 +25,7 @@ impl MinimizingNode {
             my_move,
             score: None,
             children: vec![],
+            depth_completed: 0,
         }
     }
 
@@ -78,6 +80,7 @@ impl MinimizingNode {
     pub fn solve<S>(
         &mut self,
         game: Arc<&Game>,
+        cancelled: Arc<AtomicBool>,
         deadline: &Instant,
         max_depth: usize,
         scorer: &S,
@@ -105,8 +108,14 @@ impl MinimizingNode {
                 return;
             }
 
-            let (next_score, node_count) =
-                max_node.solve(deadline, max_depth - 1, scorer, &alpha_beta, threads);
+            let (next_score, node_count) = max_node.solve(
+                cancelled.clone(),
+                deadline,
+                max_depth - 1,
+                scorer,
+                &alpha_beta,
+                threads,
+            );
 
             let next_score = if let Some(s) = next_score {
                 s.1
@@ -126,7 +135,7 @@ impl MinimizingNode {
             let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
         }
 
-        if Instant::now() > *deadline {
+        if Instant::now() > *deadline || cancelled.load(Ordering::Relaxed) {
             // deadline exceeded
             return (None, total_node_count.load(Ordering::Relaxed));
         }
@@ -138,6 +147,7 @@ impl MinimizingNode {
             Some(min_score)
         };
         self.score = min_score;
+        self.depth_completed = max_depth;
         (min_score, total_node_count.load(Ordering::Relaxed))
     }
 }
