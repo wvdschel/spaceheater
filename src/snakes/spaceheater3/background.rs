@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{logic, logic::Game, util::thread_count};
+use crate::{log, logic, logic::Game, util::thread_count};
 
 use super::{alphabeta, base_depth, max::MaximizingNode, min::MinimizingNode};
 
@@ -61,7 +61,13 @@ impl BackgroundWorker {
         }
 
         match self.foreground_receiver.recv() {
-            Ok(node) => node.unwrap_or(MaximizingNode::new(game)),
+            Ok(node) => match node {
+                Some(max) => max,
+                None => {
+                    log!("no background work found");
+                    MaximizingNode::new(game)
+                }
+            },
             Err(e) => {
                 println!("failed to receive from background worker: {}", e);
                 MaximizingNode::new(game)
@@ -124,6 +130,7 @@ impl BackgroundWork {
                 BackgroundWork::Max(max) => {
                     let next_depth =
                         cmp::max(max.depth_completed + 1, base_depth(max.game.others.len())); // TODO
+                    log!("starting depth {} in the background", next_depth);
                     max.solve(
                         cancelled.clone(),
                         &deadline,
@@ -136,6 +143,7 @@ impl BackgroundWork {
                 BackgroundWork::Min(game, min) => {
                     let next_depth =
                         cmp::max(min.depth_completed + 1, base_depth(game.others.len())); // TODO
+                    log!("starting depth {} in the background", next_depth);
                     let game_arc = Arc::new(game as &Game);
                     min.solve(
                         game_arc,

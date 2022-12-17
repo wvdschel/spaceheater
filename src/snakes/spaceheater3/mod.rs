@@ -58,10 +58,17 @@ where
         let bgworker = if let Some(v) = workers.get(game_id) {
             v
         } else {
+            log!("no background work found for {}", game_id);
             return MaximizingNode::new(g.clone());
         };
 
-        bgworker.foreground(g)
+        let res = bgworker.foreground(g);
+        log!(
+            "foregrounding work for {} at depth {}",
+            game_id,
+            res.depth_completed
+        );
+        res
     }
 
     pub fn solve(
@@ -89,7 +96,7 @@ where
             thread_count(),
         );
         thread::spawn(move || {
-            let mut best_score = None;
+            let mut best_score = root.score;
             let mut last_score = None;
             let mut _total_node_count = 0;
             for current_depth in base_depth..usize::MAX {
@@ -176,8 +183,15 @@ where
             };
 
             for c in root.children {
-                if c.my_move == best_score.unwrap().0 {
-                    bgworker.background(background::BackgroundWork::Min(root.game.clone(), c))
+                if let Some(best_dir) = best_score.map(|s| s.0) {
+                    if c.my_move == best_dir {
+                        log!(
+                            "backgrounding work for {} at depth {}",
+                            game_id,
+                            c.depth_completed
+                        );
+                        bgworker.background(background::BackgroundWork::Min(root.game.clone(), c))
+                    }
                 }
             }
         });
