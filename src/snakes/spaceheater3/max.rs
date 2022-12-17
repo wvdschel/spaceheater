@@ -3,7 +3,7 @@ use rayon::prelude::*;
 use std::{
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, RwLock,
+        Arc, Mutex, RwLock,
     },
     time::Instant,
 };
@@ -186,6 +186,57 @@ impl MaximizingNode {
         let self_score = self.score.map(|s| s.1).unwrap_or(i64::MAX);
         let other_score = other.score.map(|s| s.1).unwrap_or(i64::MAX);
         self_score.cmp(&other_score)
+    }
+
+    pub fn solve_optimistic<S>(
+        &mut self,
+        deadline: &Instant,
+        max_depth: usize,
+        scorer: &S,
+        threads: f32,
+    ) -> (Direction, i64)
+    where
+        S: logic::scoring::Scorer + Sync + Clone + 'static,
+    {
+        if max_depth == 0 {
+            if self.score.is_none() {
+                let score = scorer.score(&self.game);
+                self.score = Some((Direction::Up, score));
+            }
+            return self.score.unwrap();
+        }
+
+        self.update_children();
+
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
+
+        let top_score = Mutex::new((Direction::Up, i64::MIN));
+        let game = Arc::new(&self.game);
+        let solver = |min_node: &mut MinimizingNode| {
+            if Instant::now() > *deadline {
+                return;
+            }
+            let next_score =
+                min_node.solve_optimistic(game.clone(), deadline, max_depth, scorer, threads);
+
+            let mut best_score = top_score.lock().unwrap();
+            if best_score.1 < next_score {
+                *best_score = (min_node.my_move, next_score);
+            }
+        };
+
+        if parallel {
+            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        } else {
+            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
+        }
+
+        let res = top_score.lock().unwrap().clone();
+        res
     }
 }
 

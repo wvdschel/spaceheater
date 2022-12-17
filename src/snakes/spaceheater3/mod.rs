@@ -137,6 +137,33 @@ where
                 last_score = best_score.as_ref().map(|s| s.1.clone())
             }
 
+            let thinks_we_will_die = match best_score {
+                Some((_best_move, best_score)) => best_score < 0,
+                None => false,
+            };
+
+            if thinks_we_will_die {
+                log!(
+                    "turn {}: seems like we're going to die , try an optimistic approach",
+                    _turn
+                );
+                let new_deadline = deadline.max(Instant::now() + Duration::from_millis(20));
+                for current_depth in base_depth..max_depth {
+                    let next_score = Some(root.solve_optimistic(
+                        &new_deadline,
+                        current_depth,
+                        &scorer,
+                        thread_count() as f32,
+                    ));
+
+                    if Instant::now() >= new_deadline {
+                        break;
+                    }
+
+                    best_score = next_score;
+                }
+            }
+
             let _ = tx.send(best_score);
             let _statm = procinfo::pid::statm_self().unwrap();
             log!(

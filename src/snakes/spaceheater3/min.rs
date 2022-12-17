@@ -140,4 +140,51 @@ impl MinimizingNode {
         self.score = min_score;
         (min_score, total_node_count.load(Ordering::Relaxed))
     }
+
+    pub fn solve_optimistic<S>(
+        &mut self,
+        game: Arc<&Game>,
+        deadline: &Instant,
+        max_depth: usize,
+        scorer: &S,
+        threads: f32,
+    ) -> i64
+    where
+        S: logic::scoring::Scorer + Sync + Clone + 'static,
+    {
+        self.update_children(game.as_ref());
+        let (parallel, threads) = if threads > 1f32 {
+            (true, threads / self.children.len() as f32)
+        } else {
+            (false, threads)
+        };
+
+        let child_count = AtomicI64::new(0);
+        let sum_score = AtomicI64::new(0);
+        let solver = |max_node: &mut MaximizingNode| {
+            if Instant::now() > *deadline {
+                return;
+            }
+
+            let (_next_move, next_score) =
+                max_node.solve_optimistic(deadline, max_depth - 1, scorer, threads);
+
+            child_count.fetch_add(1, Ordering::Relaxed);
+            sum_score.fetch_add(next_score, Ordering::Relaxed);
+        };
+
+        if parallel {
+            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
+        } else {
+            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
+        }
+
+        let child_count = child_count.load(Ordering::Relaxed);
+        let sum_score = sum_score.load(Ordering::Relaxed);
+        if child_count <= 0 {
+            i64::MIN
+        } else {
+            sum_score / child_count
+        }
+    }
 }
