@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
+        atomic::{AtomicI64, AtomicUsize, Ordering},
         Arc,
     },
     time::Instant,
@@ -16,7 +16,6 @@ pub struct MinimizingNode {
     pub my_move: Direction,
     pub(super) score: Option<i64>,
     pub(super) children: Vec<MaximizingNode>,
-    will_die: bool,
 }
 
 impl MinimizingNode {
@@ -25,12 +24,7 @@ impl MinimizingNode {
             my_move,
             score: None,
             children: vec![],
-            will_die: false,
         }
-    }
-
-    pub(super) fn will_die(&self) -> bool {
-        self.will_die
     }
 
     pub(super) fn update_children(&mut self, game: &Game) {
@@ -105,7 +99,6 @@ impl MinimizingNode {
         let min_score: AtomicI64 = AtomicI64::new(i64::MAX);
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
-        let will_die = AtomicBool::new(false);
 
         let solver = |max_node: &mut MaximizingNode| {
             if alpha_beta.should_be_pruned() {
@@ -123,7 +116,6 @@ impl MinimizingNode {
 
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
             if min_score.fetch_min(next_score, Ordering::Relaxed) > next_score {
-                will_die.store(max_node.will_die(), Ordering::Relaxed);
                 alpha_beta.new_beta_score(next_score);
             }
         };
@@ -145,55 +137,7 @@ impl MinimizingNode {
         } else {
             Some(min_score)
         };
-        self.will_die = will_die.load(Ordering::Relaxed);
         self.score = min_score;
         (min_score, total_node_count.load(Ordering::Relaxed))
-    }
-
-    pub fn solve_optimistic<S>(
-        &mut self,
-        game: Arc<&Game>,
-        deadline: &Instant,
-        max_depth: usize,
-        scorer: &S,
-        threads: f32,
-    ) -> i64
-    where
-        S: logic::scoring::Scorer + Sync + Clone + 'static,
-    {
-        self.update_children(game.as_ref());
-        let (parallel, threads) = if threads > 1f32 {
-            (true, threads / self.children.len() as f32)
-        } else {
-            (false, threads)
-        };
-
-        let child_count = AtomicI64::new(0);
-        let sum_score = AtomicI64::new(0);
-        let solver = |max_node: &mut MaximizingNode| {
-            if Instant::now() > *deadline {
-                return;
-            }
-
-            let (_next_move, next_score) =
-                max_node.solve_optimistic(deadline, max_depth - 1, scorer, threads);
-
-            child_count.fetch_add(1, Ordering::Relaxed);
-            sum_score.fetch_add(next_score, Ordering::Relaxed);
-        };
-
-        if parallel {
-            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
-        } else {
-            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
-        }
-
-        let child_count = child_count.load(Ordering::Relaxed);
-        let sum_score = sum_score.load(Ordering::Relaxed);
-        if child_count <= 0 {
-            i64::MIN
-        } else {
-            sum_score / child_count
-        }
     }
 }

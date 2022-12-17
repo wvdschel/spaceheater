@@ -2,8 +2,8 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
-        Arc, Mutex, RwLock,
+        atomic::{AtomicUsize, Ordering},
+        Arc, RwLock,
     },
     time::Instant,
 };
@@ -19,7 +19,6 @@ pub struct MaximizingNode {
     pub(super) game: Game,
     pub(super) score: Option<(Direction, i64)>,
     pub(super) children: Vec<MinimizingNode>,
-    will_die: bool,
 }
 
 impl MaximizingNode {
@@ -28,7 +27,6 @@ impl MaximizingNode {
             game,
             score: None,
             children: vec![],
-            will_die: false,
         }
     }
 
@@ -51,7 +49,6 @@ impl MaximizingNode {
         S: logic::scoring::Scorer,
     {
         if self.game.you.dead() {
-            self.will_die = true;
             if self.score == None {
                 self.score = Some((Direction::Up, scorer.score(&self.game)));
             }
@@ -97,10 +94,6 @@ impl MaximizingNode {
         }
         len
     }
-
-    pub(crate) fn will_die(&self) -> bool {
-        self.will_die
-    }
 }
 
 impl MaximizingNode {
@@ -141,7 +134,6 @@ impl MaximizingNode {
         let top_score = RwLock::new((Direction::Up, None));
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
-        let will_die = AtomicBool::new(false);
 
         let solver = |min_node: &mut MinimizingNode| {
             if alpha_beta.should_be_pruned() {
@@ -171,7 +163,6 @@ impl MaximizingNode {
                 if top_score_write.1 < next_score {
                     *top_score_write = (min_node.my_move, next_score.clone());
                 }
-                will_die.store(min_node.will_die(), Ordering::Relaxed);
                 alpha_beta.new_alpha_score(next_score.unwrap());
             }
         };
@@ -187,7 +178,6 @@ impl MaximizingNode {
         }
 
         let (top_move, top_score) = top_score.read().unwrap().clone();
-        self.will_die = will_die.load(Ordering::Relaxed);
         self.score = top_score.map(|s| (top_move, s));
         return (self.score, total_node_count.load(Ordering::Relaxed));
     }
@@ -196,57 +186,6 @@ impl MaximizingNode {
         let self_score = self.score.map(|s| s.1).unwrap_or(i64::MAX);
         let other_score = other.score.map(|s| s.1).unwrap_or(i64::MAX);
         self_score.cmp(&other_score)
-    }
-
-    pub fn solve_optimistic<S>(
-        &mut self,
-        deadline: &Instant,
-        max_depth: usize,
-        scorer: &S,
-        threads: f32,
-    ) -> (Direction, i64)
-    where
-        S: logic::scoring::Scorer + Sync + Clone + 'static,
-    {
-        if max_depth == 0 {
-            if self.score.is_none() {
-                let score = scorer.score(&self.game);
-                self.score = Some((Direction::Up, score));
-            }
-            return self.score.unwrap();
-        }
-
-        self.update_children();
-
-        let (parallel, threads) = if threads > 1f32 {
-            (true, threads / self.children.len() as f32)
-        } else {
-            (false, threads)
-        };
-
-        let top_score = Mutex::new((Direction::Up, i64::MIN));
-        let game = Arc::new(&self.game);
-        let solver = |min_node: &mut MinimizingNode| {
-            if Instant::now() > *deadline {
-                return;
-            }
-            let next_score =
-                min_node.solve_optimistic(game.clone(), deadline, max_depth, scorer, threads);
-
-            let mut best_score = top_score.lock().unwrap();
-            if best_score.1 < next_score {
-                *best_score = (min_node.my_move, next_score);
-            }
-        };
-
-        if parallel {
-            let _res: Vec<()> = self.children.par_iter_mut().map(solver).collect();
-        } else {
-            let _res: Vec<()> = self.children.iter_mut().map(solver).collect();
-        }
-
-        let res = top_score.lock().unwrap().clone();
-        res
     }
 }
 

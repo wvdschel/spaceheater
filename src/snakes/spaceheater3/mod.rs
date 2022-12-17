@@ -84,7 +84,6 @@ where
             let mut best_score = None;
             let mut last_score = None;
             let mut _total_node_count = 0;
-            let mut depth_reached = 0;
             for current_depth in base_depth..max_depth {
                 log!(
                     "turn {}: {}ms: starting depth {}",
@@ -105,7 +104,6 @@ where
                 match &res {
                     Some((_dir, _score)) => {
                         best_score = res.clone();
-                        depth_reached = current_depth;
                         log!(
                             "turn {}: {}ms: completed depth {}, tree has {} nodes: {} {}",
                             _turn,
@@ -137,37 +135,6 @@ where
                     break;
                 }
                 last_score = best_score.as_ref().map(|s| s.1.clone())
-            }
-
-            if root.will_die() {
-                log!(
-                    "turn {}: {}ms: seems like we're going to die , try an optimistic approach",
-                    _turn,
-                    _start.elapsed().as_millis(),
-                );
-                let new_deadline = deadline.max(Instant::now() + Duration::from_millis(20));
-                //for current_depth in base_depth..max_depth {
-                let current_depth = depth_reached;
-                let next_score = Some(root.solve_optimistic(
-                    &new_deadline,
-                    current_depth,
-                    &scorer,
-                    thread_count() as f32,
-                ));
-
-                // if Instant::now() >= new_deadline {
-                //     break;
-                // }
-
-                log!(
-                    "turn {}: {}ms: optimistic fallback: completed depth {}: {:?}",
-                    _turn,
-                    _start.elapsed().as_millis(),
-                    current_depth,
-                    next_score,
-                );
-                best_score = next_score;
-                //}
             }
 
             let _ = tx.send(best_score);
