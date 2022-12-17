@@ -5,13 +5,12 @@ use pprof::criterion::{Output, PProfProfiler};
 use criterion::{criterion_group, criterion_main, Criterion};
 use topsnek::{
     logic::{
-        self,
+        self, floodfill,
         scoring::{
             self,
             winter::{self, Config},
             Scorer,
         },
-        voronoi,
     },
     util::{gamelogger, gauntlet::RandomConfig},
 };
@@ -48,7 +47,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
 
         c.bench_function(format!("voronoi_me_turn_{}", turn).as_str(), |b| {
-            b.iter(|| voronoi::me(&games[turn]))
+            b.iter(|| floodfill::me(&games[turn]))
         });
 
         c.bench_function(format!("winter_turn_{}", turn).as_str(), |b| {

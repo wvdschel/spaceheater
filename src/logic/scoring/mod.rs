@@ -1,7 +1,7 @@
 use super::Game;
 
-mod voronoi;
-pub use voronoi::*;
+mod floodfill;
+pub use floodfill::*;
 
 pub mod tournament;
 pub mod winter;
@@ -11,7 +11,10 @@ pub trait Scorer {
     fn score(&self, game: &Game) -> i64;
 }
 
-impl<F> Scorer for F where F: Fn(&Game) -> i64 {
+impl<F> Scorer for F
+where
+    F: Fn(&Game) -> i64,
+{
     fn score(&self, game: &Game) -> i64 {
         self(game)
     }

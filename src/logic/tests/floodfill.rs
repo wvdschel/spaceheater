@@ -1,5 +1,5 @@
 use crate::{
-    logic::{scoring::winter, voronoi, Game},
+    logic::{floodfill, scoring::winter, Game},
     protocol,
 };
 
@@ -11,12 +11,12 @@ fn voronoi_fill() {
 
     // Opening should have 20 tiles for each snake.
 
-    let all_scores = voronoi::all(&game);
+    let all_scores = floodfill::all(&game);
     for (_snake, score) in all_scores {
         assert_eq!(score, 20);
     }
 
-    assert_eq!(voronoi::me(&game), 20);
+    assert_eq!(floodfill::me(&game), 20);
 }
 
 #[test]

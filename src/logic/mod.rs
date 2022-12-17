@@ -3,8 +3,8 @@ use std::fmt::Display;
 #[cfg(test)]
 mod tests;
 
+pub mod floodfill;
 pub mod scoring;
-pub mod voronoi;
 
 mod board;
 pub use board::Board;
