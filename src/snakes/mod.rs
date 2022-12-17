@@ -41,9 +41,9 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         Box::new(Spaceheater3::new(
             champion_cfg,
             Some(Customizations {
-                color: "#03befc".to_string(),
-                head: "scarf".to_string(),
-                tail: "coffee".to_string(),
+                color: "#ff8400".to_string(),
+                head: "workout".to_string(),
+                tail: "rocket".to_string(),
             }),
         )),
     );
