@@ -109,7 +109,7 @@ pub fn next_generation(
 #[test]
 fn test_new_round() {
     let mut cfgs = Vec::<Box<dyn GeneticConfig>>::new();
-    for _ in 0..42 {
+    for _ in 0..100 {
         cfgs.push(Box::new(winter::Config::<10>::random()));
     }
 
