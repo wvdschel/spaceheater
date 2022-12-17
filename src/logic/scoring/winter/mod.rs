@@ -16,7 +16,6 @@ pub use self::floodfill::floodfill;
 use super::Scorer;
 
 mod floodfill;
-pub mod floodfill_baseline;
 
 pub type NumType = u8;
 pub const NO_SNAKE: u8 = u8::MAX;
@@ -263,7 +262,7 @@ impl<const MAX_DISTANCE: NumType> TryFrom<&str> for Config<MAX_DISTANCE> {
 }
 
 #[test]
-fn hex_encoded_config() {
+fn string_encoded_config() {
     assert_eq!(ENCODING.chars().count(), 256);
 
     let cfg = Config::<{ NumType::MAX }>::random();
