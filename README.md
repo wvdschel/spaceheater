@@ -1,7 +1,7 @@
 # Spaceheater
 # Weird choices to debug
-- [o] 87f849bb-8223-423c-bda6-1ea7478a55c0 -> should go up in turn 301 and tail chase -> nope already dead
-- [o] 31ac7ed4-a335-4c7a-83ab-5aa704a38479 -> turn 524 should probably tail chase -> already dead
+- [ ] 87f849bb-8223-423c-bda6-1ea7478a55c0 -> should go up in turn 301 and tail chase -> no point, already dead
+- [ ] 31ac7ed4-a335-4c7a-83ab-5aa704a38479 -> turn 524 should probably tail chase -> no point, already dead
 - Paranoid snake problems:
   - [ ] 5477951f-cf93-4df6-8ed5-fad896b9e81b -> should really choose to gamble going right
   - [ ] beeee38f-521f-4634-9280-c24f79c3ffab -> turn 45 should go right
