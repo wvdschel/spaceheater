@@ -1,4 +1,11 @@
 # Spaceheater
+
+This is my third attempt at building a battle snake (src/snakes/simple.rs is the first and still available).
+
+This README is mostly a TODO list of reminders for myself on how to improve the snake.
+
+The code is a bit of a chaotic mess, but feel free to steal something from `/src/logic/scoring` if you want :)
+
 # Weird choices to debug
 - [ ] 87f849bb-8223-423c-bda6-1ea7478a55c0 -> should go up in turn 301 and tail chase -> no point, already dead
 - [ ] 31ac7ed4-a335-4c7a-83ab-5aa704a38479 -> turn 524 should probably tail chase -> no point, already dead
@@ -25,10 +32,7 @@ Create flamegraph.svg:
   RUSTFLAGS='-C force-frame-pointers=y' cargo run --release --features=profiling --bin replay spaceheater3 < logs/*{game_id}*.json.gz
 
 # Scoring
-- Find more ways to encourage eating:
-  - Penalize length difference on top of length rank (length difference to largest other snake & smallest other snake), no reward for being more than N size bigger for some small N!
-  - Lower or remove penalty for distance to smaller snakes?
-- Try max-n scoring and tree search
+- Try max-n scoring and tree search, at least when paranoid minimax resolves to certain death.
 
 # Bugs
 - "All paths are certain death, just score this board and return" -> currently does not simulate enemies in this scenario, just moves our own snake into certain death and scores the board, leading to inaccurate scoring values.
