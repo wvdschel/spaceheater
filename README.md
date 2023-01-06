@@ -1,5 +1,7 @@
 # Spaceheater
 
+![image](https://user-images.githubusercontent.com/76032/211035601-9b541b1d-2741-4005-bf0a-0fe151dd6b65.png)
+
 This is my third attempt at building a battle snake (src/snakes/simple.rs is the first and still available).
 
 This README is mostly a TODO list of reminders for myself on how to improve the snake.
@@ -60,3 +62,4 @@ Create flamegraph.svg:
 - stacked hazards:
   - currently limited to max 3 hazards on a tile
   
+Artwork in README is generated with [Midjourney](https://midjourney.com/)
