@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc, RwLock,
     },
     time::Instant,
@@ -19,6 +19,7 @@ pub struct MaximizingNode {
     pub(super) game: Game,
     pub(super) score: Option<(Direction, i64)>,
     pub(super) children: Vec<MinimizingNode>,
+    pub(super) will_die: bool,
 }
 
 impl MaximizingNode {
@@ -27,6 +28,7 @@ impl MaximizingNode {
             game,
             score: None,
             children: vec![],
+            will_die: false,
         }
     }
 
@@ -134,6 +136,7 @@ impl MaximizingNode {
         let top_score = RwLock::new((Direction::Up, None));
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
+        let will_die = AtomicBool::new(false);
 
         let solver = |min_node: &mut MinimizingNode| {
             if alpha_beta.should_be_pruned() {
@@ -162,6 +165,7 @@ impl MaximizingNode {
                 let mut top_score_write = top_score.write().unwrap();
                 if top_score_write.1 < next_score {
                     *top_score_write = (min_node.my_move, next_score.clone());
+                    will_die.store(min_node.will_die, Ordering::Relaxed);
                 }
                 alpha_beta.new_alpha_score(next_score.unwrap());
             }
@@ -179,6 +183,7 @@ impl MaximizingNode {
 
         let (top_move, top_score) = top_score.read().unwrap().clone();
         self.score = top_score.map(|s| (top_move, s));
+        self.will_die = will_die.load(Ordering::Relaxed);
         return (self.score, total_node_count.load(Ordering::Relaxed));
     }
 

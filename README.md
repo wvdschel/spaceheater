@@ -11,18 +11,12 @@ The code is a bit of a chaotic mess, but feel free to steal something from `/src
 # TODOs
 
 ## Weird choices to debug
-- [ ] 87f849bb-8223-423c-bda6-1ea7478a55c0 -> should go up in turn 301 and tail chase -> no point, already dead
-- [ ] 31ac7ed4-a335-4c7a-83ab-5aa704a38479 -> turn 524 should probably tail chase -> no point, already dead
 - Paranoid snake problems:
-  - [ ] 5477951f-cf93-4df6-8ed5-fad896b9e81b -> should really choose to gamble going right
-  - [ ] beeee38f-521f-4634-9280-c24f79c3ffab -> turn 45 should go right
-  - [ ] fdb4ede4-62e1-40dc-8737-9862ebe4d02b -> turn 196 why not up?
-  - [ ] 890bcfde-b71d-4c8c-a566-4932382a9757 -> should really not choose certain death in 2 iso 50% chance of death in 1
+  - [x] 5477951f-cf93-4df6-8ed5-fad896b9e81b -> turn 33 should really choose to gamble going right
+  - [x] beeee38f-521f-4634-9280-c24f79c3ffab -> turn 45 should go right
+  - [x] fdb4ede4-62e1-40dc-8737-9862ebe4d02b -> turn 196 why not up?
+  - [x] 890bcfde-b71d-4c8c-a566-4932382a9757 -> turn 203 should really not choose certain death in 2 iso 50% chance of death in 1
   - [ ] e3375d15-da4b-46bc-8d20-2f6531a356a4 -> turn 386 should go right and tail chase
-- Doesn't grow fast enough:
-  - [x] beeee38f-521f-4634-9280-c24f79c3ffab -> turn 28 should go right and get food
-  - [x] 4f9ca4af-07af-4169-92ce-f2658e4874c4 -> turn 1 should pick food
-
 
 ## The Gauntlet
 - Support games with something other than 4 snakes per game

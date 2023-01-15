@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use std::{
     sync::{
-        atomic::{AtomicI64, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
         Arc,
     },
     time::Instant,
@@ -16,6 +16,7 @@ pub struct MinimizingNode {
     pub my_move: Direction,
     pub(super) score: Option<i64>,
     pub(super) children: Vec<MaximizingNode>,
+    pub(super) will_die: bool,
 }
 
 impl MinimizingNode {
@@ -24,10 +25,11 @@ impl MinimizingNode {
             my_move,
             score: None,
             children: vec![],
+            will_die: false,
         }
     }
 
-    pub(super) fn update_children(&mut self, game: &Game) {
+    fn update_children(&mut self, game: &Game) {
         if self.children.len() == 0 {
             for combo in all_sensible_enemy_moves(game) {
                 let mut game = game.clone();
@@ -96,7 +98,8 @@ impl MinimizingNode {
             (false, threads)
         };
 
-        let min_score: AtomicI64 = AtomicI64::new(i64::MAX);
+        let min_score = AtomicI64::new(i64::MAX);
+        let will_die = AtomicBool::new(false);
         let alpha_beta = alpha_beta.new_child();
         let total_node_count = AtomicUsize::new(0);
 
@@ -116,6 +119,7 @@ impl MinimizingNode {
 
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
             if min_score.fetch_min(next_score, Ordering::Relaxed) > next_score {
+                will_die.store(max_node.game.you.dead(), Ordering::Relaxed);
                 alpha_beta.new_beta_score(next_score);
             }
         };
@@ -137,6 +141,7 @@ impl MinimizingNode {
         } else {
             Some(min_score)
         };
+        self.will_die = will_die.load(Ordering::Relaxed);
         self.score = min_score;
         (min_score, total_node_count.load(Ordering::Relaxed))
     }

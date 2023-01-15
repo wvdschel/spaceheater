@@ -4,7 +4,7 @@ use super::{kills, turns_survived};
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct VoronoiScore {
-    turns_survived: usize,
+    turns_survived: i64,
     tiles_controlled: usize,
     kills: usize,
     length: isize,

@@ -22,7 +22,7 @@ where
 
 #[derive(Copy, Ord, Clone, PartialEq, Eq, Default)]
 pub struct SurvivalKillsLengthScore {
-    turns_survived: usize,
+    turns_survived: i64,
     kills: usize,
     length: usize,
 }
@@ -50,11 +50,11 @@ impl PartialOrd for SurvivalKillsLengthScore {
     }
 }
 
-pub fn turns_survived(game: &Game) -> usize {
+pub fn turns_survived(game: &Game) -> i64 {
     if game.you.health > 0 {
-        game.turn
+        game.turn as i64
     } else {
-        game.turn - 1
+        game.turn as i64 - 1
     }
 }
 

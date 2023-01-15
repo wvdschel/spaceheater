@@ -1,9 +1,11 @@
 mod simple;
 pub mod spaceheater3;
+pub mod suspicious_salami;
 
 pub use simple::SimpleSnake;
 pub use spaceheater3::Spaceheater3;
 use std::collections::HashMap;
+pub use suspicious_salami::Salami;
 
 use crate::{
     logic::scoring::{self, winter},
@@ -34,6 +36,11 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         "Winter champion config: {:?} '{}'",
         champion_cfg,
         champion_cfg.to_string()
+    );
+
+    snakes.insert(
+        "salami".to_string(),
+        Box::new(Salami::new(scoring::turns_survived, None)),
     );
 
     snakes.insert(

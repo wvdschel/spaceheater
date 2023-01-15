@@ -1,8 +1,8 @@
 use crate::{
     log,
-    logic::{self, Game},
+    logic::{self, scoring, Game},
     protocol::{self, Customizations, Direction},
-    snakes::spaceheater3::max::MaximizingNode,
+    snakes::{spaceheater3::max::MaximizingNode, Salami},
     util::thread_count,
     Battlesnake,
 };
@@ -16,7 +16,7 @@ use std::{
 pub mod alphabeta;
 pub mod max;
 pub mod min;
-mod util;
+pub mod util;
 
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
@@ -80,7 +80,7 @@ where
         let deadline = deadline.clone();
         let game = game.clone();
         thread::spawn(move || {
-            let mut root = MaximizingNode::new(game);
+            let mut root = MaximizingNode::new(game.clone());
             let mut best_score = None;
             let mut last_score = None;
             let mut _total_node_count = 0;
@@ -135,6 +135,13 @@ where
                     break;
                 }
                 last_score = best_score.as_ref().map(|s| s.1.clone())
+            }
+
+            if root.will_die {
+                let salami = Salami::new(scoring::turns_survived, None);
+                println!("minimax thinks we will die, go into avoidance mode (monte carlo)");
+                let deadline = deadline + LATENCY_MARGIN / 4;
+                best_score = Some(salami.solve(game, &deadline));
             }
 
             let _ = tx.send(best_score);
