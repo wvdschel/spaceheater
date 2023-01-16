@@ -202,10 +202,11 @@ impl Min {
             );
         }
 
-        panic!(
+        println!(
             "turn {}: end of Min::visit should not be reached!",
             game.turn
         );
+        None
     }
 
     fn generate_children<S>(&mut self, game: &Game, scorer: &S)
@@ -314,10 +315,11 @@ impl Max {
             );
         }
 
-        panic!(
+        println!(
             "turn {}: end of Max::visit should not be reached!",
             self.game.turn
         );
+        None
     }
 
     fn generate_children(&mut self) {
