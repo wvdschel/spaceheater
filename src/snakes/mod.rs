@@ -22,7 +22,6 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         "spaceheater3".to_string(),
         Box::new(Spaceheater3::new(
             scoring::tournament_score,
-            scoring::turns_survived,
             Some(Customizations {
                 color: "#FF2400".to_string(),
                 head: "workout".to_string(),
@@ -48,7 +47,6 @@ pub fn snakes() -> HashMap<String, Box<dyn Battlesnake + Sync + Send>> {
         "spaceheater_winter".to_string(),
         Box::new(Spaceheater3::new(
             champion_cfg,
-            scoring::turns_survived,
             Some(Customizations {
                 color: "#ff8400".to_string(),
                 head: "workout".to_string(),

@@ -13,7 +13,7 @@ const ENCODING: &str = include_str!("encoding.txt");
 
 pub use self::floodfill::floodfill;
 
-use super::{turns_survived, Scorer};
+use super::Scorer;
 
 mod floodfill;
 
@@ -109,7 +109,7 @@ impl<const MAX_DISTANCE: NumType> GeneticConfig for Config<MAX_DISTANCE> {
     }
 
     fn battlesnake(&self) -> Box<dyn crate::Battlesnake + Sync + Send> {
-        Box::new(Spaceheater3::new(self.clone(), turns_survived, None))
+        Box::new(Spaceheater3::new(self.clone(), None))
     }
 
     fn load(&mut self, cfg: &str) {

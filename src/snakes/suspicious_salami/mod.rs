@@ -122,6 +122,8 @@ where
                 root.children[0].my_move,
                 root.children[0].score.round() as i64,
             ));
+
+            thread::sleep(Duration::from_millis(10));
         });
 
         rx.recv().unwrap()

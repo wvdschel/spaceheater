@@ -1,6 +1,6 @@
 use crate::{
     log,
-    logic::{self, Game},
+    logic::{self, scoring, Game},
     protocol::{self, Customizations, Direction},
     snakes::{spaceheater3::max::MaximizingNode, Salami},
     util::thread_count,
@@ -8,7 +8,7 @@ use crate::{
 };
 use std::{
     cmp,
-    sync::{mpsc::channel, Arc},
+    sync::mpsc::channel,
     thread,
     time::{Duration, Instant},
 };
@@ -23,22 +23,19 @@ pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
 const LATENCY_MARGIN: Duration = Duration::from_millis(100);
 
-pub struct Spaceheater3<S, S2>
+pub struct Spaceheater3<S>
 where
     S: logic::scoring::Scorer + Sync + Clone,
-    S2: logic::scoring::Scorer + Sync + Clone,
 {
     scorer: S,
     customizations: Customizations,
-    fallback: Arc<Salami<S2>>,
 }
 
-impl<S, S2> Spaceheater3<S, S2>
+impl<S> Spaceheater3<S>
 where
     S: logic::scoring::Scorer + Send + Sync + Clone + 'static,
-    S2: logic::scoring::Scorer + Send + Sync + Clone + 'static,
 {
-    pub fn new(scorer: S, fallback_scorer: S2, customizations: Option<Customizations>) -> Self {
+    pub fn new(scorer: S, customizations: Option<Customizations>) -> Self {
         Self {
             scorer,
             customizations: customizations.unwrap_or(Customizations {
@@ -46,7 +43,6 @@ where
                 head: DEFAULT_HEAD.into(),
                 tail: DEFAULT_TAIL.into(),
             }),
-            fallback: Arc::new(Salami::new(fallback_scorer, None)),
         }
     }
 
@@ -83,7 +79,6 @@ where
         let scorer = self.scorer.clone();
         let deadline = deadline.clone();
         let game = game.clone();
-        let fallback = self.fallback.clone();
         thread::spawn(move || {
             let mut root = MaximizingNode::new(game.clone());
             let mut best_score = None;
@@ -147,9 +142,10 @@ where
             }
 
             if root.will_die {
-                //println!("minimax thinks we will die, go into avoidance mode (monte carlo)");
-                //let deadline = deadline + LATENCY_MARGIN / 5;
-                //best_score = Some(fallback.solve(game, &deadline));
+                let salami = Salami::new(scoring::turns_survived, None);
+                println!("minimax thinks we will die, go into avoidance mode (monte carlo)");
+                let deadline = deadline + LATENCY_MARGIN / 5;
+                best_score = Some(salami.solve(game, &deadline));
             }
 
             let _ = tx.send(best_score);
@@ -180,10 +176,9 @@ where
     }
 }
 
-impl<S, S2> Battlesnake for Spaceheater3<S, S2>
+impl<S> Battlesnake for Spaceheater3<S>
 where
     S: logic::scoring::Scorer + Send + Sync + Clone + 'static,
-    S2: logic::scoring::Scorer + Send + Sync + Clone + 'static,
 {
     fn snake_info(&self) -> crate::protocol::SnakeInfo {
         protocol::SnakeInfo {
