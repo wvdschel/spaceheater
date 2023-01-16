@@ -99,7 +99,11 @@ where
                     thread_count() as f32,
                 );
                 _total_node_count += node_count;
-                //log!("complete tree for depth {}:\n{}", current_depth, root);
+                log!(
+                    "complete min-max path for depth {}:\n{}",
+                    current_depth,
+                    root
+                );
 
                 match &res {
                     Some((_dir, _score)) => {

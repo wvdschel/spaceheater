@@ -54,6 +54,7 @@ impl MaximizingNode {
             if self.score == None {
                 self.score = Some((Direction::Up, scorer.score(&self.game)));
             }
+            self.will_die = true;
             return true;
         }
         if max_depth == 0 {
@@ -63,38 +64,6 @@ impl MaximizingNode {
         }
 
         false
-    }
-
-    pub fn format_tree(&self, depth: usize) -> String {
-        let mut strings = std::vec::Vec::<String>::new();
-        strings.push(format!(
-            "{} MAX DEPTH {} ({} children):",
-            "#".repeat(depth * 2 + 1),
-            depth,
-            self.children.len()
-        ));
-        match &self.score {
-            Some((dir, score)) => {
-                strings.push(format!("best move is {} with score {}", dir, score))
-            }
-            None => {}
-        };
-        strings.push(format!("{}", self.game));
-
-        for c in self.children.iter() {
-            strings.push(c.format_tree(depth));
-        }
-
-        strings.join("\n")
-    }
-
-    #[allow(unused)]
-    pub fn len(&self) -> usize {
-        let mut len = 1;
-        for c in &self.children {
-            len += c.len()
-        }
-        len
     }
 }
 
@@ -196,6 +165,24 @@ impl MaximizingNode {
 
 impl std::fmt::Display for MaximizingNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.format_tree(0).as_str())
+        f.write_fmt(format_args!(
+            "will_die = {}: {}\n",
+            self.will_die, self.game
+        ))?;
+        if let Some(max_choice) =
+            self.children
+                .iter()
+                .reduce(|max, child| if child.score > max.score { child } else { max })
+        {
+            f.write_fmt(format_args!(
+                "turn {}: picking {} with score {} (will_die = {})\n",
+                self.game.turn,
+                max_choice.my_move,
+                max_choice.score.unwrap_or(0),
+                max_choice.will_die,
+            ))?;
+            return max_choice.fmt(f);
+        }
+        Ok(())
     }
 }

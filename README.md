@@ -12,11 +12,8 @@ The code is a bit of a chaotic mess, but feel free to steal something from `/src
 
 ## Weird choices to debug
 - Paranoid snake problems:
-  - [x] 5477951f-cf93-4df6-8ed5-fad896b9e81b -> turn 33 should really choose to gamble going right
-  - [x] beeee38f-521f-4634-9280-c24f79c3ffab -> turn 45 should go right
-  - [x] fdb4ede4-62e1-40dc-8737-9862ebe4d02b -> turn 196 why not up?
-  - [x] 890bcfde-b71d-4c8c-a566-4932382a9757 -> turn 203 should really not choose certain death in 2 iso 50% chance of death in 1
   - [ ] e3375d15-da4b-46bc-8d20-2f6531a356a4 -> turn 386 should go right and tail chase
+  - [x] d95fb988-5a7e-4135-ad1f-51bef2e95ba5 -> turn 408 why not down?
 
 ## The Gauntlet
 - Support games with something other than 4 snakes per game

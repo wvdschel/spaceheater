@@ -41,34 +41,6 @@ impl MinimizingNode {
         }
     }
 
-    pub fn format_tree(&self, depth: usize) -> String {
-        let mut strings = std::vec::Vec::<String>::new();
-        strings.push(format!(
-            "{} MIN DEPTH {} ({} children):",
-            "#".repeat(depth * 2 + 2),
-            depth,
-            self.children.len()
-        ));
-        match &self.score {
-            Some(score) => strings.push(format!("best score is {}", score)),
-            None => {}
-        };
-
-        for c in self.children.iter() {
-            strings.push(c.format_tree(depth + 1));
-        }
-
-        strings.join(format!("\n").as_str())
-    }
-
-    pub fn len(&self) -> usize {
-        let mut len = 1;
-        for c in &self.children {
-            len += c.len()
-        }
-        len
-    }
-
     pub fn cmp_scores(&self, other: &Self) -> std::cmp::Ordering {
         let self_score = self.score.unwrap_or(i64::MIN);
         let other_score = other.score.unwrap_or(i64::MIN);
@@ -119,7 +91,7 @@ impl MinimizingNode {
 
             total_node_count.fetch_add(node_count, Ordering::Relaxed);
             if min_score.fetch_min(next_score, Ordering::Relaxed) > next_score {
-                will_die.store(max_node.game.you.dead(), Ordering::Relaxed);
+                will_die.store(max_node.will_die, Ordering::Relaxed);
                 alpha_beta.new_beta_score(next_score);
             }
         };
@@ -144,5 +116,25 @@ impl MinimizingNode {
         self.will_die = will_die.load(Ordering::Relaxed);
         self.score = min_score;
         (min_score, total_node_count.load(Ordering::Relaxed))
+    }
+}
+
+impl std::fmt::Display for MinimizingNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(min_choice) =
+            self.children
+                .iter()
+                .filter(|c| c.score.is_some())
+                .reduce(|min, child| {
+                    if child.score.unwrap().1 < min.score.unwrap().1 {
+                        child
+                    } else {
+                        min
+                    }
+                })
+        {
+            return min_choice.fmt(f);
+        }
+        Ok(())
     }
 }
