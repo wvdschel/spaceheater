@@ -144,7 +144,7 @@ where
             if root.will_die {
                 let salami = Salami::new(scoring::turns_survived, None);
                 println!("minimax thinks we will die, go into avoidance mode (monte carlo)");
-                let deadline = deadline + LATENCY_MARGIN / 4;
+                let deadline = deadline + LATENCY_MARGIN / 5;
                 best_score = Some(salami.solve(game, &deadline));
             }
 
@@ -204,12 +204,20 @@ where
         req: &crate::protocol::Request,
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
-        let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
+        let start = Instant::now();
+        let deadline = start + game.timeout - LATENCY_MARGIN;
         let res = self.solve(game, &deadline, usize::MAX);
 
         let (best_dir, top_score) = res
             .map(|(dir, score)| (dir, format!("{}", score)))
             .unwrap_or((Direction::Up, "no result".to_string()));
+
+        if Instant::now() >= deadline + LATENCY_MARGIN / 2 {
+            println!(
+                "Warning: exceeded deadline: move took {}ms",
+                start.elapsed().as_millis()
+            )
+        }
 
         Ok(protocol::MoveResponse {
             direction: best_dir,

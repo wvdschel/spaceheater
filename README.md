@@ -14,6 +14,7 @@ The code is a bit of a chaotic mess, but feel free to steal something from `/src
 - Paranoid snake problems:
   - [ ] e3375d15-da4b-46bc-8d20-2f6531a356a4 -> turn 386 should go right and tail chase
   - [x] d95fb988-5a7e-4135-ad1f-51bef2e95ba5 -> turn 408 why not down?
+  - [ ] 7ece10cd-ea09-4298-a4ab-8ebcd771f81e -> turn 248 why not right?
 
 ## The Gauntlet
 - Support games with something other than 4 snakes per game
