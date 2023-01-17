@@ -1,8 +1,9 @@
 #[macro_use]
 extern crate rouille;
 
-use std::sync::Mutex;
-
+#[cfg(feature = "profiling")]
+use std::fs::File;
+use std::{sync::Mutex, time::Instant};
 use topsnek::{util::gamelogger, *};
 
 const DEFAULT_HOST: &str = "127.0.0.1";
@@ -93,11 +94,18 @@ fn main() {
             },
 
             (POST) (/{id: String}/move) => {
-                match snakes.get(&id) {
+                let start = Instant::now();
+                let res = match snakes.get(&id) {
                     Some(snake) => {
                         match serde_json::from_slice(&body) {
                             Ok(request_body) => {
-                                match snake.make_move(&request_body) {
+                                #[cfg(feature = "profiling")]
+                                let guard = pprof::ProfilerGuardBuilder::default()
+                                    .frequency(2000)
+                                    .blocklist(&["libc", "libgcc", "vdso"])
+                                    .build()
+                                    .unwrap();
+                                let res = match snake.make_move(&request_body) {
                                     Ok(response) => {
                                         {
                                             let mut gamelogger = gamelogger.lock().unwrap();
@@ -114,7 +122,21 @@ fn main() {
                                         println!("{}\nERROR {}", logic::Game::from(&request_body), msg);
                                         rouille::Response::text(msg).with_status_code(500)
                                     },
+                                };
+
+                                #[cfg(feature = "profiling")]
+                                {
+                                    if let Ok(report) = guard.report().build() {
+                                        let file = File::create(format!(
+                                            "flamegraph_{}_{}_{}.svg",
+                                            id, request_body.game.id, request_body.turn
+                                        ))
+                                        .unwrap();
+                                        report.flamegraph(file).unwrap();
+                                    };
                                 }
+
+                                res
                             },
                             Err(e) => {
                                 println!("{:?}", e);
@@ -123,7 +145,9 @@ fn main() {
                         }
                     },
                     None => rouille::Response::empty_404(),
-                }
+                };
+                println!("move took {}ms", start.elapsed().as_millis());
+                res
             },
 
             _ => rouille::Response::empty_404()

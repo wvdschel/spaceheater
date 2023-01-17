@@ -76,6 +76,7 @@ impl Snake {
         }
     }
 
+    #[inline(always)]
     pub fn dead(&self) -> bool {
         self.health <= 0
     }

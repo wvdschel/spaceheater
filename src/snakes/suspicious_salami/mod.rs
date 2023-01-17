@@ -59,7 +59,8 @@ where
         req: &crate::protocol::Request,
     ) -> Result<crate::protocol::MoveResponse, String> {
         let game = Game::from(req);
-        let deadline = Instant::now() + game.timeout - LATENCY_MARGIN;
+        let start = Instant::now();
+        let deadline = start + game.timeout - LATENCY_MARGIN;
 
         let (best_dir, top_score) = self.solve(game, &deadline);
 
@@ -86,6 +87,7 @@ where
     }
 
     pub fn solve(&self, game: Game, deadline: &Instant) -> (Direction, i64) {
+        let start = Instant::now();
         let (tx, rx) = channel();
         let scorer = self.scorer.clone();
         let deadline = deadline.clone();
@@ -126,7 +128,9 @@ where
             thread::sleep(Duration::from_millis(10));
         });
 
-        rx.recv().unwrap()
+        let res = rx.recv().unwrap();
+        println!("Salami::solve took {}ms", start.elapsed().as_millis());
+        res
     }
 }
 
