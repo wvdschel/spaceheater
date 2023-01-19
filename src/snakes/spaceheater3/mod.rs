@@ -8,6 +8,7 @@ use crate::{
 };
 use std::{
     cmp,
+    ops::Add,
     sync::mpsc::channel,
     thread,
     time::{Duration, Instant},
@@ -21,7 +22,7 @@ pub mod util;
 pub const DEFAULT_COLOR: &str = "#b54d47";
 pub const DEFAULT_HEAD: &str = "scarf";
 pub const DEFAULT_TAIL: &str = "rocket";
-const LATENCY_MARGIN: Duration = Duration::from_millis(100);
+const LATENCY_MARGIN: Duration = Duration::from_millis(115);
 
 pub struct Spaceheater3<S>
 where
@@ -138,13 +139,16 @@ where
                     );
                     break;
                 }
-                last_score = best_score.as_ref().map(|s| s.1.clone())
+                last_score = best_score.as_ref().map(|s| s.1.clone());
+                if root.will_die {
+                    break;
+                }
             }
 
             if root.will_die {
                 let salami = Salami::new(scoring::turns_survived, None);
                 println!("minimax thinks we will die, go into avoidance mode (monte carlo)");
-                let deadline = deadline + LATENCY_MARGIN / 5;
+                let deadline = deadline.min(Instant::now().add(Duration::from_millis(125)));
                 best_score = Some(salami.solve(game, &deadline));
             }
 
