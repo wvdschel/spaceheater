@@ -1,8 +1,9 @@
-use std::collections::VecDeque;
+use std::{cmp, collections::VecDeque};
 
 use crate::protocol;
 
 use super::{
+    board,
     game::{GameMode, Rules},
     Board, Direction, Point, Tile,
 };
@@ -26,7 +27,13 @@ impl PartialEq for Snake {
 }
 
 impl Snake {
-    pub fn apply_move(&mut self, dir: Direction, board: &mut Board, rules: &Rules) {
+    pub fn apply_move(
+        &mut self,
+        dir: Direction,
+        board: &mut Board,
+        rules: &Rules,
+        snail_mode: bool,
+    ) {
         let mut new_head = self.head.neighbour(dir);
         if rules.game_mode == GameMode::Wrapped {
             new_head.warp(board.width(), board.height())
@@ -53,12 +60,18 @@ impl Snake {
         self.body.push_front(new_head.clone());
         if self.body.len() > self.length {
             if let Some(p) = self.body.pop_back() {
-                if let Some(p2) = self.body.back() {
-                    if &p != p2 {
-                        board.clear_snake(&p);
-                    }
+                let clear_tail = if let Some(p2) = self.body.back() {
+                    &p != p2
                 } else {
+                    true
+                };
+                if clear_tail {
                     board.clear_snake(&p);
+                    if snail_mode {
+                        let extra_hazards =
+                            cmp::max(self.length, board::MAX_HAZARDS as usize) as u8;
+                        board.add(&p, Tile::Hazard(extra_hazards))
+                    }
                 }
             }
         }

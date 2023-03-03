@@ -10,24 +10,22 @@ pub struct Board {
     pub(super) data: Vec<u8>,
 }
 
-const TILE_MASK: u8 = 0b1111;
-const HAZARD_MASK: u8 = 0b1100;
-const TILE_TYPE_MASK: u8 = 0b0011;
+const TILE_MASK: u8 = 0b11111111;
+const HAZARD_MASK: u8 = 0b11111100;
+const TILE_TYPE_MASK: u8 = 0b00000011;
 const EMPTY: u8 = 0b00;
 const SNAKE: u8 = 0b01;
 const HEAD: u8 = 0b10;
 const FOOD: u8 = 0b11;
 
+pub const MAX_HAZARDS: u8 = HAZARD_MASK >> 2;
+
 macro_rules! get_tile {
     ($data:expr, $x:expr, $y:expr, $mask:expr) => {{
         let w = $data[0] as usize;
         let (x, y) = ($x as usize, $y as usize);
-        let idx = x + y * w;
-        if idx % 2 == 0 {
-            (unsafe { $data.get_unchecked(2 + idx / 2) } >> 4) & $mask
-        } else {
-            (unsafe { $data.get_unchecked(2 + idx / 2) }) & $mask
-        }
+        let idx = 2 + x + y * w;
+        $data[idx]
     }};
 }
 
@@ -35,24 +33,15 @@ macro_rules! set_tile {
     ($data:expr, $x:expr, $y:expr, $mask:expr, $value:expr) => {{
         let w = $data[0] as usize;
         let (x, y) = ($x as usize, $y as usize);
-        let idx = x + y * w;
-        let v = unsafe { $data.get_unchecked_mut(2 + idx / 2) };
-        if idx % 2 == 0 {
-            let mask = $mask << 4;
-            let value = $value << 4;
-            *v = (!mask & *v | mask & value);
-        } else {
-            *v = (!$mask & *v | $mask & $value);
-        }
+        let idx = 2 + x + y * w;
+        let v = unsafe { $data.get_unchecked_mut(idx) };
+        *v = (!$mask & *v | $mask & $value);
     }};
 }
 
 impl Board {
     pub fn new(w: usize, h: usize) -> Board {
-        let mut count = w * h + 2;
-        if count % 2 == 1 {
-            count += 1
-        }
+        let count = w * h + 2;
         let mut data = Vec::with_capacity(count);
         data.resize(count, 0 as u8);
         data[0] = w as u8;
@@ -105,19 +94,19 @@ impl Board {
             Tile::Snake => set_tile!(self.data, p.x, p.y, TILE_MASK, SNAKE),
             Tile::Head => set_tile!(self.data, p.x, p.y, TILE_MASK, HEAD),
             Tile::Food => set_tile!(self.data, p.x, p.y, TILE_MASK, FOOD),
-            Tile::Hazard(x) => set_tile!(self.data, p.x, p.y, TILE_MASK, (x as u8 & 3) << 2),
+            Tile::Hazard(x) => set_tile!(self.data, p.x, p.y, TILE_MASK, (x as u8) << 2),
             Tile::HazardWithFood(x) => {
-                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | FOOD)
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8) << 2) | FOOD)
             }
             Tile::HazardWithSnake(x) => {
-                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | SNAKE)
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8) << 2) | SNAKE)
             }
             Tile::HazardWithHead(x) => {
-                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8 & 3) << 2) | HEAD)
+                set_tile!(self.data, p.x, p.y, TILE_MASK, ((x as u8) << 2) | HEAD)
             }
             Tile::Wall => {
                 log!("warning: attempt to configure a tile as a wall, this should never happen. Adding max hazards instead.");
-                set_tile!(self.data, p.x, p.y, TILE_MASK, 3 << 2);
+                set_tile!(self.data, p.x, p.y, TILE_MASK, HAZARD_MASK);
             }
         }
     }
@@ -160,7 +149,21 @@ impl Board {
             }
         }
     }
+
+    pub fn remove_hazards(&mut self, p: &Point, count: u8) {
+        let mut hazard_count = self.hazard_count(p);
+        if hazard_count < count {
+            hazard_count = 0;
+        } else {
+            hazard_count -= count
+        }
+        set_tile!(self.data, p.x, p.y, HAZARD_MASK, hazard_count << 2);
+    }
+
     pub fn add(&mut self, p: &Point, t: Tile) {
+        if p.x < 0 || p.y < 0 || p.x as isize >= self.width() || p.y as isize >= self.height() {
+            return;
+        }
         match t {
             Tile::Empty => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, EMPTY),
             Tile::Snake => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, SNAKE),
@@ -196,7 +199,7 @@ impl Board {
             }
             Tile::Wall => {
                 println!("warning: attempt to configure a tile as a wall, this should never happen. Adding max hazards instead.");
-                set_tile!(self.data, p.x, p.y, HAZARD_MASK, 3 << 2);
+                set_tile!(self.data, p.x, p.y, HAZARD_MASK, HAZARD_MASK);
             }
         }
     }

@@ -12,6 +12,7 @@ pub struct Game {
     pub timeout: std::time::Duration,
     pub rules: Rules,
     pub turn: usize,
+    pub snail_mode: bool,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -41,9 +42,23 @@ impl Game {
     // - spawning food
     pub fn execute_moves(&mut self, you: Direction, others: &Vec<Direction>) {
         let mut new_board = self.board.clone();
-        self.you.apply_move(you, &mut new_board, &self.rules);
+
+        if self.snail_mode {
+            for x in 0..new_board.width() {
+                for y in 0..new_board.height() {
+                    let p = Point {
+                        x: x as i8,
+                        y: y as i8,
+                    };
+                    new_board.remove_hazards(&p, 1)
+                }
+            }
+        }
+
+        self.you
+            .apply_move(you, &mut new_board, &self.rules, self.snail_mode);
         for i in 0..others.len() {
-            self.others[i].apply_move(others[i], &mut new_board, &self.rules)
+            self.others[i].apply_move(others[i], &mut new_board, &self.rules, self.snail_mode)
         }
 
         self.eliminate_dead_snakes(&mut new_board);
@@ -245,6 +260,7 @@ impl From<&protocol::Request> for Game {
             rules: Rules::from(&req.game.ruleset),
             dead_snakes: 0,
             turn: req.turn,
+            snail_mode: req.game.map == "snail_mode",
         }
     }
 }
