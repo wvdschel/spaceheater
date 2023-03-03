@@ -177,29 +177,29 @@ impl Board {
             Tile::Food => set_tile!(self.data, p.x, p.y, TILE_TYPE_MASK, FOOD),
             Tile::Hazard(x) => {
                 let mut hazard_count = self.hazard_count(p) + x as u8;
-                if hazard_count > 3 {
-                    hazard_count = 3;
+                if hazard_count > MAX_HAZARDS {
+                    hazard_count = MAX_HAZARDS;
                 }
                 set_tile!(self.data, p.x, p.y, HAZARD_MASK, hazard_count << 2);
             }
             Tile::HazardWithFood(x) => {
                 let mut hazard_count = self.hazard_count(p) + x as u8;
-                if hazard_count > 3 {
-                    hazard_count = 3;
+                if hazard_count > MAX_HAZARDS {
+                    hazard_count = MAX_HAZARDS;
                 }
                 set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | FOOD)
             }
             Tile::HazardWithSnake(x) => {
                 let mut hazard_count = self.hazard_count(p) + x as u8;
-                if hazard_count > 3 {
-                    hazard_count = 3;
+                if hazard_count > MAX_HAZARDS {
+                    hazard_count = MAX_HAZARDS;
                 }
                 set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | SNAKE)
             }
             Tile::HazardWithHead(x) => {
                 let mut hazard_count = self.hazard_count(p) + x as u8;
-                if hazard_count > 3 {
-                    hazard_count = 3;
+                if hazard_count > MAX_HAZARDS {
+                    hazard_count = MAX_HAZARDS;
                 }
                 set_tile!(self.data, p.x, p.y, TILE_MASK, (hazard_count << 2) | HEAD)
             }
