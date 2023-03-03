@@ -1,5 +1,3 @@
-use std::char::MAX;
-
 use crate::{
     log,
     protocol::{self, Point},
