@@ -1,3 +1,5 @@
+use std::char::MAX;
+
 use crate::{
     log,
     protocol::{self, Point},
@@ -117,7 +119,11 @@ impl Board {
         match t & TILE_TYPE_MASK {
             EMPTY => {
                 let hazards = (t & HAZARD_MASK) as u8 >> 2;
-                hazard_dmg * hazards as i8
+                if hazards == MAX_HAZARDS {
+                    i8::MAX
+                } else {
+                    hazard_dmg * hazards as i8
+                }
             }
             FOOD => 0,
             SNAKE | HEAD => i8::MAX,
