@@ -69,7 +69,7 @@ impl Snake {
                     board.clear_snake(&p);
                     if snail_mode {
                         let extra_hazards =
-                            cmp::max(self.length, board::MAX_HAZARDS as usize) as u8;
+                            cmp::min(self.length, board::MAX_HAZARDS as usize) as u8;
                         board.add(&p, Tile::Hazard(extra_hazards))
                     }
                 }

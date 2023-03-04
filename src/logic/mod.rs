@@ -88,6 +88,16 @@ impl Tile {
         }
     }
 
+    pub fn hazard_count(&self) -> u8 {
+        match self {
+            Tile::Hazard(h) => *h,
+            Tile::HazardWithFood(h) => *h,
+            Tile::HazardWithSnake(h) => *h,
+            Tile::HazardWithHead(h) => *h,
+            _ => 0,
+        }
+    }
+
     pub fn is_snake(&self) -> bool {
         match self {
             Tile::Snake => true,

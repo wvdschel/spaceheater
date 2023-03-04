@@ -6,6 +6,7 @@ use super::{Direction, Game};
 
 mod board;
 mod floodfill;
+mod snail_mode;
 
 #[test]
 fn head_to_head_collision_equal_length() {

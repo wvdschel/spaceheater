@@ -1,0 +1,245 @@
+{
+  "game": {
+    "id": "64fd765a-6ad2-4df2-a7fc-b3fa5667e1d4",
+    "ruleset": {
+      "name": "standard",
+      "version": "v1.2.3",
+      "settings": {
+        "foodSpawnChance": 15,
+        "minimumFood": 1,
+        "hazardDamagePerTurn": 14,
+        "royale": {
+          "shrinkEveryNTurns": 0
+        },
+        "squad": {
+          "allowBodyCollisions": false,
+          "sharedElimination": false,
+          "sharedHealth": false,
+          "sharedLength": false
+        }
+      }
+    },
+    "map": "snail_mode",
+    "timeout": 500,
+    "source": "custom"
+  },
+  "turn": 11,
+  "board": {
+    "height": 11,
+    "width": 11,
+    "food": [
+      {
+        "x": 10,
+        "y": 8
+      },
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 6,
+        "y": 10
+      }
+    ],
+    "hazards": [
+      {
+        "x": 10,
+        "y": 5
+      },
+      {
+        "x": 10,
+        "y": 5
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 10,
+        "y": 6
+      },
+      {
+        "x": 7,
+        "y": 4
+      },
+      {
+        "x": 7,
+        "y": 4
+      },
+      {
+        "x": 8,
+        "y": 4
+      },
+      {
+        "x": 10,
+        "y": 4
+      },
+      {
+        "x": 10,
+        "y": 18
+      },
+      {
+        "x": 10,
+        "y": 18
+      },
+      {
+        "x": 10,
+        "y": 18
+      },
+      {
+        "x": 10,
+        "y": 18
+      },
+      {
+        "x": 10,
+        "y": 18
+      },
+      {
+        "x": 7,
+        "y": 17
+      },
+      {
+        "x": 7,
+        "y": 17
+      },
+      {
+        "x": 7,
+        "y": 17
+      },
+      {
+        "x": 7,
+        "y": 5
+      },
+      {
+        "x": 7,
+        "y": 5
+      },
+      {
+        "x": 7,
+        "y": 5
+      }
+    ],
+    "snakes": [
+      {
+        "id": "gs_7JRjGtYhkK3kVQPPP7BDpTgP",
+        "name": "Spaceheater⠀",
+        "health": 99,
+        "body": [
+          {
+            "x": 6,
+            "y": 7
+          },
+          {
+            "x": 7,
+            "y": 7
+          },
+          {
+            "x": 8,
+            "y": 7
+          },
+          {
+            "x": 9,
+            "y": 7
+          },
+          {
+            "x": 10,
+            "y": 7
+          }
+        ],
+        "latency": "387",
+        "head": {
+          "x": 6,
+          "y": 7
+        },
+        "length": 5,
+        "shout": "17410",
+        "squad": "",
+        "customizations": {
+          "color": "#ff8400",
+          "head": "workout",
+          "tail": "rocket"
+        }
+      },
+      {
+        "id": "gs_RHgVRcMkVrGGGthJDrWXVdY8",
+        "name": "Hovering Hobbs",
+        "health": 89,
+        "body": [
+          {
+            "x": 6,
+            "y": 5
+          },
+          {
+            "x": 6,
+            "y": 6
+          },
+          {
+            "x": 7,
+            "y": 6
+          }
+        ],
+        "latency": "365",
+        "head": {
+          "x": 6,
+          "y": 5
+        },
+        "length": 3,
+        "shout": "",
+        "squad": "",
+        "customizations": {
+          "color": "#da8a1a",
+          "head": "beach-puffin-special",
+          "tail": "beach-puffin-special"
+        }
+      }
+    ]
+  },
+  "you": {
+    "id": "gs_7JRjGtYhkK3kVQPPP7BDpTgP",
+    "name": "Spaceheater⠀",
+    "health": 99,
+    "body": [
+      {
+        "x": 6,
+        "y": 7
+      },
+      {
+        "x": 7,
+        "y": 7
+      },
+      {
+        "x": 8,
+        "y": 7
+      },
+      {
+        "x": 9,
+        "y": 7
+      },
+      {
+        "x": 10,
+        "y": 7
+      }
+    ],
+    "latency": "387",
+    "head": {
+      "x": 6,
+      "y": 7
+    },
+    "length": 5,
+    "shout": "17410",
+    "squad": "",
+    "customizations": {
+      "color": "#ff8400",
+      "head": "workout",
+      "tail": "rocket"
+    }
+  }
+}
