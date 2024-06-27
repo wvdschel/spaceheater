@@ -4,6 +4,8 @@
 
 This is my third attempt at building a battle snake (src/snakes/simple.rs is the first and still available).
 
+See https://play.battlesnake.com/profile/general-error for recent games.
+
 This README is mostly a TODO list of reminders for myself on how to improve the snake.
 
 The code is a bit of a chaotic mess, but feel free to steal something from `/src/logic/scoring` if you want :)
